@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project — Plotly</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.min.js"></script>
+  <style>
+    :root {
+      --bg:          #0f0f13;
+      --surface:     #16161d;
+      --surface-2:   #1e1e2a;
+      --surface-3:   #252535;
+      --border:      rgba(255,255,255,0.08);
+      --border-hover:rgba(255,255,255,0.16);
+      --accent:      #6366f1;
+      --accent-hover:#4f51d4;
+      --accent-muted:rgba(99,102,241,0.15);
+      --danger:      #ef4444;
+      --danger-muted:rgba(239,68,68,0.12);
+      --success:     #22c55e;
+      --warning:     #f59e0b;
+      --status-past: #64748b;
+      --text:        #f1f5f9;
+      --text-muted:  #94a3b8;
+      --text-subtle: #64748b;
+      --radius-sm:   6px;
+      --radius-md:   10px;
+      --radius-lg:   16px;
+      --radius-xl:   24px;
+      --shadow-md:   0 4px 20px rgba(0,0,0,0.5);
+      --shadow-lg:   0 8px 32px rgba(0,0,0,0.6);
+      --t-fast:      0.15s ease;
+      --t-base:      0.25s ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15,15,19,0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 56px;
+      gap: 1rem;
+    }
+    .topbar__left, .topbar__right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+    .topbar__center {
+      flex: 1;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .back-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3em;
+      padding: 0.35rem 0.6rem;
+      border-radius: var(--radius-sm);
+      transition: color var(--t-fast), background var(--t-fast);
+    }
+    .back-link:hover { color: var(--text); background: var(--surface-2); }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4em;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--t-fast);
+      border: none;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-primary  { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .btn-ghost:hover { border-color: var(--border-hover); color: var(--text); background: var(--surface-2); }
+    .btn-danger-outline {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--danger);
+    }
+    .btn-danger-outline:hover { background: var(--danger-muted); border-color: var(--danger); }
+    .btn-icon {
+      padding: 0.35rem;
+      width: 28px; height: 28px;
+      justify-content: center;
+    }
+    .btn-xs { padding: 0.25rem 0.6rem; font-size: 12px; }
+    .btn svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Page layout ── */
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 2rem 4rem;
+    }
+
+    /* ── Project Header ── */
+    .project-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .project-header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 0 0 0.25rem;
+      letter-spacing: -0.03em;
+    }
+    .project-header__desc {
+      color: var(--text-muted);
+      margin: 0;
+      font-size: 14px;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.75rem;
+    }
+    .tab-btn {
+      padding: 0.75rem 1.25rem;
+      background: none; border: none;
+      color: var(--text-muted);
+      font-family: inherit; font-size: 14px; font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color var(--t-fast), border-color var(--t-fast);
+    }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-btn:hover:not(.active) { color: var(--text); }
+
+    /* ── Panel toolbar ── */
+    .panel-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+    .panel-toolbar__label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-subtle);
+    }
+
+    /* ── Phase card ── */
+    .phase-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.125rem 1.25rem;
+      margin-bottom: 0.875rem;
+      transition: border-color var(--t-base);
+    }
+    .phase-card:hover { border-color: rgba(255,255,255,0.14); }
+    .phase-card[data-status="active"]   { border-left: 3px solid var(--success); }
+    .phase-card[data-status="upcoming"] { border-left: 3px solid var(--warning); }
+    .phase-card[data-status="past"]     { border-left: 3px solid var(--status-past); opacity: 0.78; }
+
+    .phase-card__header {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    .phase-card__color-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      margin-top: 5px;
+      flex-shrink: 0;
+      box-shadow: 0 0 6px var(--dot-color, transparent);
+    }
+    .phase-card__title-area { flex: 1; min-width: 0; }
+    .phase-card__name {
+      margin: 0 0 0.3rem;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .phase-card__meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .phase-card__dates {
+      font-size: 12px;
+      color: var(--text-subtle);
+    }
+    .phase-card__actions {
+      display: flex;
+      gap: 0.2rem;
+      flex-shrink: 0;
+    }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.15em 0.55em;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .badge-active   { background: rgba(34,197,94,0.15);  color: var(--success); }
+    .badge-upcoming { background: rgba(245,158,11,0.15); color: var(--warning); }
+    .badge-past     { background: rgba(100,116,139,0.15);color: var(--status-past); }
+    .badge-dep      { background: var(--accent-muted);   color: var(--accent); }
+
+    /* ── Phase sections (milestones / events) ── */
+    .phase-section {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+    .phase-section__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .phase-section__label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-subtle);
+    }
+    .item-list {
+      list-style: none;
+      padding: 0; margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .item-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      padding: 0.45rem 0.75rem;
+      font-size: 13px;
+      gap: 0.5rem;
+    }
+    .item-list__name { flex: 1; font-weight: 500; }
+    .item-list__meta { color: var(--text-subtle); font-size: 11px; white-space: nowrap; }
+    .item-empty {
+      font-size: 12px;
+      color: var(--text-subtle);
+      padding: 0.35rem 0;
+      font-style: italic;
+    }
+
+    /* ── Gantt overrides ── */
+    #tab-timeline {
+      overflow: hidden;
+    }
+    .gantt-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .gantt-toolbar span { font-size: 12px; color: var(--text-muted); }
+    .gantt-view-btns { display: flex; gap: 0.25rem; }
+    .gantt-view-btns button {
+      padding: 0.3rem 0.7rem;
+      font-size: 12px; font-weight: 500;
+      font-family: inherit;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text-muted);
+      cursor: pointer; transition: all var(--t-fast);
+    }
+    .gantt-view-btns button.active,
+    .gantt-view-btns button:hover { background: var(--accent-muted); border-color: var(--accent); color: var(--accent); }
+    .gantt-container {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow-x: auto;
+      background: var(--surface);
+    }
+    .gantt .grid-background { fill: var(--surface) !important; }
+    .gantt .grid-header { fill: var(--surface-2) !important; }
+    .gantt .grid-row { fill: transparent !important; }
+    .gantt .grid-row:nth-child(even) { fill: rgba(255,255,255,0.015) !important; }
+    .gantt .tick { stroke: var(--border) !important; }
+    .gantt .lower-text, .gantt .upper-text { fill: var(--text-muted) !important; }
+    .gantt .bar { fill: var(--accent) !important; }
+    .gantt .bar-progress { fill: var(--accent-hover) !important; }
+    .gantt .bar-label { fill: #fff !important; font-size: 11px !important; }
+    .gantt .arrow { stroke: var(--text-subtle) !important; }
+    .gantt .today-highlight { fill: rgba(99,102,241,0.08) !important; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      padding: 1rem;
+    }
+    .modal-overlay.is-open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      width: 100%; max-width: 440px;
+      box-shadow: var(--shadow-lg);
+      animation: slideUp var(--t-base) forwards;
+      overflow: hidden;
+    }
+    .modal--sm { max-width: 360px; }
+    .modal__header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1.25rem 1.5rem 0;
+    }
+    .modal__title { margin: 0; font-size: 1.05rem; font-weight: 600; }
+    .modal__close {
+      background: none; border: none; color: var(--text-muted); cursor: pointer;
+      font-size: 18px; line-height: 1; padding: 4px;
+      border-radius: var(--radius-sm); transition: color var(--t-fast);
+    }
+    .modal__close:hover { color: var(--text); }
+    .modal__body { padding: 1.25rem 1.5rem; }
+    .modal__footer { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0 1.5rem 1.25rem; }
+    .modal-field { margin-bottom: 1rem; }
+    .modal-field:last-child { margin-bottom: 0; }
+    .field-label {
+      display: block; margin-bottom: 0.4rem;
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .modal-field input, .modal-field select, .modal-field textarea {
+      width: 100%; padding: 0.65rem 0.75rem;
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-family: inherit; font-size: 14px;
+      transition: border-color var(--t-fast), box-shadow var(--t-fast);
+    }
+    .modal-field input:focus, .modal-field select:focus {
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-muted);
+    }
+    .color-picker-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .color-picker-row input[type="color"] {
+      width: 48px; height: 38px; padding: 2px 4px;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .color-preview {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+    .confirm-message { color: var(--text-muted); margin: 0; line-height: 1.6; }
+
+    /* ── Toasts ── */
+    .toast-container {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      z-index: 1000; display: flex; flex-direction: column; gap: 0.5rem;
+      pointer-events: none;
+    }
+    .toast {
+      pointer-events: all;
+      display: flex; align-items: center; gap: 0.75rem;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 0.75rem 1rem;
+      min-width: 260px; max-width: 400px; box-shadow: var(--shadow-md);
+      font-size: 14px; animation: toastIn 0.2s ease forwards;
+    }
+    .toast--success { border-left: 3px solid var(--success); }
+    .toast--error   { border-left: 3px solid var(--danger); }
+    .toast--info    { border-left: 3px solid var(--accent); }
+    .toast__body { flex: 1; }
+    .toast__close {
+      background: none; border: none; color: var(--text-subtle);
+      cursor: pointer; padding: 0; font-size: 16px; line-height: 1;
+    }
+    .toast.is-dismissing { animation: toastOut 0.2s ease forwards; }
+
+    @keyframes slideUp {
+      from { transform: translateY(16px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    @keyframes toastIn {
+      from { transform: translateX(110%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    @keyframes toastOut {
+      from { transform: translateX(0);    opacity: 1; }
+      to   { transform: translateX(110%); opacity: 0; }
+    }
+
+    @media (max-width: 640px) {
+      .topbar { padding: 0 1rem; }
+      .topbar__center { display: none; }
+      .page { padding: 1.5rem 1rem 3rem; }
+      .project-header { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- SVG icon sprite -->
+<svg style="display:none" aria-hidden="true">
+  <symbol id="icon-pencil" viewBox="0 0 16 16">
+    <path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354l-1.086-1.086zM11.189 6.25 9.75 4.81 3.847 10.714a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.249.249 0 0 0 .108-.064L11.189 6.25z"/>
+  </symbol>
+  <symbol id="icon-trash" viewBox="0 0 16 16">
+    <path d="M11 1.75V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.675l.66 6.6a.25.25 0 0 0 .249.225h5.19a.25.25 0 0 0 .249-.225l.66-6.6a.75.75 0 0 1 1.492.149l-.66 6.6A1.748 1.748 0 0 1 10.595 15h-5.19a1.75 1.75 0 0 1-1.741-1.575l-.66-6.6a.75.75 0 1 1 1.492-.15zM6.5 1.75V3h3V1.75a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25z"/>
+  </symbol>
+  <symbol id="icon-link" viewBox="0 0 16 16">
+    <path d="M7.775 3.275a.75.75 0 0 0 1.06 1.06l1.25-1.25a2 2 0 1 1 2.83 2.83l-2.5 2.5a2 2 0 0 1-2.83 0 .75.75 0 0 0-1.06 1.06 3.5 3.5 0 0 0 4.95 0l2.5-2.5a3.5 3.5 0 0 0-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 0 1 0-2.83l2.5-2.5a2 2 0 0 1 2.83 0 .75.75 0 0 0 1.06-1.06 3.5 3.5 0 0 0-4.95 0l-2.5 2.5a3.5 3.5 0 0 0 4.95 4.95l1.25-1.25a.75.75 0 0 0-1.06-1.06l-1.25 1.25a2 2 0 0 1-2.83 0z"/>
+  </symbol>
+  <symbol id="icon-calendar" viewBox="0 0 16 16">
+    <path d="M4.75 0a.75.75 0 0 1 .75.75V2h5V.75a.75.75 0 0 1 1.5 0V2h1.25c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 13.25 16H2.75A1.75 1.75 0 0 1 1 14.25V3.75C1 2.784 1.784 2 2.75 2H4V.75A.75.75 0 0 1 4.75 0zM2.5 7.5v6.75c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V7.5H2.5zm10.75-4H2.75a.25.25 0 0 0-.25.25V6h11V3.75a.25.25 0 0 0-.25-.25H13.25z"/>
+  </symbol>
+  <symbol id="icon-plus" viewBox="0 0 16 16">
+    <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2z"/>
+  </symbol>
+</svg>
+
+<!-- Topbar -->
+<nav class="topbar">
+  <div class="topbar__left">
+    <a class="back-link" href="/">← Dashboard</a>
+  </div>
+  <div class="topbar__center" id="topbarTitle">Loading…</div>
+  <div class="topbar__right">
+    <button class="btn btn-ghost" id="gcalBtn" onclick="onGcalClick()">
+      <svg><use href="#icon-calendar"/></svg>
+      <span class="gcal-label">Auto-synced</span>
+    </button>
+    <button class="btn btn-danger-outline" id="deleteProjectBtn" onclick="confirmDeleteProject()">
+      <svg><use href="#icon-trash"/></svg>
+      Delete
+    </button>
+  </div>
+</nav>
+
+<!-- Page -->
+<main class="page">
+  <!-- Project header -->
+  <div class="project-header">
+    <div>
+      <h1 id="pName">Loading…</h1>
+      <p class="project-header__desc" id="pDesc"></p>
+    </div>
+    <button class="btn btn-ghost" onclick="editProject()">
+      <svg><use href="#icon-pencil"/></svg>
+      Edit
+    </button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" role="tablist">
+    <button class="tab-btn active" data-tab="phases" role="tab" aria-selected="true" onclick="switchTab('phases')">Phases</button>
+    <button class="tab-btn" data-tab="timeline" role="tab" aria-selected="false" onclick="switchTab('timeline')">Timeline</button>
+  </div>
+
+  <!-- Phases tab -->
+  <div id="tab-phases" role="tabpanel">
+    <div class="panel-toolbar">
+      <span class="panel-toolbar__label" id="phaseCount">0 phases</span>
+      <button class="btn btn-primary" onclick="addPhase()">
+        <svg><use href="#icon-plus"/></svg>
+        Add Phase
+      </button>
+    </div>
+    <div id="phasesList"></div>
+  </div>
+
+  <!-- Timeline tab -->
+  <div id="tab-timeline" role="tabpanel" style="display:none">
+    <div class="gantt-toolbar">
+      <span>View:</span>
+      <div class="gantt-view-btns" id="ganttViewBtns">
+        <button class="active" data-view="Day"   onclick="setGanttView('Day')">Day</button>
+        <button data-view="Week"  onclick="setGanttView('Week')">Week</button>
+        <button data-view="Month" onclick="setGanttView('Month')">Month</button>
+      </div>
+    </div>
+    <div class="gantt-container">
+      <svg id="gantt"></svg>
+    </div>
+  </div>
+</main>
+
+<!-- Generic Modal -->
+<div class="modal-overlay" id="genericModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="modalTitle"></h2>
+      <button class="modal__close" onclick="closeModal()" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body" id="modalFields"></div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="modalSubmitBtn">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal-overlay" id="confirmModal" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="modal modal--sm">
+    <div class="modal__header">
+      <h2 class="modal__title" id="confirmTitle">Confirm</h2>
+    </div>
+    <div class="modal__body">
+      <p class="confirm-message" id="confirmMessage"></p>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-danger-outline" id="confirmOkBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+<script>
+  // ── Constants & State ────────────────────────────────────────
+  const projectId = {{ project_id }};
+  const state = { project: null, activeTab: 'phases', ganttView: 'Day', ganttInstance: null };
+
+  // ── API ──────────────────────────────────────────────────────
+  const H = { 'Content-Type': 'application/json' };
+  const api = {
+    getProject:      (id)       => fetch(`/api/projects/${id}`).then(r => r.json()),
+    updateProject:   (id, data) => fetch(`/api/projects/${id}`, { method: 'PUT', headers: H, body: JSON.stringify(data) }),
+    deleteProject:   (id)       => fetch(`/api/projects/${id}`, { method: 'DELETE' }),
+    createPhase:     (pid, data)=> fetch(`/api/phases/?project_id=${pid}`, { method: 'POST', headers: H, body: JSON.stringify(data) }),
+    updatePhase:     (id, data) => fetch(`/api/phases/${id}`, { method: 'PUT', headers: H, body: JSON.stringify(data) }),
+    deletePhase:     (id)       => fetch(`/api/phases/${id}`, { method: 'DELETE' }),
+    createMilestone: (phid, d)  => fetch(`/api/phases/${phid}/milestones/`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
+    deleteMilestone: (id)       => fetch(`/api/milestones/${id}`, { method: 'DELETE' }),
+    createEvent:     (phid, d)  => fetch(`/api/phases/${phid}/events/`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
+    deleteEvent:     (id)       => fetch(`/api/events/${id}`, { method: 'DELETE' }),
+  };
+
+  // ── Utilities ────────────────────────────────────────────────
+  const todayStr = () => new Date().toISOString().split('T')[0];
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function fmtDate(d) {
+    if (!d) return '';
+    const [y, m, day] = d.split('-');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${months[parseInt(m,10)-1]} ${parseInt(day,10)}, ${y}`;
+  }
+
+  function getPhaseStatus(start, end) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const s = new Date(start), e = new Date(end);
+    if (e < today) return 'past';
+    if (s > today) return 'upcoming';
+    return 'active';
+  }
+
+  function statusBadge(status) {
+    const labels = { past: 'Past', active: 'Active', upcoming: 'Upcoming' };
+    return `<span class="badge badge-${status}">${labels[status]}</span>`;
+  }
+
+  // ── Render ───────────────────────────────────────────────────
+  function renderProject(p) {
+    document.title = `${p.name} — Plotly`;
+    document.getElementById('pName').textContent = p.name;
+    document.getElementById('pDesc').textContent = p.description || 'No description provided.';
+    document.getElementById('topbarTitle').textContent = p.name;
+    const pc = p.phases.length;
+    document.getElementById('phaseCount').textContent = `${pc} phase${pc !== 1 ? 's' : ''}`;
+    renderPhases(p.phases);
+    if (state.activeTab === 'timeline') renderGantt(p.phases);
+  }
+
+  function renderPhases(phases) {
+    const list = document.getElementById('phasesList');
+    list.innerHTML = '';
+    if (phases.length === 0) {
+      list.innerHTML = `<div class="item-empty" style="text-align:center;padding:2rem;">
+        No phases yet. Add your first phase to get started.
+      </div>`;
+      return;
+    }
+
+    // Build a quick lookup for dependency names
+    const phaseMap = {};
+    phases.forEach(p => { phaseMap[p.id] = p.name; });
+
+    phases.forEach(phase => {
+      const status = getPhaseStatus(phase.start_date, phase.end_date);
+      const color = phase.color || '#6366f1';
+      const depName = phase.depends_on_id ? phaseMap[phase.depends_on_id] : null;
+
+      const card = document.createElement('div');
+      card.className = 'phase-card';
+      card.dataset.phaseId = phase.id;
+      card.dataset.status = status;
+
+      // Milestones
+      const msItems = phase.milestones.length > 0
+        ? phase.milestones.map(m => `
+            <li>
+              <span class="item-list__name">${escHtml(m.name)}</span>
+              <span class="item-list__meta">${fmtDate(m.target_date)}</span>
+              <button class="btn btn-icon btn-danger-outline" title="Delete milestone" style="width:22px;height:22px;padding:2px;"
+                onclick="confirmDeleteMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}')">
+                <svg><use href="#icon-trash"/></svg>
+              </button>
+            </li>`).join('')
+        : `<li class="item-empty" style="background:none;padding:0.25rem 0;">None</li>`;
+
+      // Events
+      const evItems = phase.events.length > 0
+        ? phase.events.map(e => `
+            <li>
+              <span class="item-list__name">${escHtml(e.name)}</span>
+              <span class="item-list__meta">${fmtDate(e.start_date)} → ${fmtDate(e.end_date)}</span>
+              <button class="btn btn-icon btn-danger-outline" title="Delete event" style="width:22px;height:22px;padding:2px;"
+                onclick="confirmDeleteEvent(${e.id}, '${escHtml(e.name).replace(/'/g,"\\'")}')">
+                <svg><use href="#icon-trash"/></svg>
+              </button>
+            </li>`).join('')
+        : `<li class="item-empty" style="background:none;padding:0.25rem 0;">None</li>`;
+
+      card.innerHTML = `
+        <div class="phase-card__header">
+          <div class="phase-card__color-dot" style="background:${color};--dot-color:${color}"></div>
+          <div class="phase-card__title-area">
+            <h3 class="phase-card__name">${escHtml(phase.name)}</h3>
+            <div class="phase-card__meta">
+              ${statusBadge(status)}
+              <span class="phase-card__dates">${fmtDate(phase.start_date)} → ${fmtDate(phase.end_date)}</span>
+              ${depName ? `<span class="badge badge-dep">↳ After ${escHtml(depName)}</span>` : ''}
+            </div>
+          </div>
+          <div class="phase-card__actions">
+            <button class="btn btn-icon btn-ghost" title="Edit phase" onclick="editPhase(${phase.id})">
+              <svg><use href="#icon-pencil"/></svg>
+            </button>
+            <button class="btn btn-icon btn-ghost" title="Set dependency" onclick="setDependency(${phase.id})">
+              <svg><use href="#icon-link"/></svg>
+            </button>
+            <button class="btn btn-icon btn-danger-outline" title="Delete phase" onclick="confirmDeletePhase(${phase.id}, '${escHtml(phase.name).replace(/'/g,"\\'")}')">
+              <svg><use href="#icon-trash"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="phase-section">
+          <div class="phase-section__header">
+            <span class="phase-section__label">Milestones</span>
+            <button class="btn btn-ghost btn-xs" onclick="addMilestone(${phase.id})">+ Add</button>
+          </div>
+          <ul class="item-list" id="ms-list-${phase.id}">${msItems}</ul>
+        </div>
+
+        <div class="phase-section">
+          <div class="phase-section__header">
+            <span class="phase-section__label">Events</span>
+            <button class="btn btn-ghost btn-xs" onclick="addEvent(${phase.id})">+ Add</button>
+          </div>
+          <ul class="item-list" id="ev-list-${phase.id}">${evItems}</ul>
+        </div>`;
+
+      list.appendChild(card);
+    });
+  }
+
+  function renderGantt(phases) {
+    if (!phases || phases.length === 0) {
+      document.querySelector('.gantt-container').innerHTML = `<div class="item-empty" style="text-align:center;padding:2rem;">No phases to display.</div>`;
+      return;
+    }
+    // Inject per-phase color styles
+    const styleId = 'gantt-phase-colors';
+    let styleTag = document.getElementById(styleId);
+    if (!styleTag) { styleTag = document.createElement('style'); styleTag.id = styleId; document.head.appendChild(styleTag); }
+    styleTag.textContent = phases.map(p =>
+      `.gantt .bar.phase-bar-${p.id} { fill: ${p.color || '#6366f1'} !important; }`
+    ).join('\n');
+
+    const tasks = phases.map(p => ({
+      id: 'p' + p.id,
+      name: p.name,
+      start: p.start_date,
+      end: p.end_date,
+      progress: getPhaseStatus(p.start_date, p.end_date) === 'past' ? 100 : 0,
+      dependencies: p.depends_on_id ? ('p' + p.depends_on_id) : '',
+      custom_class: 'phase-bar-' + p.id,
+    }));
+
+    // Reset SVG
+    const svgEl = document.getElementById('gantt');
+    if (svgEl) svgEl.innerHTML = '';
+    const container = document.querySelector('.gantt-container');
+    container.innerHTML = '<svg id="gantt"></svg>';
+
+    state.ganttInstance = new Gantt('#gantt', tasks, {
+      header_height: 50,
+      column_width: 30,
+      step: 24,
+      bar_height: 22,
+      bar_corner_radius: 4,
+      arrow_curve: 5,
+      padding: 18,
+      view_mode: state.ganttView,
+      view_modes: ['Day', 'Week', 'Month'],
+    });
+  }
+
+  // ── Tabs ─────────────────────────────────────────────────────
+  function switchTab(tab) {
+    state.activeTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      const active = b.dataset.tab === tab;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-selected', active);
+    });
+    document.getElementById('tab-phases').style.display   = tab === 'phases'   ? '' : 'none';
+    document.getElementById('tab-timeline').style.display = tab === 'timeline' ? '' : 'none';
+    if (tab === 'timeline' && state.project) renderGantt(state.project.phases);
+  }
+
+  function setGanttView(view) {
+    state.ganttView = view;
+    document.querySelectorAll('#ganttViewBtns button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+    if (state.ganttInstance) {
+      state.ganttInstance.change_view_mode(view);
+    }
+  }
+
+  // ── Generic Modal ────────────────────────────────────────────
+  let _modalCallback = null;
+
+  function showModal(title, fields, callback, submitLabel = 'Save') {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalSubmitBtn').textContent = submitLabel;
+    const container = document.getElementById('modalFields');
+    container.innerHTML = '';
+    fields.forEach(f => {
+      const wrap = document.createElement('div');
+      wrap.className = 'modal-field';
+      wrap.innerHTML = buildFieldHTML(f);
+      container.appendChild(wrap);
+    });
+    // Wire color picker live preview
+    fields.filter(f => f.type === 'color').forEach(f => {
+      const input = document.getElementById(`modal_input_${f.id}`);
+      const preview = document.getElementById(`color_preview_${f.id}`);
+      if (input && preview) {
+        input.addEventListener('input', () => { preview.textContent = input.value; });
+      }
+    });
+    _modalCallback = callback;
+    document.getElementById('genericModal').classList.add('is-open');
+    setTimeout(() => container.querySelector('input, select')?.focus(), 50);
+  }
+
+  function buildFieldHTML(f) {
+    const label = `<label class="field-label" for="modal_input_${f.id}">${escHtml(f.label)}</label>`;
+    if (f.type === 'color') {
+      return `${label}<div class="color-picker-row">
+        <input type="color" id="modal_input_${f.id}" value="${escHtml(f.defaultValue || '#6366f1')}">
+        <span class="color-preview" id="color_preview_${f.id}">${escHtml(f.defaultValue || '#6366f1')}</span>
+      </div>`;
+    }
+    if (f.type === 'select') {
+      const opts = (f.options || []).map(o =>
+        `<option value="${escHtml(String(o.value))}">${escHtml(o.text)}</option>`
+      ).join('');
+      return `${label}<select id="modal_input_${f.id}"><option value="">— None —</option>${opts}</select>`;
+    }
+    return `${label}<input type="${f.type || 'text'}" id="modal_input_${f.id}" value="${escHtml(f.defaultValue || '')}" autocomplete="off">`;
+  }
+
+  function closeModal() {
+    document.getElementById('genericModal').classList.remove('is-open');
+    _modalCallback = null;
+  }
+
+  document.getElementById('modalSubmitBtn').addEventListener('click', () => {
+    if (_modalCallback) _modalCallback();
+  });
+
+  // ── Confirmation Modal ───────────────────────────────────────
+  let _confirmCallback = null;
+
+  function showConfirm(message, onConfirm, title = 'Confirm Deletion') {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    _confirmCallback = onConfirm;
+    document.getElementById('confirmModal').classList.add('is-open');
+  }
+
+  function closeConfirm() {
+    document.getElementById('confirmModal').classList.remove('is-open');
+    _confirmCallback = null;
+  }
+
+  document.getElementById('confirmOkBtn').addEventListener('click', () => {
+    if (_confirmCallback) _confirmCallback();
+    closeConfirm();
+  });
+
+  // ── Toast ────────────────────────────────────────────────────
+  const toast = {
+    _show(message, type) {
+      const el = document.createElement('div');
+      el.className = `toast toast--${type}`;
+      el.innerHTML = `<span class="toast__body">${escHtml(message)}</span>
+        <button class="toast__close" onclick="this.closest('.toast').remove()" aria-label="Dismiss">✕</button>`;
+      document.getElementById('toastContainer').appendChild(el);
+      setTimeout(() => {
+        el.classList.add('is-dismissing');
+        el.addEventListener('animationend', () => el.remove(), { once: true });
+      }, 4000);
+    },
+    success: (msg) => toast._show(msg, 'success'),
+    error:   (msg) => toast._show(msg, 'error'),
+    info:    (msg) => toast._show(msg, 'info'),
+  };
+
+  // ── Phase Actions ────────────────────────────────────────────
+  function addPhase() {
+    showModal('Add Phase', [
+      { id: 'name',  label: 'Phase Name', type: 'text' },
+      { id: 'start', label: 'Start Date', type: 'date', defaultValue: todayStr() },
+      { id: 'end',   label: 'End Date',   type: 'date', defaultValue: todayStr() },
+      { id: 'color', label: 'Color',      type: 'color', defaultValue: '#6366f1' },
+    ], async () => {
+      const name  = document.getElementById('modal_input_name').value.trim();
+      const start = document.getElementById('modal_input_start').value;
+      const end   = document.getElementById('modal_input_end').value;
+      const color = document.getElementById('modal_input_color').value;
+      if (!name || !start || !end) return;
+      const btn = document.getElementById('modalSubmitBtn');
+      btn.disabled = true;
+      try {
+        const resp = await api.createPhase(projectId, { name, start_date: start, end_date: end, color });
+        if (resp.ok) { toast.success('Phase added'); closeModal(); await refresh(); }
+        else toast.error('Failed to add phase');
+      } finally { btn.disabled = false; }
+    }, 'Add Phase');
+  }
+
+  function editPhase(phaseId) {
+    const phase = state.project.phases.find(p => p.id === phaseId);
+    if (!phase) return;
+    showModal('Edit Phase', [
+      { id: 'name',  label: 'Phase Name', type: 'text',  defaultValue: phase.name },
+      { id: 'start', label: 'Start Date', type: 'date',  defaultValue: phase.start_date },
+      { id: 'end',   label: 'End Date',   type: 'date',  defaultValue: phase.end_date },
+      { id: 'color', label: 'Color',      type: 'color', defaultValue: phase.color || '#6366f1' },
+    ], async () => {
+      const name  = document.getElementById('modal_input_name').value.trim();
+      const start = document.getElementById('modal_input_start').value;
+      const end   = document.getElementById('modal_input_end').value;
+      const color = document.getElementById('modal_input_color').value;
+      if (!name || !start || !end) return;
+      const btn = document.getElementById('modalSubmitBtn');
+      btn.disabled = true;
+      try {
+        const resp = await api.updatePhase(phaseId, {
+          name, start_date: start, end_date: end, color,
+          depends_on_id: phase.depends_on_id ?? null,
+        });
+        if (resp.ok) { toast.success('Phase updated'); closeModal(); await refresh(); }
+        else toast.error('Failed to update phase');
+      } finally { btn.disabled = false; }
+    }, 'Save Changes');
+  }
+
+  function setDependency(phaseId) {
+    const opts = (state.project.phases || [])
+      .filter(p => p.id !== phaseId)
+      .map(p => ({ value: p.id, text: p.name }));
+    showModal('Set Phase Dependency', [
+      { id: 'target', label: 'This phase starts after…', type: 'select', options: opts },
+    ], async () => {
+      const target = document.getElementById('modal_input_target').value;
+      const phase = state.project.phases.find(p => p.id === phaseId);
+      const resp = await api.updatePhase(phaseId, {
+        name: phase.name,
+        start_date: phase.start_date,
+        end_date: phase.end_date,
+        color: phase.color || '#6366f1',
+        depends_on_id: target ? parseInt(target) : null,
+      });
+      if (resp.ok) { toast.success('Dependency updated'); closeModal(); await refresh(); }
+      else toast.error('Failed to update dependency');
+    }, 'Save');
+  }
+
+  function confirmDeletePhase(id, name) {
+    showConfirm(
+      `Delete phase "${name}" and all its milestones and events? This cannot be undone.`,
+      async () => {
+        const resp = await api.deletePhase(id);
+        if (resp.ok) { toast.success('Phase deleted'); await refresh(); }
+        else toast.error('Failed to delete phase');
+      }
+    );
+  }
+
+  // ── Milestone Actions ────────────────────────────────────────
+  function addMilestone(phaseId) {
+    showModal('Add Milestone', [
+      { id: 'name',   label: 'Milestone Name', type: 'text' },
+      { id: 'target', label: 'Target Date',    type: 'date', defaultValue: todayStr() },
+    ], async () => {
+      const name = document.getElementById('modal_input_name').value.trim();
+      const date = document.getElementById('modal_input_target').value;
+      if (!name || !date) return;
+      const btn = document.getElementById('modalSubmitBtn');
+      btn.disabled = true;
+      try {
+        const resp = await api.createMilestone(phaseId, { name, target_date: date });
+        if (resp.ok) { toast.success('Milestone added'); closeModal(); await refresh(); }
+        else toast.error('Failed to add milestone');
+      } finally { btn.disabled = false; }
+    }, 'Add Milestone');
+  }
+
+  function confirmDeleteMilestone(id, name) {
+    showConfirm(
+      `Delete milestone "${name}"?`,
+      async () => {
+        const resp = await api.deleteMilestone(id);
+        if (resp.ok) { toast.success('Milestone deleted'); await refresh(); }
+        else toast.error('Failed to delete milestone');
+      }
+    );
+  }
+
+  // ── Event Actions ────────────────────────────────────────────
+  function addEvent(phaseId) {
+    showModal('Add Event', [
+      { id: 'name',  label: 'Event Name', type: 'text' },
+      { id: 'start', label: 'Start Date', type: 'date', defaultValue: todayStr() },
+      { id: 'end',   label: 'End Date',   type: 'date', defaultValue: todayStr() },
+    ], async () => {
+      const name  = document.getElementById('modal_input_name').value.trim();
+      const start = document.getElementById('modal_input_start').value;
+      const end   = document.getElementById('modal_input_end').value;
+      if (!name || !start || !end) return;
+      const btn = document.getElementById('modalSubmitBtn');
+      btn.disabled = true;
+      try {
+        const resp = await api.createEvent(phaseId, { name, start_date: start, end_date: end });
+        if (resp.ok) { toast.success('Event added'); closeModal(); await refresh(); }
+        else toast.error('Failed to add event');
+      } finally { btn.disabled = false; }
+    }, 'Add Event');
+  }
+
+  function confirmDeleteEvent(id, name) {
+    showConfirm(
+      `Delete event "${name}"?`,
+      async () => {
+        const resp = await api.deleteEvent(id);
+        if (resp.ok) { toast.success('Event deleted'); await refresh(); }
+        else toast.error('Failed to delete event');
+      }
+    );
+  }
+
+  // ── Project Actions ──────────────────────────────────────────
+  function editProject() {
+    const p = state.project;
+    showModal('Edit Project', [
+      { id: 'name', label: 'Project Name', type: 'text', defaultValue: p.name },
+      { id: 'desc', label: 'Description',  type: 'text', defaultValue: p.description || '' },
+    ], async () => {
+      const name = document.getElementById('modal_input_name').value.trim();
+      const description = document.getElementById('modal_input_desc').value.trim();
+      if (!name) return;
+      const resp = await api.updateProject(projectId, { name, description });
+      if (resp.ok) { toast.success('Project updated'); closeModal(); await refresh(); }
+      else toast.error('Failed to update project');
+    }, 'Save Changes');
+  }
+
+  function confirmDeleteProject() {
+    showConfirm(
+      'Delete this entire project and all its phases? This cannot be undone.',
+      async () => {
+        const resp = await api.deleteProject(projectId);
+        if (resp.ok) {
+          toast.success('Project deleted');
+          setTimeout(() => { window.location.href = '/'; }, 800);
+        } else {
+          toast.error('Failed to delete project');
+        }
+      }
+    );
+  }
+
+  function onGcalClick() {
+    toast.info('Phases are automatically synced to Google Calendar on create and update.');
+  }
+
+  // ── Keyboard Shortcuts ───────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeModal(); closeConfirm(); }
+  });
+  document.getElementById('genericModal').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey && e.target.tagName !== 'SELECT') {
+      e.preventDefault();
+      document.getElementById('modalSubmitBtn').click();
+    }
+  });
+  document.getElementById('genericModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+  document.getElementById('confirmModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeConfirm();
+  });
+
+  // ── Init ─────────────────────────────────────────────────────
+  async function refresh() {
+    try {
+      state.project = await api.getProject(projectId);
+      renderProject(state.project);
+    } catch (err) {
+      toast.error('Failed to load project');
+    }
+  }
+
+  refresh();
+</script>
+</body>
+</html>

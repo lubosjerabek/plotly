@@ -1,130 +1,627 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Manager</title>
-    <style>
-        :root {
-            --bg-color: #121212;
-            --surface-color: #1e1e1e;
-            --primary-color: #bb86fc;
-            --text-color: #ffffff;
-            --secondary-text: #b3b3b3;
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 2rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .container {
-            width: 100%;
-            max-width: 800px;
-        }
-        h1 {
-            color: var(--primary-color);
-            font-weight: 700;
-        }
-        .card {
-            background-color: var(--surface-color);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        input, button {
-            padding: 0.75rem;
-            margin: 0.5rem 0;
-            border-radius: 8px;
-            border: 1px solid #333;
-            background: #2c2c2c;
-            color: #fff;
-            width: calc(100% - 1.5rem);
-            box-sizing: border-box;
-        }
-        button {
-            background: var(--primary-color);
-            color: var(--bg-color);
-            font-weight: bold;
-            cursor: pointer;
-            border: none;
-            transition: all 0.2s ease;
-        }
-        button:hover {
-            opacity: 0.9;
-            transform: scale(1.02);
-        }
-        .project-list {
-            list-style: none;
-            padding: 0;
-        }
-        .project-item {
-            padding: 1rem;
-            border-bottom: 1px solid #333;
-        }
-        .project-item h3 {
-            margin: 0 0 0.5rem 0;
-            color: var(--primary-color);
-        }
-        .project-item p {
-            margin: 0;
-            color: var(--secondary-text);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plotly — Project Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:          #0f0f13;
+      --surface:     #16161d;
+      --surface-2:   #1e1e2a;
+      --surface-3:   #252535;
+      --border:      rgba(255,255,255,0.08);
+      --border-hover:rgba(255,255,255,0.16);
+      --accent:      #6366f1;
+      --accent-hover:#4f51d4;
+      --accent-muted:rgba(99,102,241,0.15);
+      --danger:      #ef4444;
+      --danger-muted:rgba(239,68,68,0.12);
+      --success:     #22c55e;
+      --text:        #f1f5f9;
+      --text-muted:  #94a3b8;
+      --text-subtle: #64748b;
+      --radius-sm:   6px;
+      --radius-md:   10px;
+      --radius-lg:   16px;
+      --radius-xl:   24px;
+      --shadow-md:   0 4px 20px rgba(0,0,0,0.5);
+      --shadow-lg:   0 8px 32px rgba(0,0,0,0.6);
+      --shadow-glow: 0 0 0 1px var(--accent), 0 0 20px rgba(99,102,241,0.2);
+      --t-fast:      0.15s ease;
+      --t-base:      0.25s ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15,15,19,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 56px;
+    }
+    .topbar__brand {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .topbar__brand-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    /* ── Page ── */
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2.5rem 2rem;
+    }
+    .page__header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .page__title-area h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 0 0 0.25rem;
+      letter-spacing: -0.03em;
+    }
+    .page__subtitle {
+      color: var(--text-muted);
+      margin: 0;
+      font-size: 13px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4em;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--t-fast);
+      border: none;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .btn-ghost:hover { border-color: var(--border-hover); color: var(--text); background: var(--surface-2); }
+    .btn-danger {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--danger);
+    }
+    .btn-danger:hover { background: var(--danger-muted); border-color: var(--danger); }
+    .btn-icon {
+      padding: 0.35rem;
+      width: 28px;
+      height: 28px;
+      justify-content: center;
+    }
+    .btn svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
+
+    /* ── Project Grid ── */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    /* ── Project Card ── */
+    .project-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      transition: border-color var(--t-base), box-shadow var(--t-base);
+      position: relative;
+    }
+    .project-card:hover {
+      border-color: var(--accent);
+      box-shadow: var(--shadow-glow);
+    }
+    .project-card__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .project-card__name {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 0;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .project-card__actions {
+      display: flex;
+      gap: 0.2rem;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity var(--t-fast);
+    }
+    .project-card:hover .project-card__actions { opacity: 1; }
+    .project-card__desc {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin: 0;
+      flex: 1;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      min-height: 2.4em;
+    }
+    .project-card__footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.4rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+    .project-card__meta {
+      font-size: 12px;
+      color: var(--text-subtle);
+    }
+
+    /* ── Empty State ── */
+    .empty-state {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+      text-align: center;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-lg);
+      color: var(--text-muted);
+    }
+    .empty-state__icon {
+      width: 48px; height: 48px;
+      background: var(--surface-2);
+      border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .empty-state__icon svg { width: 24px; height: 24px; fill: var(--text-subtle); }
+    .empty-state h3 { margin: 0 0 0.5rem; font-size: 15px; color: var(--text); }
+    .empty-state p { margin: 0 0 1.5rem; font-size: 13px; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      padding: 1rem;
+    }
+    .modal-overlay.is-open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      width: 100%; max-width: 440px;
+      box-shadow: var(--shadow-lg);
+      animation: slideUp var(--t-base) forwards;
+      overflow: hidden;
+    }
+    .modal--sm { max-width: 360px; }
+    .modal__header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1.25rem 1.5rem 0;
+    }
+    .modal__title { margin: 0; font-size: 1.05rem; font-weight: 600; }
+    .modal__close {
+      background: none; border: none; color: var(--text-muted); cursor: pointer;
+      font-size: 18px; line-height: 1; padding: 4px; border-radius: var(--radius-sm);
+      transition: color var(--t-fast);
+    }
+    .modal__close:hover { color: var(--text); }
+    .modal__body { padding: 1.25rem 1.5rem; }
+    .modal__footer {
+      display: flex; justify-content: flex-end; gap: 0.5rem;
+      padding: 0 1.5rem 1.25rem;
+    }
+    .modal-field { margin-bottom: 1rem; }
+    .modal-field:last-child { margin-bottom: 0; }
+    .field-label {
+      display: block; margin-bottom: 0.4rem;
+      font-size: 12px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .modal-field input, .modal-field select, .modal-field textarea {
+      width: 100%; padding: 0.65rem 0.75rem;
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-family: inherit; font-size: 14px;
+      transition: border-color var(--t-fast), box-shadow var(--t-fast);
+    }
+    .modal-field input:focus, .modal-field select:focus {
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-muted);
+    }
+    .confirm-message { color: var(--text-muted); margin: 0; line-height: 1.6; }
+
+    /* ── Toasts ── */
+    .toast-container {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      z-index: 1000; display: flex; flex-direction: column; gap: 0.5rem;
+      pointer-events: none;
+    }
+    .toast {
+      pointer-events: all;
+      display: flex; align-items: center; gap: 0.75rem;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 0.75rem 1rem;
+      min-width: 260px; max-width: 400px; box-shadow: var(--shadow-md);
+      font-size: 14px; animation: toastIn 0.2s ease forwards;
+    }
+    .toast--success { border-left: 3px solid var(--success); }
+    .toast--error   { border-left: 3px solid var(--danger); }
+    .toast--info    { border-left: 3px solid var(--accent); }
+    .toast__body { flex: 1; }
+    .toast__close {
+      background: none; border: none; color: var(--text-subtle);
+      cursor: pointer; padding: 0; font-size: 16px; line-height: 1;
+    }
+    .toast.is-dismissing { animation: toastOut 0.2s ease forwards; }
+
+    @keyframes slideUp {
+      from { transform: translateY(16px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    @keyframes toastIn {
+      from { transform: translateX(110%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    @keyframes toastOut {
+      from { transform: translateX(0);    opacity: 1; }
+      to   { transform: translateX(110%); opacity: 0; }
+    }
+
+    @media (max-width: 600px) {
+      .page { padding: 1.5rem 1rem; }
+      .topbar { padding: 0 1rem; }
+      .page__header { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Projects</h1>
-        <div class="card">
-            <h2>Create New Project</h2>
-            <form id="createProjectForm">
-                <input type="text" id="pName" placeholder="Project Name" required>
-                <input type="text" id="pDesc" placeholder="Description">
-                <button type="submit">Create</button>
-            </form>
-        </div>
-        
-        <div class="card">
-            <h2>Project List</h2>
-            <ul id="projectsList" class="project-list"></ul>
-        </div>
+
+<!-- SVG icon sprite -->
+<svg style="display:none" aria-hidden="true">
+  <symbol id="icon-pencil" viewBox="0 0 16 16">
+    <path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354l-1.086-1.086zM11.189 6.25 9.75 4.81 3.847 10.714a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.249.249 0 0 0 .108-.064L11.189 6.25z"/>
+  </symbol>
+  <symbol id="icon-trash" viewBox="0 0 16 16">
+    <path d="M11 1.75V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.675l.66 6.6a.25.25 0 0 0 .249.225h5.19a.25.25 0 0 0 .249-.225l.66-6.6a.75.75 0 0 1 1.492.149l-.66 6.6A1.748 1.748 0 0 1 10.595 15h-5.19a1.75 1.75 0 0 1-1.741-1.575l-.66-6.6a.75.75 0 1 1 1.492-.15zM6.5 1.75V3h3V1.75a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25z"/>
+  </symbol>
+  <symbol id="icon-folder" viewBox="0 0 16 16">
+    <path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75z"/>
+  </symbol>
+  <symbol id="icon-plus" viewBox="0 0 16 16">
+    <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2z"/>
+  </symbol>
+</svg>
+
+<nav class="topbar">
+  <div class="topbar__brand">
+    <div class="topbar__brand-dot"></div>
+    Plotly
+  </div>
+</nav>
+
+<main class="page">
+  <div class="page__header">
+    <div class="page__title-area">
+      <h1>Projects</h1>
+      <p class="page__subtitle" id="pageSubtitle">Loading…</p>
     </div>
+    <button class="btn btn-primary" id="btnNewProject" onclick="openNewProjectModal()">
+      <svg><use href="#icon-plus"/></svg>
+      New Project
+    </button>
+  </div>
 
-    <script>
-        document.getElementById('createProjectForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('pName').value;
-            const desc = document.getElementById('pDesc').value;
-            const resp = await fetch('/api/projects/', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name: name, description: desc})
-            });
-            if(resp.ok) {
-                loadProjects();
-                document.getElementById('createProjectForm').reset();
-            }
-        });
+  <div class="projects-grid" id="projectsGrid"></div>
+</main>
 
-        async function loadProjects() {
-            const resp = await fetch('/api/projects/');
-            const projects = await resp.json();
-            const list = document.getElementById('projectsList');
-            list.innerHTML = '';
-            projects.forEach(p => {
-                const li = document.createElement('li');
-                li.className = 'project-item';
-                li.innerHTML = `<h3>${p.name}</h3><p>${p.description || 'No description'}</p>`;
-                list.appendChild(li);
-            });
-        }
+<!-- New / Edit Project Modal -->
+<div class="modal-overlay" id="projectModal" role="dialog" aria-modal="true" aria-labelledby="projectModalTitle">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="projectModalTitle">New Project</h2>
+      <button class="modal__close" onclick="closeProjectModal()" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body">
+      <div class="modal-field">
+        <label class="field-label" for="pm_name">Project Name</label>
+        <input type="text" id="pm_name" placeholder="e.g. Website Redesign" autocomplete="off">
+      </div>
+      <div class="modal-field">
+        <label class="field-label" for="pm_desc">Description</label>
+        <input type="text" id="pm_desc" placeholder="Optional description" autocomplete="off">
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" onclick="closeProjectModal()">Cancel</button>
+      <button class="btn btn-primary" id="projectModalSubmit" onclick="submitProjectModal()">Create</button>
+    </div>
+  </div>
+</div>
 
-        loadProjects();
-    </script>
+<!-- Confirmation Modal -->
+<div class="modal-overlay" id="confirmModal" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="modal modal--sm">
+    <div class="modal__header">
+      <h2 class="modal__title" id="confirmTitle">Confirm</h2>
+    </div>
+    <div class="modal__body">
+      <p class="confirm-message" id="confirmMessage"></p>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-danger" id="confirmOkBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+<script>
+  // ── State ────────────────────────────────────────────────────
+  const state = { projects: [] };
+  let _editingProjectId = null;
+
+  // ── API ──────────────────────────────────────────────────────
+  const h = { 'Content-Type': 'application/json' };
+  const api = {
+    getProjects:   ()         => fetch('/api/projects/').then(r => r.json()),
+    createProject: (data)     => fetch('/api/projects/', { method: 'POST', headers: h, body: JSON.stringify(data) }),
+    updateProject: (id, data) => fetch(`/api/projects/${id}`, { method: 'PUT', headers: h, body: JSON.stringify(data) }),
+    deleteProject: (id)       => fetch(`/api/projects/${id}`, { method: 'DELETE' }),
+  };
+
+  // ── Render ───────────────────────────────────────────────────
+  function renderProjects() {
+    const grid = document.getElementById('projectsGrid');
+    const subtitle = document.getElementById('pageSubtitle');
+    grid.innerHTML = '';
+
+    const count = state.projects.length;
+    subtitle.textContent = count === 0 ? 'No projects yet' : `${count} project${count !== 1 ? 's' : ''}`;
+
+    if (count === 0) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state__icon">
+            <svg><use href="#icon-folder"/></svg>
+          </div>
+          <h3>No projects yet</h3>
+          <p>Create your first project to get started tracking phases and milestones.</p>
+          <button class="btn btn-primary" onclick="openNewProjectModal()">
+            <svg><use href="#icon-plus"/></svg>
+            New Project
+          </button>
+        </div>`;
+      return;
+    }
+
+    state.projects.forEach(p => {
+      const phaseCount = (p.phases || []).length;
+      const card = document.createElement('article');
+      card.className = 'project-card';
+      card.dataset.id = p.id;
+      card.innerHTML = `
+        <div class="project-card__header">
+          <h2 class="project-card__name">${escHtml(p.name)}</h2>
+          <div class="project-card__actions">
+            <button class="btn btn-icon btn-ghost" title="Edit project" onclick="openEditProjectModal(${p.id})">
+              <svg><use href="#icon-pencil"/></svg>
+            </button>
+            <button class="btn btn-icon btn-danger" title="Delete project" onclick="confirmDeleteProject(${p.id}, '${escHtml(p.name).replace(/'/g, "\\'")}')">
+              <svg><use href="#icon-trash"/></svg>
+            </button>
+          </div>
+        </div>
+        <p class="project-card__desc">${escHtml(p.description || 'No description')}</p>
+        <div class="project-card__footer">
+          <span class="project-card__meta">${phaseCount} phase${phaseCount !== 1 ? 's' : ''}</span>
+          <a class="btn btn-ghost" href="/project/${p.id}">Open →</a>
+        </div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  // ── Project Modal ────────────────────────────────────────────
+  function openNewProjectModal() {
+    _editingProjectId = null;
+    document.getElementById('projectModalTitle').textContent = 'New Project';
+    document.getElementById('projectModalSubmit').textContent = 'Create';
+    document.getElementById('pm_name').value = '';
+    document.getElementById('pm_desc').value = '';
+    document.getElementById('projectModal').classList.add('is-open');
+    setTimeout(() => document.getElementById('pm_name').focus(), 50);
+  }
+
+  function openEditProjectModal(id) {
+    const p = state.projects.find(x => x.id === id);
+    if (!p) return;
+    _editingProjectId = id;
+    document.getElementById('projectModalTitle').textContent = 'Edit Project';
+    document.getElementById('projectModalSubmit').textContent = 'Save';
+    document.getElementById('pm_name').value = p.name;
+    document.getElementById('pm_desc').value = p.description || '';
+    document.getElementById('projectModal').classList.add('is-open');
+    setTimeout(() => document.getElementById('pm_name').focus(), 50);
+  }
+
+  function closeProjectModal() {
+    document.getElementById('projectModal').classList.remove('is-open');
+    _editingProjectId = null;
+  }
+
+  async function submitProjectModal() {
+    const name = document.getElementById('pm_name').value.trim();
+    const description = document.getElementById('pm_desc').value.trim();
+    if (!name) {
+      document.getElementById('pm_name').focus();
+      return;
+    }
+    const btn = document.getElementById('projectModalSubmit');
+    btn.disabled = true;
+
+    try {
+      let resp;
+      if (_editingProjectId) {
+        resp = await api.updateProject(_editingProjectId, { name, description });
+      } else {
+        resp = await api.createProject({ name, description });
+      }
+      if (resp.ok) {
+        closeProjectModal();
+        toast.success(_editingProjectId ? 'Project updated' : 'Project created');
+        await refresh();
+      } else {
+        toast.error('Something went wrong');
+      }
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ── Confirm ──────────────────────────────────────────────────
+  let _confirmCallback = null;
+
+  function showConfirm(message, onConfirm, title = 'Confirm Deletion') {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    _confirmCallback = onConfirm;
+    document.getElementById('confirmModal').classList.add('is-open');
+  }
+
+  function closeConfirm() {
+    document.getElementById('confirmModal').classList.remove('is-open');
+    _confirmCallback = null;
+  }
+
+  document.getElementById('confirmOkBtn').addEventListener('click', () => {
+    if (_confirmCallback) _confirmCallback();
+    closeConfirm();
+  });
+
+  function confirmDeleteProject(id, name) {
+    showConfirm(
+      `Delete "${name}" and all its phases? This cannot be undone.`,
+      async () => {
+        const resp = await api.deleteProject(id);
+        if (resp.ok) { toast.success('Project deleted'); await refresh(); }
+        else toast.error('Failed to delete project');
+      }
+    );
+  }
+
+  // ── Toast ────────────────────────────────────────────────────
+  const toast = {
+    _show(message, type, icon) {
+      const el = document.createElement('div');
+      el.className = `toast toast--${type}`;
+      el.innerHTML = `<span class="toast__body">${escHtml(message)}</span>
+        <button class="toast__close" onclick="this.closest('.toast').remove()" aria-label="Dismiss">✕</button>`;
+      document.getElementById('toastContainer').appendChild(el);
+      setTimeout(() => {
+        el.classList.add('is-dismissing');
+        el.addEventListener('animationend', () => el.remove(), { once: true });
+      }, 4000);
+    },
+    success: (msg) => toast._show(msg, 'success'),
+    error:   (msg) => toast._show(msg, 'error'),
+    info:    (msg) => toast._show(msg, 'info'),
+  };
+
+  // ── Utilities ────────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ── Keyboard shortcuts ───────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeProjectModal(); closeConfirm(); }
+  });
+  document.getElementById('projectModal').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitProjectModal(); }
+  });
+  document.getElementById('projectModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeProjectModal();
+  });
+  document.getElementById('confirmModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeConfirm();
+  });
+
+  // ── Init ─────────────────────────────────────────────────────
+  async function refresh() {
+    state.projects = await api.getProjects();
+    renderProjects();
+  }
+
+  refresh();
+</script>
 </body>
 </html>

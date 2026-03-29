@@ -19,11 +19,11 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/")
 def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="index.html", context={})
 
 @app.get("/login")
 def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="login.html", context={})
 
 # API Endpoints
 @app.post("/api/projects/", response_model=schemas.Project)
@@ -95,4 +95,73 @@ def update_phase(phase_id: int, phase_in: schemas.PhaseCreate, db: Session = Dep
     db.refresh(db_phase)
     return db_phase
 
+@app.get("/project/{project_id}")
+def project_page(request: Request, project_id: int):
+    return templates.TemplateResponse(request=request, name="project.html", context={"project_id": project_id})
 
+@app.get("/api/projects/{project_id}", response_model=schemas.Project)
+def get_project(project_id: int, db: Session = Depends(get_db)):
+    db_project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not db_project:
+        raise HTTPException(status_code=404, detail="Not found")
+    return db_project
+
+@app.delete("/api/projects/{project_id}")
+def delete_project(project_id: int, db: Session = Depends(get_db)):
+    db_project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if db_project:
+        for phase in db_project.phases:
+            if phase.google_event_id: sync_service.delete_event(phase.google_event_id)
+            for m in phase.milestones:
+                if m.google_event_id: sync_service.delete_event(m.google_event_id)
+            for e in phase.events:
+                if e.google_event_id: sync_service.delete_event(e.google_event_id)
+        db.delete(db_project)
+        db.commit()
+    return {"ok": True}
+
+@app.put("/api/projects/{project_id}", response_model=schemas.Project)
+def update_project(project_id: int, proj_in: schemas.ProjectCreate, db: Session = Depends(get_db)):
+    db_project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not db_project: raise HTTPException(status_code=404)
+    db_project.name = proj_in.name
+    db_project.description = proj_in.description
+    db.commit()
+    db.refresh(db_project)
+    return db_project
+
+@app.post("/api/phases/{phase_id}/milestones/", response_model=schemas.Milestone)
+def create_milestone(phase_id: int, ms: schemas.MilestoneCreate, db: Session = Depends(get_db)):
+    event_id = sync_service.sync_event(ms.target_date, ms.target_date, ms.name)
+    db_ms = models.Milestone(**ms.model_dump(), phase_id=phase_id, google_event_id=event_id)
+    db.add(db_ms)
+    db.commit()
+    db.refresh(db_ms)
+    return db_ms
+
+@app.delete("/api/milestones/{ms_id}")
+def delete_milestone(ms_id: int, db: Session = Depends(get_db)):
+    ms = db.query(models.Milestone).filter(models.Milestone.id == ms_id).first()
+    if ms:
+        if ms.google_event_id: sync_service.delete_event(ms.google_event_id)
+        db.delete(ms)
+        db.commit()
+    return {"ok": True}
+
+@app.post("/api/phases/{phase_id}/events/", response_model=schemas.Event)
+def create_event(phase_id: int, ev: schemas.EventCreate, db: Session = Depends(get_db)):
+    event_id = sync_service.sync_event(ev.start_date, ev.end_date, ev.name)
+    db_ev = models.Event(**ev.model_dump(), phase_id=phase_id, google_event_id=event_id)
+    db.add(db_ev)
+    db.commit()
+    db.refresh(db_ev)
+    return db_ev
+
+@app.delete("/api/events/{ev_id}")
+def delete_event(ev_id: int, db: Session = Depends(get_db)):
+    ev = db.query(models.Event).filter(models.Event.id == ev_id).first()
+    if ev:
+        if ev.google_event_id: sync_service.delete_event(ev.google_event_id)
+        db.delete(ev)
+        db.commit()
+    return {"ok": True}
