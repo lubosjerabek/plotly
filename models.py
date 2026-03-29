@@ -20,6 +20,7 @@ class Phase(Base):
     start_date = Column(Date)
     end_date = Column(Date)
     color = Column(String, default="#cccccc")
+    description = Column(String, nullable=True)
     google_event_id = Column(String, nullable=True)
     depends_on_id = Column(Integer, ForeignKey("phases.id"), nullable=True)
 

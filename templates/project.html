@@ -260,6 +260,48 @@
     .badge-past     { background: rgba(100,116,139,0.15);color: var(--status-past); }
     .badge-dep      { background: var(--accent-muted);   color: var(--accent); }
 
+    /* ── Phase collapse/expand ── */
+    .phase-card__toggle-area {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+      user-select: none;
+    }
+    .phase-card__chevron {
+      width: 16px; height: 16px;
+      fill: var(--text-subtle);
+      flex-shrink: 0;
+      margin-top: 3px;
+      transition: transform 0.2s ease;
+    }
+    .phase-card.is-collapsed .phase-card__chevron {
+      transform: rotate(-90deg);
+    }
+    .phase-card__body {
+      overflow: hidden;
+      max-height: 1000px;
+      margin-top: 1rem;
+      transition: max-height 0.25s ease, margin-top 0.2s ease, opacity 0.2s ease;
+      opacity: 1;
+    }
+    .phase-card.is-collapsed .phase-card__body {
+      max-height: 0;
+      margin-top: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ── Phase description ── */
+    .phase-description {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin: 0 0 1rem;
+      line-height: 1.55;
+    }
+
     /* ── Phase sections (milestones / events) ── */
     .phase-section {
       margin-top: 1rem;
@@ -396,9 +438,14 @@
       font-family: inherit; font-size: 14px;
       transition: border-color var(--t-fast), box-shadow var(--t-fast);
     }
-    .modal-field input:focus, .modal-field select:focus {
+    .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus {
       outline: none; border-color: var(--accent);
       box-shadow: 0 0 0 3px var(--accent-muted);
+    }
+    .modal-field textarea {
+      resize: vertical;
+      min-height: 80px;
+      line-height: 1.5;
     }
     .color-picker-row {
       display: flex;
@@ -479,6 +526,9 @@
   </symbol>
   <symbol id="icon-plus" viewBox="0 0 16 16">
     <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2z"/>
+  </symbol>
+  <symbol id="icon-chevron-down" viewBox="0 0 16 16">
+    <path d="M4.427 7.427l3.396 3.396a.25.25 0 0 0 .354 0l3.396-3.396A.25.25 0 0 0 11.396 7H4.604a.25.25 0 0 0-.177.427z"/>
   </symbol>
 </svg>
 
@@ -663,9 +713,11 @@
       const status = getPhaseStatus(phase.start_date, phase.end_date);
       const color = phase.color || '#6366f1';
       const depName = phase.depends_on_id ? phaseMap[phase.depends_on_id] : null;
+      // Only active phases start expanded
+      const collapsed = status !== 'active';
 
       const card = document.createElement('div');
-      card.className = 'phase-card';
+      card.className = 'phase-card' + (collapsed ? ' is-collapsed' : '');
       card.dataset.phaseId = phase.id;
       card.dataset.status = status;
 
@@ -697,13 +749,16 @@
 
       card.innerHTML = `
         <div class="phase-card__header">
-          <div class="phase-card__color-dot" style="background:${color};--dot-color:${color}"></div>
-          <div class="phase-card__title-area">
-            <h3 class="phase-card__name">${escHtml(phase.name)}</h3>
-            <div class="phase-card__meta">
-              ${statusBadge(status)}
-              <span class="phase-card__dates">${fmtDate(phase.start_date)} → ${fmtDate(phase.end_date)}</span>
-              ${depName ? `<span class="badge badge-dep">↳ After ${escHtml(depName)}</span>` : ''}
+          <div class="phase-card__toggle-area" onclick="togglePhase(${phase.id})" title="${collapsed ? 'Expand' : 'Collapse'} phase">
+            <svg class="phase-card__chevron"><use href="#icon-chevron-down"/></svg>
+            <div class="phase-card__color-dot" style="background:${color};--dot-color:${color}"></div>
+            <div class="phase-card__title-area">
+              <h3 class="phase-card__name">${escHtml(phase.name)}</h3>
+              <div class="phase-card__meta">
+                ${statusBadge(status)}
+                <span class="phase-card__dates">${fmtDate(phase.start_date)} → ${fmtDate(phase.end_date)}</span>
+                ${depName ? `<span class="badge badge-dep">↳ After ${escHtml(depName)}</span>` : ''}
+              </div>
             </div>
           </div>
           <div class="phase-card__actions">
@@ -719,20 +774,23 @@
           </div>
         </div>
 
-        <div class="phase-section">
-          <div class="phase-section__header">
-            <span class="phase-section__label">Milestones</span>
-            <button class="btn btn-ghost btn-xs" onclick="addMilestone(${phase.id})">+ Add</button>
+        <div class="phase-card__body">
+          ${phase.description ? `<p class="phase-description">${escHtml(phase.description)}</p>` : ''}
+          <div class="phase-section">
+            <div class="phase-section__header">
+              <span class="phase-section__label">Milestones</span>
+              <button class="btn btn-ghost btn-xs" onclick="addMilestone(${phase.id})">+ Add</button>
+            </div>
+            <ul class="item-list" id="ms-list-${phase.id}">${msItems}</ul>
           </div>
-          <ul class="item-list" id="ms-list-${phase.id}">${msItems}</ul>
-        </div>
 
-        <div class="phase-section">
-          <div class="phase-section__header">
-            <span class="phase-section__label">Events</span>
-            <button class="btn btn-ghost btn-xs" onclick="addEvent(${phase.id})">+ Add</button>
+          <div class="phase-section">
+            <div class="phase-section__header">
+              <span class="phase-section__label">Events</span>
+              <button class="btn btn-ghost btn-xs" onclick="addEvent(${phase.id})">+ Add</button>
+            </div>
+            <ul class="item-list" id="ev-list-${phase.id}">${evItems}</ul>
           </div>
-          <ul class="item-list" id="ev-list-${phase.id}">${evItems}</ul>
         </div>`;
 
       list.appendChild(card);
@@ -843,6 +901,9 @@
       ).join('');
       return `${label}<select id="modal_input_${f.id}"><option value="">— None —</option>${opts}</select>`;
     }
+    if (f.type === 'textarea') {
+      return `${label}<textarea id="modal_input_${f.id}" rows="3" autocomplete="off">${escHtml(f.defaultValue || '')}</textarea>`;
+    }
     return `${label}<input type="${f.type || 'text'}" id="modal_input_${f.id}" value="${escHtml(f.defaultValue || '')}" autocomplete="off">`;
   }
 
@@ -893,15 +954,27 @@
     info:    (msg) => toast._show(msg, 'info'),
   };
 
+  // ── Phase collapse / expand ──────────────────────────────────
+  function togglePhase(phaseId) {
+    const card = document.querySelector(`.phase-card[data-phase-id="${phaseId}"]`);
+    if (!card) return;
+    const collapsing = !card.classList.contains('is-collapsed');
+    card.classList.toggle('is-collapsed', collapsing);
+    const toggleArea = card.querySelector('.phase-card__toggle-area');
+    if (toggleArea) toggleArea.title = collapsing ? 'Expand phase' : 'Collapse phase';
+  }
+
   // ── Phase Actions ────────────────────────────────────────────
   function addPhase() {
     showModal('Add Phase', [
-      { id: 'name',  label: 'Phase Name', type: 'text' },
-      { id: 'start', label: 'Start Date', type: 'date', defaultValue: todayStr() },
-      { id: 'end',   label: 'End Date',   type: 'date', defaultValue: todayStr() },
-      { id: 'color', label: 'Color',      type: 'color', defaultValue: '#6366f1' },
+      { id: 'name',  label: 'Phase Name',  type: 'text' },
+      { id: 'desc',  label: 'Description', type: 'textarea' },
+      { id: 'start', label: 'Start Date',  type: 'date', defaultValue: todayStr() },
+      { id: 'end',   label: 'End Date',    type: 'date', defaultValue: todayStr() },
+      { id: 'color', label: 'Color',       type: 'color', defaultValue: '#6366f1' },
     ], async () => {
       const name  = document.getElementById('modal_input_name').value.trim();
+      const desc  = document.getElementById('modal_input_desc').value.trim();
       const start = document.getElementById('modal_input_start').value;
       const end   = document.getElementById('modal_input_end').value;
       const color = document.getElementById('modal_input_color').value;
@@ -909,7 +982,7 @@
       const btn = document.getElementById('modalSubmitBtn');
       btn.disabled = true;
       try {
-        const resp = await api.createPhase(projectId, { name, start_date: start, end_date: end, color });
+        const resp = await api.createPhase(projectId, { name, description: desc || null, start_date: start, end_date: end, color });
         if (resp.ok) { toast.success('Phase added'); closeModal(); await refresh(); }
         else toast.error('Failed to add phase');
       } finally { btn.disabled = false; }
@@ -920,12 +993,14 @@
     const phase = state.project.phases.find(p => p.id === phaseId);
     if (!phase) return;
     showModal('Edit Phase', [
-      { id: 'name',  label: 'Phase Name', type: 'text',  defaultValue: phase.name },
-      { id: 'start', label: 'Start Date', type: 'date',  defaultValue: phase.start_date },
-      { id: 'end',   label: 'End Date',   type: 'date',  defaultValue: phase.end_date },
-      { id: 'color', label: 'Color',      type: 'color', defaultValue: phase.color || '#6366f1' },
+      { id: 'name',  label: 'Phase Name',  type: 'text',     defaultValue: phase.name },
+      { id: 'desc',  label: 'Description', type: 'textarea', defaultValue: phase.description || '' },
+      { id: 'start', label: 'Start Date',  type: 'date',     defaultValue: phase.start_date },
+      { id: 'end',   label: 'End Date',    type: 'date',     defaultValue: phase.end_date },
+      { id: 'color', label: 'Color',       type: 'color',    defaultValue: phase.color || '#6366f1' },
     ], async () => {
       const name  = document.getElementById('modal_input_name').value.trim();
+      const desc  = document.getElementById('modal_input_desc').value.trim();
       const start = document.getElementById('modal_input_start').value;
       const end   = document.getElementById('modal_input_end').value;
       const color = document.getElementById('modal_input_color').value;
@@ -934,7 +1009,7 @@
       btn.disabled = true;
       try {
         const resp = await api.updatePhase(phaseId, {
-          name, start_date: start, end_date: end, color,
+          name, description: desc || null, start_date: start, end_date: end, color,
           depends_on_id: phase.depends_on_id ?? null,
         });
         if (resp.ok) { toast.success('Phase updated'); closeModal(); await refresh(); }
@@ -1077,7 +1152,7 @@
     if (e.key === 'Escape') { closeModal(); closeConfirm(); }
   });
   document.getElementById('genericModal').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey && e.target.tagName !== 'SELECT') {
+    if (e.key === 'Enter' && !e.shiftKey && e.target.tagName !== 'SELECT' && e.target.tagName !== 'TEXTAREA') {
       e.preventDefault();
       document.getElementById('modalSubmitBtn').click();
     }

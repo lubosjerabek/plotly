@@ -38,6 +38,7 @@ class PhaseBase(BaseModel):
     start_date: date
     end_date: date
     color: Optional[str] = "#cccccc"
+    description: Optional[str] = None
     depends_on_id: Optional[int] = None
 
 class PhaseCreate(PhaseBase):

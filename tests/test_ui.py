@@ -41,6 +41,14 @@ def navigate_to_test_project(page: Page, name: str):
     expect(page.locator("#pName")).to_contain_text(name)
 
 
+def expand_phase(page: Page, phase_name: str):
+    """Expand a phase card if it is currently collapsed."""
+    card = page.locator(".phase-card", has_text=phase_name)
+    if "is-collapsed" in (card.get_attribute("class") or ""):
+        card.locator(".phase-card__toggle-area").click()
+        page.wait_for_timeout(300)  # let CSS transition finish
+
+
 # ── Test: Dashboard ────────────────────────────────────────────
 
 class TestDashboard:
@@ -166,6 +174,64 @@ class TestProjectDetail:
         page.wait_for_load_state("networkidle")
         expect(page.locator(".phase-card", has_text="Colored Phase")).to_be_visible()
 
+    def test_add_phase_with_description(self, page: Page):
+        navigate_to_test_project(page, "Playwright Test Project")
+        page.locator("button", has_text="Add Phase").click()
+        expect(page.locator("#genericModal")).to_have_class(re.compile(r"is-open"))
+        # Description textarea should be present
+        expect(page.locator("#modal_input_desc")).to_be_visible()
+        page.locator("#modal_input_name").fill("Described Phase")
+        page.locator("#modal_input_desc").fill("This phase has a detailed description for context.")
+        page.locator("#modal_input_start").fill("2027-07-01")
+        page.locator("#modal_input_end").fill("2027-09-30")
+        page.locator("#modalSubmitBtn").click()
+        expect(page.locator(".toast--success")).to_be_visible()
+        page.wait_for_load_state("networkidle")
+        # Expand so body is visible
+        expand_phase(page, "Described Phase")
+        phase_card = page.locator(".phase-card", has_text="Described Phase")
+        expect(phase_card.locator(".phase-description")).to_contain_text("This phase has a detailed description")
+
+    def test_upcoming_phase_is_collapsed_by_default(self, page: Page):
+        navigate_to_test_project(page, "Playwright Test Project")
+        # Alpha Phase has future dates → upcoming → should be collapsed
+        phase_card = page.locator(".phase-card", has_text="Alpha Phase")
+        expect(phase_card).to_have_class(re.compile(r"is-collapsed"))
+
+    def test_collapsed_phase_can_be_expanded(self, page: Page):
+        navigate_to_test_project(page, "Playwright Test Project")
+        phase_card = page.locator(".phase-card", has_text="Alpha Phase")
+        expect(phase_card).to_have_class(re.compile(r"is-collapsed"))
+        phase_card.locator(".phase-card__toggle-area").click()
+        page.wait_for_timeout(300)
+        expect(phase_card).not_to_have_class(re.compile(r"is-collapsed"))
+
+    def test_expanded_phase_can_be_collapsed(self, page: Page):
+        navigate_to_test_project(page, "Playwright Test Project")
+        # Expand first
+        expand_phase(page, "Alpha Phase")
+        phase_card = page.locator(".phase-card", has_text="Alpha Phase")
+        expect(phase_card).not_to_have_class(re.compile(r"is-collapsed"))
+        # Now collapse
+        phase_card.locator(".phase-card__toggle-area").click()
+        page.wait_for_timeout(300)
+        expect(phase_card).to_have_class(re.compile(r"is-collapsed"))
+
+    def test_edit_phase_description(self, page: Page):
+        navigate_to_test_project(page, "Playwright Test Project")
+        phase_card = page.locator(".phase-card", has_text="Alpha Phase")
+        phase_card.locator("button[title='Edit phase']").click()
+        expect(page.locator("#genericModal")).to_have_class(re.compile(r"is-open"))
+        # Description field should be present and pre-populated (empty for existing phase)
+        expect(page.locator("#modal_input_desc")).to_be_visible()
+        page.locator("#modal_input_desc").fill("Added description via edit.")
+        page.locator("#modalSubmitBtn").click()
+        expect(page.locator(".toast--success")).to_be_visible()
+        page.wait_for_load_state("networkidle")
+        expand_phase(page, "Alpha Phase")
+        phase_card = page.locator(".phase-card", has_text="Alpha Phase")
+        expect(phase_card.locator(".phase-description")).to_contain_text("Added description via edit.")
+
     def test_esc_closes_generic_modal(self, page: Page):
         navigate_to_test_project(page, "Playwright Test Project")
         page.locator("button", has_text="Add Phase").click()
@@ -188,6 +254,7 @@ class TestProjectDetail:
 
     def test_add_milestone_to_phase(self, page: Page):
         navigate_to_test_project(page, "Playwright Test Project")
+        expand_phase(page, "Alpha Phase")
         phase_card = page.locator(".phase-card", has_text="Alpha Phase")
         # First "+ Add" button = milestones
         phase_card.locator(".phase-section").first.locator("button", has_text="+ Add").click()
@@ -206,6 +273,7 @@ class TestProjectDetail:
 
     def test_add_event_to_phase(self, page: Page):
         navigate_to_test_project(page, "Playwright Test Project")
+        expand_phase(page, "Alpha Phase")
         phase_card = page.locator(".phase-card", has_text="Alpha Phase")
         # Second ".phase-section" = events
         phase_card.locator(".phase-section").last.locator("button", has_text="+ Add").click()
@@ -247,6 +315,7 @@ class TestProjectDetail:
 
     def test_delete_milestone_via_confirmation_modal(self, page: Page):
         navigate_to_test_project(page, "Playwright Test Project")
+        expand_phase(page, "Alpha Phase")
         phase_card = page.locator(".phase-card", has_text="Alpha Phase")
         ms_item = phase_card.locator(".phase-section").first.locator(".item-list li", has_text="Kickoff Meeting")
         ms_item.locator("button[title='Delete milestone']").click()
@@ -262,6 +331,7 @@ class TestProjectDetail:
 
     def test_delete_event_via_confirmation_modal(self, page: Page):
         navigate_to_test_project(page, "Playwright Test Project")
+        expand_phase(page, "Alpha Phase")
         phase_card = page.locator(".phase-card", has_text="Alpha Phase")
         ev_item = phase_card.locator(".phase-section").last.locator(".item-list li", has_text="Sprint Demo")
         ev_item.locator("button[title='Delete event']").click()

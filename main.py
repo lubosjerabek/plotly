@@ -11,6 +11,14 @@ from sync import sync_service
 # Create tables
 models.Base.metadata.create_all(bind=engine)
 
+# Migrate: add description column to phases if not present
+from sqlalchemy import text, inspect as sa_inspect
+with engine.connect() as _conn:
+    _cols = [c["name"] for c in sa_inspect(engine).get_columns("phases")]
+    if "description" not in _cols:
+        _conn.execute(text("ALTER TABLE phases ADD COLUMN description TEXT"))
+        _conn.commit()
+
 app = FastAPI()
 
 # Make sure templates directory exists
@@ -73,6 +81,7 @@ def update_phase(phase_id: int, phase_in: schemas.PhaseCreate, db: Session = Dep
     db_phase.start_date = phase_in.start_date
     db_phase.end_date = phase_in.end_date
     db_phase.color = phase_in.color
+    db_phase.description = phase_in.description
     db_phase.depends_on_id = phase_in.depends_on_id
 
     # Update Google Event
