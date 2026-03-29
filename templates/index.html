@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Manager</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --primary-color: #bb86fc;
+            --text-color: #ffffff;
+            --secondary-text: #b3b3b3;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+        h1 {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+        .card {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        input, button {
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #2c2c2c;
+            color: #fff;
+            width: calc(100% - 1.5rem);
+            box-sizing: border-box;
+        }
+        button {
+            background: var(--primary-color);
+            color: var(--bg-color);
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+        button:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+        .project-list {
+            list-style: none;
+            padding: 0;
+        }
+        .project-item {
+            padding: 1rem;
+            border-bottom: 1px solid #333;
+        }
+        .project-item h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary-color);
+        }
+        .project-item p {
+            margin: 0;
+            color: var(--secondary-text);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Projects</h1>
+        <div class="card">
+            <h2>Create New Project</h2>
+            <form id="createProjectForm">
+                <input type="text" id="pName" placeholder="Project Name" required>
+                <input type="text" id="pDesc" placeholder="Description">
+                <button type="submit">Create</button>
+            </form>
+        </div>
+        
+        <div class="card">
+            <h2>Project List</h2>
+            <ul id="projectsList" class="project-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('createProjectForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('pName').value;
+            const desc = document.getElementById('pDesc').value;
+            const resp = await fetch('/api/projects/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name: name, description: desc})
+            });
+            if(resp.ok) {
+                loadProjects();
+                document.getElementById('createProjectForm').reset();
+            }
+        });
+
+        async function loadProjects() {
+            const resp = await fetch('/api/projects/');
+            const projects = await resp.json();
+            const list = document.getElementById('projectsList');
+            list.innerHTML = '';
+            projects.forEach(p => {
+                const li = document.createElement('li');
+                li.className = 'project-item';
+                li.innerHTML = `<h3>${p.name}</h3><p>${p.description || 'No description'}</p>`;
+                list.appendChild(li);
+            });
+        }
+
+        loadProjects();
+    </script>
+</body>
+</html>
