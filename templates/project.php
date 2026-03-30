@@ -394,8 +394,10 @@
     .gantt .bar-label { fill: #fff !important; font-size: 11px !important; }
     .gantt .arrow { stroke: var(--text-subtle) !important; }
     .gantt .today-highlight { fill: rgba(99,102,241,0.08) !important; }
-    .gantt .bar.gantt-milestone { fill: #f59e0b !important; }
-    .gantt .bar.gantt-event     { fill: #10b981 !important; }
+    .gantt .gantt-milestone .bar { fill: #f59e0b !important; }
+    .gantt .gantt-milestone .bar-progress { fill: #d97706 !important; }
+    .gantt .gantt-event .bar     { fill: #10b981 !important; }
+    .gantt .gantt-event .bar-progress { fill: #059669 !important; }
 
     /* ── Modal ── */
     .modal-overlay {
@@ -960,7 +962,8 @@
     let styleTag = document.getElementById(styleId);
     if (!styleTag) { styleTag = document.createElement('style'); styleTag.id = styleId; document.head.appendChild(styleTag); }
     styleTag.textContent = phases.map(p =>
-      `.gantt .bar.phase-bar-${p.id} { fill: ${p.color || '#6366f1'} !important; }`
+      `.gantt .phase-bar-${p.id} .bar { fill: ${p.color || '#6366f1'} !important; }` +
+      `.gantt .phase-bar-${p.id} .bar-progress { fill: ${p.color || '#6366f1'} !important; opacity: 0.7; }`
     ).join('\n');
 
     const tasks = phases.map(p => {
@@ -978,15 +981,32 @@
       };
     });
 
-    allMilestones.forEach(m => tasks.push({
-      id: 'ms' + m.id,
-      name: '◆ ' + m.name,
-      start: m.target_date,
-      end: m.target_date,
-      progress: 0,
-      dependencies: '',
-      custom_class: 'gantt-milestone',
-    }));
+    // Group milestones by date so same-day milestones share one row
+    const msByDate = {};
+    allMilestones.forEach(m => {
+      if (!msByDate[m.target_date]) msByDate[m.target_date] = [];
+      msByDate[m.target_date].push(m);
+    });
+    Object.entries(msByDate).forEach(([date, group]) => {
+      tasks.push({
+        id: 'ms-' + date,
+        name: '◆ ' + group.map(m => m.name).join(' · '),
+        start: date,
+        end: date,
+        progress: 0,
+        dependencies: '',
+        custom_class: 'gantt-milestone',
+      });
+    });
+
+    // Update phase dependencies to point at the grouped milestone row id
+    tasks.forEach(t => {
+      if (t.dependencies && t.dependencies.startsWith('ms')) {
+        const msId = parseInt(t.dependencies.slice(2));
+        const ms = allMilestones.find(m => m.id === msId);
+        if (ms) t.dependencies = 'ms-' + ms.target_date;
+      }
+    });
 
     allEvents.forEach(e => tasks.push({
       id: 'ev' + e.id,

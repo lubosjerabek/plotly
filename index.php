@@ -191,7 +191,7 @@ function collect_project_ics_items(array $project): array {
             'uid'         => 'phase-' . $phase['id'] . '@plotly',
             'start'       => $phase['start_date'],
             'end'         => $phase['end_date'],
-            'summary'     => '[Phase] ' . $phase['name'],
+            'summary'     => '📅 ' . $phase['name'],
             'description' => $phase['description'] ?? '',
         ];
         foreach ($phase['milestones'] as $ms) {
@@ -199,7 +199,7 @@ function collect_project_ics_items(array $project): array {
                 'uid'         => 'ms-' . $ms['id'] . '@plotly',
                 'start'       => $ms['target_date'],
                 'end'         => $ms['target_date'],
-                'summary'     => '[Milestone] ' . $ms['name'],
+                'summary'     => '🏁 ' . $ms['name'],
                 'description' => '',
             ];
         }
