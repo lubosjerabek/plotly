@@ -350,7 +350,13 @@
 
     /* ── Gantt overrides ── */
     #tab-timeline {
-      overflow: hidden;
+      overflow: visible;
+      width: 100vw;
+      position: relative;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 0 2rem;
+      box-sizing: border-box;
     }
     .gantt-toolbar {
       display: flex;
@@ -388,6 +394,8 @@
     .gantt .bar-label { fill: #fff !important; font-size: 11px !important; }
     .gantt .arrow { stroke: var(--text-subtle) !important; }
     .gantt .today-highlight { fill: rgba(99,102,241,0.08) !important; }
+    .gantt .bar.gantt-milestone { fill: #f59e0b !important; }
+    .gantt .bar.gantt-event     { fill: #10b981 !important; }
 
     /* ── Modal ── */
     .modal-overlay {
@@ -607,7 +615,7 @@
       </button>
     </div>
     <!-- Project-wide milestones & events (not tied to any phase) -->
-    <div id="projectItemsCard" class="phase-card" style="display:none;border-left:3px solid var(--accent);margin-bottom:1.25rem;">
+    <div id="projectItemsCard" class="phase-card" style="border-left:3px solid var(--accent);margin-bottom:1.25rem;">
       <div class="phase-card__header">
         <div style="display:flex;align-items:center;gap:0.6rem;flex:1;">
           <div class="phase-card__color-dot" style="background:var(--accent);--dot-color:var(--accent)"></div>
@@ -631,9 +639,9 @@
     <div class="gantt-toolbar">
       <span>View:</span>
       <div class="gantt-view-btns" id="ganttViewBtns">
-        <button class="active" data-view="Day"   onclick="setGanttView('Day')">Day</button>
+        <button data-view="Day"   onclick="setGanttView('Day')">Day</button>
         <button data-view="Week"  onclick="setGanttView('Week')">Week</button>
-        <button data-view="Month" onclick="setGanttView('Month')">Month</button>
+        <button class="active" data-view="Month" onclick="setGanttView('Month')">Month</button>
       </div>
     </div>
     <div class="gantt-container">
@@ -706,7 +714,7 @@
 <script>
   // ── Constants & State ────────────────────────────────────────
   const projectId = <?= (int)$project_id ?>;
-  const state = { project: null, activeTab: 'phases', ganttView: 'Day', ganttInstance: null };
+  const state = { project: null, activeTab: 'phases', ganttView: 'Month', ganttInstance: null };
 
   // ── API ──────────────────────────────────────────────────────
   const H = { 'Content-Type': 'application/json' };
@@ -723,6 +731,7 @@
     deleteEvent:            (id)       => fetch(`/api/events/${id}`, { method: 'DELETE' }),
     createProjectMilestone: (pid, d)   => fetch(`/api/projects/${pid}/milestones`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
     createProjectEvent:     (pid, d)   => fetch(`/api/projects/${pid}/events`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
+    updateMilestone:        (id, d)    => fetch(`/api/milestones/${id}`, { method: 'PATCH', headers: H, body: JSON.stringify(d) }),
   };
 
   // ── Utilities ────────────────────────────────────────────────
@@ -766,24 +775,23 @@
     document.getElementById('phaseCount').textContent = `${pc} phase${pc !== 1 ? 's' : ''}`;
     renderProjectItems(p.milestones || [], p.events || []);
     renderPhases(p.phases);
-    if (state.activeTab === 'timeline') renderGantt(p.phases);
+    if (state.activeTab === 'timeline') renderGantt(p);
   }
 
   function renderProjectItems(milestones, events) {
     const card = document.getElementById('projectItemsCard');
     const container = document.getElementById('projectItemsBody');
     if (!card || !container) return;
-    if (milestones.length === 0 && events.length === 0) {
-      card.style.display = 'none';
-      return;
-    }
-    card.style.display = '';
 
     const msItems = milestones.length > 0
       ? milestones.map(m => `
           <li>
             <span class="item-list__name">${escHtml(m.name)}</span>
             <span class="item-list__meta">${fmtDate(m.target_date)}</span>
+            <button class="btn btn-icon btn-ghost" title="Edit milestone date" style="width:22px;height:22px;padding:2px;"
+              onclick="editMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}', '${m.target_date}')">
+              <svg><use href="#icon-pencil"/></svg>
+            </button>
             <button class="btn btn-icon btn-danger-outline" title="Delete milestone" style="width:22px;height:22px;padding:2px;"
               onclick="confirmDeleteMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}')">
               <svg><use href="#icon-trash"/></svg>
@@ -833,10 +841,16 @@
     const phaseMap = {};
     phases.forEach(p => { phaseMap[p.id] = p.name; });
 
+    // Build milestone map for dependency display
+    const msMap = {};
+    (state.project.milestones || []).forEach(m => { msMap[m.id] = m.name; });
+    phases.forEach(p => (p.milestones || []).forEach(m => { msMap[m.id] = m.name; }));
+
     phases.forEach(phase => {
       const status = getPhaseStatus(phase.start_date, phase.end_date);
       const color = phase.color || '#6366f1';
       const depName = phase.depends_on_id ? phaseMap[phase.depends_on_id] : null;
+      const depMsName = phase.depends_on_milestone_id ? msMap[phase.depends_on_milestone_id] : null;
       const collapsed = status !== 'active';
 
       const card = document.createElement('div');
@@ -849,6 +863,10 @@
             <li>
               <span class="item-list__name">${escHtml(m.name)}</span>
               <span class="item-list__meta">${fmtDate(m.target_date)}</span>
+              <button class="btn btn-icon btn-ghost" title="Edit milestone date" style="width:22px;height:22px;padding:2px;"
+                onclick="editMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}', '${m.target_date}')">
+                <svg><use href="#icon-pencil"/></svg>
+              </button>
               <button class="btn btn-icon btn-danger-outline" title="Delete milestone" style="width:22px;height:22px;padding:2px;"
                 onclick="confirmDeleteMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}')">
                 <svg><use href="#icon-trash"/></svg>
@@ -879,6 +897,7 @@
                 ${statusBadge(status)}
                 <span class="phase-card__dates">${fmtDate(phase.start_date)} → ${fmtDate(phase.end_date)}</span>
                 ${depName ? `<span class="badge badge-dep">↳ After ${escHtml(depName)}</span>` : ''}
+                ${depMsName ? `<span class="badge badge-dep">◆ After ${escHtml(depMsName)}</span>` : ''}
               </div>
             </div>
           </div>
@@ -918,11 +937,25 @@
     });
   }
 
-  function renderGantt(phases) {
-    if (!phases || phases.length === 0) {
-      document.querySelector('.gantt-container').innerHTML = `<div class="item-empty" style="text-align:center;padding:2rem;">No phases to display.</div>`;
+  function renderGantt(project) {
+    const phases = (project && project.phases) ? project.phases : [];
+    const container = document.querySelector('.gantt-container');
+
+    // Collect all milestones and events
+    const allMilestones = [
+      ...(project.milestones || []),
+      ...phases.flatMap(p => p.milestones || []),
+    ];
+    const allEvents = [
+      ...(project.events || []),
+      ...phases.flatMap(p => p.events || []),
+    ];
+
+    if (phases.length === 0 && allMilestones.length === 0 && allEvents.length === 0) {
+      container.innerHTML = `<div class="item-empty" style="text-align:center;padding:2rem;">No phases to display.</div>`;
       return;
     }
+
     const styleId = 'gantt-phase-colors';
     let styleTag = document.getElementById(styleId);
     if (!styleTag) { styleTag = document.createElement('style'); styleTag.id = styleId; document.head.appendChild(styleTag); }
@@ -930,19 +963,41 @@
       `.gantt .bar.phase-bar-${p.id} { fill: ${p.color || '#6366f1'} !important; }`
     ).join('\n');
 
-    const tasks = phases.map(p => ({
-      id: 'p' + p.id,
-      name: p.name,
-      start: p.start_date,
-      end: p.end_date,
-      progress: getPhaseStatus(p.start_date, p.end_date) === 'past' ? 100 : 0,
-      dependencies: p.depends_on_id ? ('p' + p.depends_on_id) : '',
-      custom_class: 'phase-bar-' + p.id,
+    const tasks = phases.map(p => {
+      let deps = '';
+      if (p.depends_on_id) deps = 'p' + p.depends_on_id;
+      if (p.depends_on_milestone_id) deps = 'ms' + p.depends_on_milestone_id;
+      return {
+        id: 'p' + p.id,
+        name: p.name,
+        start: p.start_date,
+        end: p.end_date,
+        progress: getPhaseStatus(p.start_date, p.end_date) === 'past' ? 100 : 0,
+        dependencies: deps,
+        custom_class: 'phase-bar-' + p.id,
+      };
+    });
+
+    allMilestones.forEach(m => tasks.push({
+      id: 'ms' + m.id,
+      name: '◆ ' + m.name,
+      start: m.target_date,
+      end: m.target_date,
+      progress: 0,
+      dependencies: '',
+      custom_class: 'gantt-milestone',
     }));
 
-    const svgEl = document.getElementById('gantt');
-    if (svgEl) svgEl.innerHTML = '';
-    const container = document.querySelector('.gantt-container');
+    allEvents.forEach(e => tasks.push({
+      id: 'ev' + e.id,
+      name: '▸ ' + e.name,
+      start: e.start_date,
+      end: e.end_date,
+      progress: 0,
+      dependencies: '',
+      custom_class: 'gantt-event',
+    }));
+
     container.innerHTML = '<svg id="gantt"></svg>';
 
     state.ganttInstance = new Gantt('#gantt', tasks, {
@@ -968,7 +1023,7 @@
     });
     document.getElementById('tab-phases').style.display   = tab === 'phases'   ? '' : 'none';
     document.getElementById('tab-timeline').style.display = tab === 'timeline' ? '' : 'none';
-    if (tab === 'timeline' && state.project) renderGantt(state.project.phases);
+    if (tab === 'timeline' && state.project) renderGantt(state.project);
   }
 
   function setGanttView(view) {
@@ -1037,9 +1092,9 @@
     }
     if (f.type === 'select') {
       const opts = (f.options || []).map(o =>
-        `<option value="${escHtml(String(o.value))}">${escHtml(o.text)}</option>`
+        `<option value="${escHtml(String(o.value))}"${String(o.value) === (f.defaultValue ?? '') ? ' selected' : ''}>${escHtml(o.text)}</option>`
       ).join('');
-      return `${label}<select id="modal_input_${f.id}"><option value="">— None —</option>${opts}</select>`;
+      return `${label}<select id="modal_input_${f.id}"><option value=""${!f.defaultValue ? ' selected' : ''}>— None —</option>${opts}</select>`;
     }
     if (f.type === 'textarea') {
       return `${label}<textarea id="modal_input_${f.id}" rows="3" autocomplete="off">${escHtml(f.defaultValue || '')}</textarea>`;
@@ -1159,20 +1214,33 @@
   }
 
   function setDependency(phaseId) {
-    const opts = (state.project.phases || [])
+    const phaseOpts = (state.project.phases || [])
       .filter(p => p.id !== phaseId)
-      .map(p => ({ value: p.id, text: p.name }));
+      .map(p => ({ value: 'phase:' + p.id, text: '📋 ' + p.name }));
+    const allMilestones = [
+      ...(state.project.milestones || []),
+      ...(state.project.phases || []).flatMap(p => p.milestones || []),
+    ];
+    const msOpts = allMilestones.map(m => ({ value: 'ms:' + m.id, text: '◆ ' + m.name + ' (' + fmtDate(m.target_date) + ')' }));
+    const opts = [...phaseOpts, ...msOpts];
+    const phase = state.project.phases.find(p => p.id === phaseId);
+    const currentVal = phase.depends_on_milestone_id
+      ? 'ms:' + phase.depends_on_milestone_id
+      : (phase.depends_on_id ? 'phase:' + phase.depends_on_id : '');
     showModal('Set Phase Dependency', [
-      { id: 'target', label: 'This phase starts after…', type: 'select', options: opts },
+      { id: 'target', label: 'This phase starts after…', type: 'select', options: opts, defaultValue: currentVal },
     ], async () => {
-      const target = document.getElementById('modal_input_target').value;
-      const phase = state.project.phases.find(p => p.id === phaseId);
+      const raw = document.getElementById('modal_input_target').value;
+      let depends_on_id = null, depends_on_milestone_id = null;
+      if (raw.startsWith('phase:')) depends_on_id = parseInt(raw.slice(6));
+      else if (raw.startsWith('ms:'))  depends_on_milestone_id = parseInt(raw.slice(3));
       const resp = await api.updatePhase(phaseId, {
         name: phase.name,
         start_date: phase.start_date,
         end_date: phase.end_date,
         color: phase.color || '#6366f1',
-        depends_on_id: target ? parseInt(target) : null,
+        depends_on_id,
+        depends_on_milestone_id,
       });
       if (resp.ok) { toast.success('Dependency updated'); closeModal(); await refresh(); }
       else toast.error('Failed to update dependency');
@@ -1246,6 +1314,22 @@
         else toast.error('Failed to add milestone');
       } finally { btn.disabled = false; }
     }, 'Add Milestone');
+  }
+
+  function editMilestone(id, name, currentDate) {
+    showModal(`Edit Milestone: ${name}`, [
+      { id: 'target', label: 'Target Date', type: 'date', defaultValue: currentDate },
+    ], async () => {
+      const date = document.getElementById('modal_input_target').value;
+      if (!date) return;
+      const btn = document.getElementById('modalSubmitBtn');
+      btn.disabled = true;
+      try {
+        const resp = await api.updateMilestone(id, { target_date: date });
+        if (resp.ok) { toast.success('Milestone updated'); closeModal(); await refresh(); }
+        else toast.error('Failed to update milestone');
+      } finally { btn.disabled = false; }
+    }, 'Save');
   }
 
   function confirmDeleteMilestone(id, name) {

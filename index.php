@@ -80,14 +80,15 @@ function get_full_project(int $id): ?array {
     $project['id'] = (int)$project['id'];
 
     // Phases
-    $stmt = pdo()->prepare('SELECT id, project_id, name, start_date, end_date, color, description, google_event_id, depends_on_id FROM phases WHERE project_id = ? ORDER BY start_date');
+    $stmt = pdo()->prepare('SELECT id, project_id, name, start_date, end_date, color, description, google_event_id, depends_on_id, depends_on_milestone_id FROM phases WHERE project_id = ? ORDER BY start_date');
     $stmt->execute([$id]);
     $phases = $stmt->fetchAll();
 
     foreach ($phases as &$phase) {
-        $phase['id']           = (int)$phase['id'];
-        $phase['project_id']   = (int)$phase['project_id'];
-        $phase['depends_on_id']= $phase['depends_on_id'] !== null ? (int)$phase['depends_on_id'] : null;
+        $phase['id']                     = (int)$phase['id'];
+        $phase['project_id']             = (int)$phase['project_id'];
+        $phase['depends_on_id']          = $phase['depends_on_id'] !== null ? (int)$phase['depends_on_id'] : null;
+        $phase['depends_on_milestone_id']= $phase['depends_on_milestone_id'] !== null ? (int)$phase['depends_on_milestone_id'] : null;
 
         // Milestones
         $ms = pdo()->prepare('SELECT id, phase_id, name, target_date, google_event_id FROM milestones WHERE phase_id = ? ORDER BY target_date');
@@ -360,7 +361,7 @@ function api_update_phase(int $id): void {
     $delta_days = (int)round((strtotime($new_start) - strtotime($old_start)) / 86400);
 
     $upd = pdo()->prepare(
-        'UPDATE phases SET name=?, start_date=?, end_date=?, color=?, description=?, depends_on_id=? WHERE id=?'
+        'UPDATE phases SET name=?, start_date=?, end_date=?, color=?, description=?, depends_on_id=?, depends_on_milestone_id=? WHERE id=?'
     );
     $upd->execute([
         $b['name']          ?? $existing['name'],
@@ -369,6 +370,7 @@ function api_update_phase(int $id): void {
         $b['color']         ?? $existing['color'],
         array_key_exists('description', $b) ? $b['description'] : $existing['description'],
         isset($b['depends_on_id']) && $b['depends_on_id'] ? (int)$b['depends_on_id'] : null,
+        isset($b['depends_on_milestone_id']) && $b['depends_on_milestone_id'] ? (int)$b['depends_on_milestone_id'] : null,
         $id,
     ]);
 
@@ -376,9 +378,10 @@ function api_update_phase(int $id): void {
 
     $sel->execute([$id]);
     $phase = $sel->fetch();
-    $phase['id']           = (int)$phase['id'];
-    $phase['project_id']   = (int)$phase['project_id'];
-    $phase['depends_on_id']= $phase['depends_on_id'] !== null ? (int)$phase['depends_on_id'] : null;
+    $phase['id']                     = (int)$phase['id'];
+    $phase['project_id']             = (int)$phase['project_id'];
+    $phase['depends_on_id']          = $phase['depends_on_id'] !== null ? (int)$phase['depends_on_id'] : null;
+    $phase['depends_on_milestone_id']= $phase['depends_on_milestone_id'] !== null ? (int)$phase['depends_on_milestone_id'] : null;
 
     // Attach milestones + events
     $ms = pdo()->prepare('SELECT * FROM milestones WHERE phase_id = ? ORDER BY target_date');
@@ -417,6 +420,44 @@ function api_create_milestone(int $phase_id): void {
     $stmt->execute([$phase_id, $b['name'] ?? '', $b['target_date'] ?? '']);
     $new_id = (int)pdo()->lastInsertId();
     json_out(['id' => $new_id, 'phase_id' => $phase_id, 'name' => $b['name'] ?? '', 'target_date' => $b['target_date'] ?? '', 'google_event_id' => null], 201);
+}
+
+function api_update_milestone(int $id): void {
+    require_auth();
+    $b = body();
+
+    $sel = pdo()->prepare('SELECT * FROM milestones WHERE id = ?');
+    $sel->execute([$id]);
+    $existing = $sel->fetch();
+    if (!$existing) not_found();
+
+    $old_date  = $existing['target_date'];
+    $new_date  = $b['target_date'] ?? $old_date;
+
+    $upd = pdo()->prepare('UPDATE milestones SET target_date = ? WHERE id = ?');
+    $upd->execute([$new_date, $id]);
+
+    // Cascade: shift all phases that depend on this milestone
+    $delta_days = (int)round((strtotime($new_date) - strtotime($old_date)) / 86400);
+    if ($delta_days !== 0) {
+        $deps = pdo()->prepare('SELECT id, start_date, end_date FROM phases WHERE depends_on_milestone_id = ?');
+        $deps->execute([$id]);
+        foreach ($deps->fetchAll() as $dep) {
+            $sign       = $delta_days >= 0 ? "+$delta_days" : "$delta_days";
+            $new_start  = date('Y-m-d', strtotime($dep['start_date'] . " $sign days"));
+            $new_end    = date('Y-m-d', strtotime($dep['end_date']   . " $sign days"));
+            $upd2 = pdo()->prepare('UPDATE phases SET start_date = ?, end_date = ? WHERE id = ?');
+            $upd2->execute([$new_start, $new_end, (int)$dep['id']]);
+            shift_dependents((int)$dep['id'], $delta_days);
+        }
+    }
+
+    $sel->execute([$id]);
+    $ms = $sel->fetch();
+    $ms['id'] = (int)$ms['id'];
+    if (isset($ms['phase_id']))   $ms['phase_id']   = $ms['phase_id']   !== null ? (int)$ms['phase_id']   : null;
+    if (isset($ms['project_id'])) $ms['project_id'] = $ms['project_id'] !== null ? (int)$ms['project_id'] : null;
+    json_out($ms);
 }
 
 function api_delete_milestone(int $id): void {
@@ -518,6 +559,7 @@ if ($method === 'DELETE' && preg_match('#^/api/phases/(\d+)$#', $path, $m))     
 // Milestones API
 if ($method === 'POST'   && preg_match('#^/api/projects/(\d+)/milestones$#', $path, $m)) { api_create_project_milestone((int)$m[1]); }
 if ($method === 'POST'   && preg_match('#^/api/phases/(\d+)/milestones$#', $path, $m))   { api_create_milestone((int)$m[1]); }
+if ($method === 'PATCH'  && preg_match('#^/api/milestones/(\d+)$#', $path, $m))          { api_update_milestone((int)$m[1]); }
 if ($method === 'DELETE' && preg_match('#^/api/milestones/(\d+)$#', $path, $m))          { api_delete_milestone((int)$m[1]); }
 
 // Events API

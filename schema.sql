@@ -1,5 +1,7 @@
 -- Run this once via your hosting panel's SQL / phpMyAdmin console.
--- Safe to re-run: all statements use IF NOT EXISTS / IF EXISTS guards.
+-- Note: the ALTER TABLE near the bottom adds the milestone-dependency FK and
+-- must be run on existing installations (Wedos). For fresh installs via Docker
+-- the entrypoint runs this file in full, so the ALTER also applies.
 
 CREATE TABLE IF NOT EXISTS projects (
   id          INT AUTO_INCREMENT PRIMARY KEY,
@@ -8,17 +10,19 @@ CREATE TABLE IF NOT EXISTS projects (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS phases (
-  id              INT AUTO_INCREMENT PRIMARY KEY,
-  project_id      INT NOT NULL,
-  name            VARCHAR(255) NOT NULL,
-  start_date      DATE NOT NULL,
-  end_date        DATE NOT NULL,
-  color           VARCHAR(20) DEFAULT '#cccccc',
-  description     TEXT,
-  google_event_id VARCHAR(255),
-  depends_on_id   INT,
+  id                      INT AUTO_INCREMENT PRIMARY KEY,
+  project_id              INT NOT NULL,
+  name                    VARCHAR(255) NOT NULL,
+  start_date              DATE NOT NULL,
+  end_date                DATE NOT NULL,
+  color                   VARCHAR(20) DEFAULT '#cccccc',
+  description             TEXT,
+  google_event_id         VARCHAR(255),
+  depends_on_id           INT,
+  depends_on_milestone_id INT NULL,
   FOREIGN KEY (project_id)    REFERENCES projects(id) ON DELETE CASCADE,
   FOREIGN KEY (depends_on_id) REFERENCES phases(id)   ON DELETE SET NULL
+  -- depends_on_milestone_id FK is added via ALTER TABLE below (circular reference)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- phase_id is nullable so milestones can belong to a project directly
@@ -47,16 +51,24 @@ CREATE TABLE IF NOT EXISTS events (
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Add the milestone-dependency FK on phases now that milestones table exists
+ALTER TABLE phases
+  ADD FOREIGN KEY (depends_on_milestone_id) REFERENCES milestones(id) ON DELETE SET NULL;
+
 -- ── Live-server migration (run once if upgrading from an earlier schema) ──────
 -- If you are starting fresh, these ALTER statements are harmless no-ops because
 -- the tables above already have the correct structure.
 --
 -- ALTER TABLE milestones
 --   MODIFY phase_id INT NULL,
---   ADD COLUMN IF NOT EXISTS project_id INT NULL,
---   ADD CONSTRAINT IF NOT EXISTS fk_ms_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
+--   ADD COLUMN project_id INT NULL,
+--   ADD FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
 --
 -- ALTER TABLE events
 --   MODIFY phase_id INT NULL,
---   ADD COLUMN IF NOT EXISTS project_id INT NULL,
---   ADD CONSTRAINT IF NOT EXISTS fk_ev_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
+--   ADD COLUMN project_id INT NULL,
+--   ADD FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE phases
+--   ADD COLUMN depends_on_milestone_id INT NULL,
+--   ADD FOREIGN KEY (depends_on_milestone_id) REFERENCES milestones(id) ON DELETE SET NULL;
