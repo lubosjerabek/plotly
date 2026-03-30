@@ -889,14 +889,14 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
       <div class="phase-section">
         <div class="phase-section__header">
           <span class="phase-section__label">${T.milestones}</span>
-          <button class="btn btn-ghost btn-xs" onclick="addProjectMilestone()">+ ${T.add}</button>
+          <button class="btn btn-ghost btn-xs" onclick="addProjectMilestone()">${T.add}</button>
         </div>
         <ul class="item-list">${msItems}</ul>
       </div>
       <div class="phase-section">
         <div class="phase-section__header">
           <span class="phase-section__label">${T.events}</span>
-          <button class="btn btn-ghost btn-xs" onclick="addProjectEvent()">+ ${T.add}</button>
+          <button class="btn btn-ghost btn-xs" onclick="addProjectEvent()">${T.add}</button>
         </div>
         <ul class="item-list">${evItems}</ul>
       </div>`;
@@ -1005,7 +1005,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
           <div class="phase-section">
             <div class="phase-section__header">
               <span class="phase-section__label">${T.milestones}</span>
-              <button class="btn btn-ghost btn-xs" onclick="addMilestone(${phase.id})">+ ${T.add}</button>
+              <button class="btn btn-ghost btn-xs" onclick="addMilestone(${phase.id})">${T.add}</button>
             </div>
             <ul class="item-list" id="ms-list-${phase.id}">${msItems}</ul>
           </div>
@@ -1013,7 +1013,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
           <div class="phase-section">
             <div class="phase-section__header">
               <span class="phase-section__label">${T.events}</span>
-              <button class="btn btn-ghost btn-xs" onclick="addEvent(${phase.id})">+ ${T.add}</button>
+              <button class="btn btn-ghost btn-xs" onclick="addEvent(${phase.id})">${T.add}</button>
             </div>
             <ul class="item-list" id="ev-list-${phase.id}">${evItems}</ul>
           </div>
