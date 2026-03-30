@@ -362,6 +362,47 @@ $lang = current_lang();
       to   { transform: translateX(110%); opacity: 0; }
     }
 
+    /* ── Calendar sync modal ── */
+    .cal-url-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .cal-url-input {
+      flex: 1;
+      padding: 0.6rem 0.75rem;
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      word-break: break-all;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: default;
+      user-select: all;
+    }
+    .cal-instructions {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin: 0;
+    }
+    .cal-rotate-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+      margin-top: 0.25rem;
+    }
+    .cal-rotate-label {
+      font-size: 12px;
+      color: var(--text-subtle);
+    }
+
     @media (max-width: 600px) {
       .page { padding: 1.5rem 1rem; }
       .topbar { padding: 0 1rem; }
@@ -385,6 +426,12 @@ $lang = current_lang();
   <symbol id="icon-plus" viewBox="0 0 16 16">
     <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2z"/>
   </symbol>
+  <symbol id="icon-calendar" viewBox="0 0 16 16">
+    <path d="M4.75 0a.75.75 0 0 1 .75.75V2h5V.75a.75.75 0 0 1 1.5 0V2h1.25c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 13.25 16H2.75A1.75 1.75 0 0 1 1 14.25V3.75C1 2.784 1.784 2 2.75 2H4V.75A.75.75 0 0 1 4.75 0zm0 3.5h-2a.25.25 0 0 0-.25.25V6h11V3.75a.25.25 0 0 0-.25-.25h-2V5a.75.75 0 0 1-1.5 0V3.5h-5V5a.75.75 0 0 1-1.5 0V3.5zm-2.25 4v6.75c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V7.5H2.5z"/>
+  </symbol>
+  <symbol id="icon-refresh" viewBox="0 0 16 16">
+    <path d="M1.705 8.005a.75.75 0 0 1 .834.656 5.5 5.5 0 0 0 9.592 2.97l-1.204-1.204a.25.25 0 0 1 .177-.427h3.646a.25.25 0 0 1 .25.25v3.646a.25.25 0 0 1-.427.177l-1.38-1.38A7.002 7.002 0 0 1 1.05 8.84a.75.75 0 0 1 .656-.834zM8 2.5a5.487 5.487 0 0 0-4.131 1.869l1.204 1.204A.25.25 0 0 1 4.896 6H1.25A.25.25 0 0 1 1 5.75V2.104a.25.25 0 0 1 .427-.177l1.38 1.38A7.002 7.002 0 0 1 14.95 7.16a.75.75 0 0 1-1.49.178A5.5 5.5 0 0 0 8 2.5z"/>
+  </symbol>
 </svg>
 
 <nav class="topbar">
@@ -404,6 +451,9 @@ $lang = current_lang();
         <button type="submit" class="lang-btn<?= $lang === 'cs' ? ' active' : '' ?>"><?= t('lang_cs') ?></button>
       </form>
     </div>
+    <button class="btn btn-ghost btn-icon" title="<?= htmlspecialchars(t('cal_sync_button_title')) ?>" onclick="openCalSyncModal()">
+      <svg><use href="#icon-calendar"/></svg>
+    </button>
     <a class="btn btn-ghost" href="/logout" style="font-size:12px"><?= htmlspecialchars(t('sign_out')) ?></a>
   </div>
 </nav>
@@ -459,6 +509,36 @@ $lang = current_lang();
     <div class="modal__footer">
       <button class="btn btn-ghost" onclick="closeConfirm()"><?= htmlspecialchars(t('cancel')) ?></button>
       <button class="btn btn-danger" id="confirmOkBtn"><?= htmlspecialchars(t('delete')) ?></button>
+    </div>
+  </div>
+</div>
+
+<!-- Calendar Sync Modal -->
+<div class="modal-overlay" id="calSyncModal" role="dialog" aria-modal="true" aria-labelledby="calSyncTitle">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="calSyncTitle"><?= htmlspecialchars(t('cal_sync_title')) ?></h2>
+      <button class="modal__close" onclick="closeCalSyncModal()" aria-label="<?= htmlspecialchars(t('close')) ?>">✕</button>
+    </div>
+    <div class="modal__body" style="display:flex;flex-direction:column;gap:1rem;">
+      <div>
+        <span class="field-label"><?= htmlspecialchars(t('cal_sync_all_projects_label')) ?></span>
+        <div class="cal-url-row">
+          <input class="cal-url-input" id="calSyncUrl" type="text" readonly value="">
+          <button class="btn btn-ghost" onclick="copyCalUrl()" title="<?= htmlspecialchars(t('tooltip_copy_url')) ?>"><?= htmlspecialchars(t('copy')) ?></button>
+        </div>
+      </div>
+      <p class="cal-instructions"><?= t('cal_sync_instructions') ?></p>
+      <div class="cal-rotate-row">
+        <span class="cal-rotate-label"><?= htmlspecialchars(t('cal_rotate_confirm')) ?></span>
+        <button class="btn btn-danger" id="calRotateBtn" onclick="rotateCalToken()">
+          <svg><use href="#icon-refresh"/></svg>
+          <?= htmlspecialchars(t('cal_rotate_token')) ?>
+        </button>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" onclick="closeCalSyncModal()"><?= htmlspecialchars(t('close')) ?></button>
     </div>
   </div>
 </div>
@@ -670,9 +750,6 @@ $lang = current_lang();
   }
 
   // ── Keyboard shortcuts ───────────────────────────────────────
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeProjectModal(); closeConfirm(); }
-  });
   document.getElementById('projectModal').addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitProjectModal(); }
   });
@@ -681,6 +758,52 @@ $lang = current_lang();
   });
   document.getElementById('confirmModal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeConfirm();
+  });
+
+  // ── Calendar Sync ─────────────────────────────────────────────
+  async function openCalSyncModal() {
+    document.getElementById('calSyncModal').classList.add('is-open');
+    const resp = await fetch('/api/settings/ics-token').then(r => r.json());
+    document.getElementById('calSyncUrl').value = resp.url;
+  }
+
+  function closeCalSyncModal() {
+    document.getElementById('calSyncModal').classList.remove('is-open');
+  }
+
+  function copyCalUrl() {
+    const input = document.getElementById('calSyncUrl');
+    const url = input.value;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => toast.success(T.toast_url_copied));
+    } else {
+      input.select();
+      toast.info(T.toast_copy_manual);
+    }
+  }
+
+  async function rotateCalToken() {
+    const btn = document.getElementById('calRotateBtn');
+    btn.disabled = true;
+    try {
+      const resp = await fetch('/api/settings/ics-token/rotate', { method: 'POST' });
+      if (resp.ok) {
+        const data = await resp.json();
+        document.getElementById('calSyncUrl').value = data.url;
+        toast.success(T.toast_token_rotated);
+      } else {
+        toast.error(T.toast_token_rotate_failed);
+      }
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('calSyncModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeCalSyncModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeProjectModal(); closeConfirm(); closeCalSyncModal(); }
   });
 
   // ── Init ─────────────────────────────────────────────────────

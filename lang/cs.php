@@ -156,6 +156,16 @@ return [
     'ics_feed_label'        => 'URL ICS feedu (tento projekt)',
     'subscribe_instructions' => 'V Google Kalendáři: <strong>Další kalendáře → Z URL</strong> → vložte výše uvedenou URL → <strong>Přidat kalendář</strong>.<br>Feed se aktualizuje automaticky. Změny provedené zde se v Google Kalendáři projeví do několika hodin.',
 
+    // ── Calendar sync (token management) ──────────────────────
+    'cal_sync_title'            => 'Synchronizace kalendáře',
+    'cal_sync_all_projects_label' => 'URL ICS feedu (všechny projekty)',
+    'cal_sync_instructions'     => 'Zkopírujte tuto URL a přihlaste se k odběru v Google Kalendáři nebo jiné aplikaci. Změny se projeví do několika hodin.',
+    'cal_rotate_token'          => 'Obnovit token',
+    'cal_rotate_confirm'        => 'Obnovit token? Všechny aplikace používající starou URL přestanou synchronizovat, dokud je znovu nepřihlásíte k odběru.',
+    'toast_token_rotated'       => 'Token obnoven — aktualizujte odběry kalendáře',
+    'toast_token_rotate_failed' => 'Nepodařilo se obnovit token',
+    'cal_sync_button_title'     => 'Nastavení synchronizace kalendáře',
+
     // ── Date / count plurals ───────────────────────────────────
     'months'                => ['Led','Úno','Bře','Dub','Kvě','Čvn','Čvc','Srp','Zář','Říj','Lis','Pro'],
     'n_projects'            => '%d projekt',

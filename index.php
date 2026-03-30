@@ -81,8 +81,19 @@ function require_auth(): void {
     }
 }
 
+function get_ics_token(): string {
+    static $token = null;
+    if ($token === null) {
+        $stmt = pdo()->prepare("SELECT `value` FROM settings WHERE `key` = 'ics_token'");
+        $stmt->execute();
+        $row   = $stmt->fetch();
+        $token = $row ? $row['value'] : ICS_TOKEN;
+    }
+    return $token;
+}
+
 function require_ics_token(): void {
-    if (($_GET['token'] ?? '') !== ICS_TOKEN) {
+    if (($_GET['token'] ?? '') !== get_ics_token()) {
         http_response_code(403);
         header('Content-Type: text/plain');
         echo 'Forbidden: invalid or missing token.';
@@ -546,6 +557,29 @@ function api_delete_event(int $id): void {
     json_out(['ok' => true]);
 }
 
+// ── Settings API ──────────────────────────────────────────────────────────────
+
+function api_get_ics_token(): void {
+    require_auth();
+    $token = get_ics_token();
+    $base  = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+           . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    json_out(['token' => $token, 'url' => $base . '/calendar.ics?token=' . urlencode($token)]);
+}
+
+function api_rotate_ics_token(): void {
+    require_auth();
+    $token = bin2hex(random_bytes(32));
+    $stmt  = pdo()->prepare(
+        "INSERT INTO settings (`key`, `value`) VALUES ('ics_token', ?)
+         ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)"
+    );
+    $stmt->execute([$token]);
+    $base = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+          . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    json_out(['token' => $token, 'url' => $base . '/calendar.ics?token=' . urlencode($token)]);
+}
+
 // ── ICS feed handlers ─────────────────────────────────────────────────────────
 
 function ics_all(): void {
@@ -634,6 +668,10 @@ if ($method === 'POST'   && preg_match('#^/api/projects/(\d+)/events$#', $path, 
 if ($method === 'POST'   && preg_match('#^/api/phases/(\d+)/events$#', $path, $m))   { api_create_event((int)$m[1]); }
 if ($method === 'PATCH'  && preg_match('#^/api/events/(\d+)$#', $path, $m))          { api_update_event((int)$m[1]); }
 if ($method === 'DELETE' && preg_match('#^/api/events/(\d+)$#', $path, $m))          { api_delete_event((int)$m[1]); }
+
+// Settings API
+if ($method === 'GET'  && $path === '/api/settings/ics-token') { api_get_ics_token(); }
+if ($method === 'POST' && $path === '/api/settings/ics-token/rotate') { api_rotate_ics_token(); }
 
 // Nothing matched
 not_found();

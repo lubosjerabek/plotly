@@ -156,6 +156,16 @@ return [
     'ics_feed_label'        => 'ICS Feed URL (this project)',
     'subscribe_instructions' => 'In Google Calendar: <strong>Other calendars → From URL</strong> → paste the URL above → <strong>Add calendar</strong>.<br>The feed refreshes automatically. Changes you make here appear in Google Calendar within a few hours.',
 
+    // ── Calendar sync (token management) ──────────────────────
+    'cal_sync_title'            => 'Calendar Sync',
+    'cal_sync_all_projects_label' => 'ICS Feed URL (all projects)',
+    'cal_sync_instructions'     => 'Copy this URL and subscribe to it in Google Calendar or any other calendar app. Changes appear within a few hours.',
+    'cal_rotate_token'          => 'Regenerate Token',
+    'cal_rotate_confirm'        => 'Regenerate the token? Any calendar apps using the old URL will stop syncing until you re-subscribe them.',
+    'toast_token_rotated'       => 'Token regenerated — update your calendar subscriptions',
+    'toast_token_rotate_failed' => 'Failed to regenerate token',
+    'cal_sync_button_title'     => 'Calendar sync settings',
+
     // ── Date / count plurals ───────────────────────────────────
     'months'                => ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
     'n_projects'            => '%d project',       // singular

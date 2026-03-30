@@ -55,6 +55,11 @@ CREATE TABLE IF NOT EXISTS events (
 ALTER TABLE phases
   ADD FOREIGN KEY (depends_on_milestone_id) REFERENCES milestones(id) ON DELETE SET NULL;
 
+CREATE TABLE IF NOT EXISTS settings (
+  `key`   VARCHAR(64) PRIMARY KEY,
+  `value` TEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ── Live-server migration (run once if upgrading from an earlier schema) ──────
 -- If you are starting fresh, these ALTER statements are harmless no-ops because
 -- the tables above already have the correct structure.
