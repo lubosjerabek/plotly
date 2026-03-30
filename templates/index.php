@@ -1,9 +1,12 @@
+<?php
+$lang = current_lang();
+?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= $lang ?>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Plotly — Project Manager</title>
+  <title><?= htmlspecialchars(t('page_title_projects')) ?></title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -149,6 +152,28 @@
       justify-content: center;
     }
     .btn svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
+
+    /* ── Language switcher ── */
+    .lang-switcher {
+      display: flex;
+      gap: 0.25rem;
+    }
+    .lang-switcher form { display: inline; }
+    .lang-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      padding: 0.25rem 0.5rem;
+      cursor: pointer;
+      transition: all var(--t-fast);
+    }
+    .lang-btn:hover,
+    .lang-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,0.1); }
 
     /* ── Project Grid ── */
     .projects-grid {
@@ -365,22 +390,33 @@
 <nav class="topbar">
   <div class="topbar__brand">
     <div class="topbar__brand-dot"></div>
-    Plotly
+    <?= htmlspecialchars(t('app_name')) ?>
   </div>
   <div class="topbar__right">
-    <a class="btn btn-ghost" href="/logout" style="font-size:12px">Sign out</a>
+    <!-- Language switcher -->
+    <div class="lang-switcher">
+      <form method="post" action="/set-lang">
+        <input type="hidden" name="lang" value="en">
+        <button type="submit" class="lang-btn<?= $lang === 'en' ? ' active' : '' ?>"><?= t('lang_en') ?></button>
+      </form>
+      <form method="post" action="/set-lang">
+        <input type="hidden" name="lang" value="cs">
+        <button type="submit" class="lang-btn<?= $lang === 'cs' ? ' active' : '' ?>"><?= t('lang_cs') ?></button>
+      </form>
+    </div>
+    <a class="btn btn-ghost" href="/logout" style="font-size:12px"><?= htmlspecialchars(t('sign_out')) ?></a>
   </div>
 </nav>
 
 <main class="page">
   <div class="page__header">
     <div class="page__title-area">
-      <h1>Projects</h1>
-      <p class="page__subtitle" id="pageSubtitle">Loading…</p>
+      <h1><?= htmlspecialchars(t('projects')) ?></h1>
+      <p class="page__subtitle" id="pageSubtitle"></p>
     </div>
     <button class="btn btn-primary" id="btnNewProject" onclick="openNewProjectModal()">
       <svg><use href="#icon-plus"/></svg>
-      New Project
+      <?= htmlspecialchars(t('new_project')) ?>
     </button>
   </div>
 
@@ -391,22 +427,22 @@
 <div class="modal-overlay" id="projectModal" role="dialog" aria-modal="true" aria-labelledby="projectModalTitle">
   <div class="modal">
     <div class="modal__header">
-      <h2 class="modal__title" id="projectModalTitle">New Project</h2>
-      <button class="modal__close" onclick="closeProjectModal()" aria-label="Close">✕</button>
+      <h2 class="modal__title" id="projectModalTitle"><?= htmlspecialchars(t('new_project')) ?></h2>
+      <button class="modal__close" onclick="closeProjectModal()" aria-label="<?= htmlspecialchars(t('close')) ?>">✕</button>
     </div>
     <div class="modal__body">
       <div class="modal-field">
-        <label class="field-label" for="pm_name">Project Name</label>
-        <input type="text" id="pm_name" placeholder="e.g. Website Redesign" autocomplete="off">
+        <label class="field-label" for="pm_name"><?= htmlspecialchars(t('project_name')) ?></label>
+        <input type="text" id="pm_name" placeholder="<?= htmlspecialchars(t('project_name_example')) ?>" autocomplete="off">
       </div>
       <div class="modal-field">
-        <label class="field-label" for="pm_desc">Description</label>
-        <input type="text" id="pm_desc" placeholder="Optional description" autocomplete="off">
+        <label class="field-label" for="pm_desc"><?= htmlspecialchars(t('description')) ?></label>
+        <input type="text" id="pm_desc" placeholder="<?= htmlspecialchars(t('description_optional')) ?>" autocomplete="off">
       </div>
     </div>
     <div class="modal__footer">
-      <button class="btn btn-ghost" onclick="closeProjectModal()">Cancel</button>
-      <button class="btn btn-primary" id="projectModalSubmit" onclick="submitProjectModal()">Create</button>
+      <button class="btn btn-ghost" onclick="closeProjectModal()"><?= htmlspecialchars(t('cancel')) ?></button>
+      <button class="btn btn-primary" id="projectModalSubmit" onclick="submitProjectModal()"><?= htmlspecialchars(t('create')) ?></button>
     </div>
   </div>
 </div>
@@ -415,14 +451,14 @@
 <div class="modal-overlay" id="confirmModal" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
   <div class="modal modal--sm">
     <div class="modal__header">
-      <h2 class="modal__title" id="confirmTitle">Confirm</h2>
+      <h2 class="modal__title" id="confirmTitle"><?= htmlspecialchars(t('confirm')) ?></h2>
     </div>
     <div class="modal__body">
       <p class="confirm-message" id="confirmMessage"></p>
     </div>
     <div class="modal__footer">
-      <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
-      <button class="btn btn-danger" id="confirmOkBtn">Delete</button>
+      <button class="btn btn-ghost" onclick="closeConfirm()"><?= htmlspecialchars(t('cancel')) ?></button>
+      <button class="btn btn-danger" id="confirmOkBtn"><?= htmlspecialchars(t('delete')) ?></button>
     </div>
   </div>
 </div>
@@ -431,6 +467,9 @@
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
 <script>
+  // ── Translations (PHP-injected) ──────────────────────────────
+  const T = <?= t_js() ?>;
+
   // ── State ────────────────────────────────────────────────────
   const state = { projects: [] };
   let _editingProjectId = null;
@@ -451,7 +490,17 @@
     grid.innerHTML = '';
 
     const count = state.projects.length;
-    subtitle.textContent = count === 0 ? 'No projects yet' : `${count} project${count !== 1 ? 's' : ''}`;
+    if (count === 0) {
+      subtitle.textContent = T.no_projects_count;
+    } else {
+      subtitle.textContent = count === 1
+        ? T.n_phases.replace('%d', count)   // reuse singular pattern
+        : (T.n_projects_plural || T.n_projects).replace('%d', count);
+      // prefer dedicated project plural key
+      subtitle.textContent = count === 1
+        ? T.n_projects.replace('%d', count)
+        : (T.n_projects_plural5 && count >= 5 ? T.n_projects_plural5 : T.n_projects_plural || T.n_projects).replace('%d', count);
+    }
 
     if (count === 0) {
       grid.innerHTML = `
@@ -459,11 +508,11 @@
           <div class="empty-state__icon">
             <svg><use href="#icon-folder"/></svg>
           </div>
-          <h3>No projects yet</h3>
-          <p>Create your first project to get started tracking phases and milestones.</p>
+          <h3>${escHtml(T.no_projects_title)}</h3>
+          <p>${escHtml(T.no_projects_body)}</p>
           <button class="btn btn-primary" onclick="openNewProjectModal()">
             <svg><use href="#icon-plus"/></svg>
-            New Project
+            ${escHtml(T.new_project)}
           </button>
         </div>`;
       return;
@@ -471,6 +520,15 @@
 
     state.projects.forEach(p => {
       const phaseCount = (p.phases || []).length;
+      let phasesLabel;
+      if (phaseCount === 1) {
+        phasesLabel = (T.n_phases || '%d phase').replace('%d', phaseCount);
+      } else if (phaseCount >= 5 && T.n_phases_plural5) {
+        phasesLabel = T.n_phases_plural5.replace('%d', phaseCount);
+      } else {
+        phasesLabel = (T.n_phases_plural || T.n_phases || '%d phases').replace('%d', phaseCount);
+      }
+
       const card = document.createElement('article');
       card.className = 'project-card';
       card.dataset.id = p.id;
@@ -478,18 +536,18 @@
         <div class="project-card__header">
           <h2 class="project-card__name">${escHtml(p.name)}</h2>
           <div class="project-card__actions">
-            <button class="btn btn-icon btn-ghost" title="Edit project" onclick="openEditProjectModal(${p.id})">
+            <button class="btn btn-icon btn-ghost" title="${escHtml(T.tooltip_edit_project)}" onclick="openEditProjectModal(${p.id})">
               <svg><use href="#icon-pencil"/></svg>
             </button>
-            <button class="btn btn-icon btn-danger" title="Delete project" onclick="confirmDeleteProject(${p.id}, '${escHtml(p.name).replace(/'/g, "\\'")}')">
+            <button class="btn btn-icon btn-danger" title="${escHtml(T.tooltip_delete_project)}" onclick="confirmDeleteProject(${p.id}, '${escHtml(p.name).replace(/'/g, "\\'")}')">
               <svg><use href="#icon-trash"/></svg>
             </button>
           </div>
         </div>
-        <p class="project-card__desc">${escHtml(p.description || 'No description')}</p>
+        <p class="project-card__desc">${escHtml(p.description || T.no_description)}</p>
         <div class="project-card__footer">
-          <span class="project-card__meta">${phaseCount} phase${phaseCount !== 1 ? 's' : ''}</span>
-          <a class="btn btn-ghost" href="/project/${p.id}">Open →</a>
+          <span class="project-card__meta">${phasesLabel}</span>
+          <a class="btn btn-ghost" href="/project/${p.id}">${escHtml(T.open_arrow)}</a>
         </div>`;
       grid.appendChild(card);
     });
@@ -498,8 +556,8 @@
   // ── Project Modal ────────────────────────────────────────────
   function openNewProjectModal() {
     _editingProjectId = null;
-    document.getElementById('projectModalTitle').textContent = 'New Project';
-    document.getElementById('projectModalSubmit').textContent = 'Create';
+    document.getElementById('projectModalTitle').textContent = T.new_project;
+    document.getElementById('projectModalSubmit').textContent = T.create;
     document.getElementById('pm_name').value = '';
     document.getElementById('pm_desc').value = '';
     document.getElementById('projectModal').classList.add('is-open');
@@ -510,8 +568,8 @@
     const p = state.projects.find(x => x.id === id);
     if (!p) return;
     _editingProjectId = id;
-    document.getElementById('projectModalTitle').textContent = 'Edit Project';
-    document.getElementById('projectModalSubmit').textContent = 'Save';
+    document.getElementById('projectModalTitle').textContent = T.modal_edit_project;
+    document.getElementById('projectModalSubmit').textContent = T.save;
     document.getElementById('pm_name').value = p.name;
     document.getElementById('pm_desc').value = p.description || '';
     document.getElementById('projectModal').classList.add('is-open');
@@ -542,10 +600,10 @@
       }
       if (resp.ok) {
         closeProjectModal();
-        toast.success(_editingProjectId ? 'Project updated' : 'Project created');
+        toast.success(_editingProjectId ? T.toast_project_updated : T.toast_project_created);
         await refresh();
       } else {
-        toast.error('Something went wrong');
+        toast.error(T.toast_something_wrong);
       }
     } finally {
       btn.disabled = false;
@@ -555,7 +613,8 @@
   // ── Confirm ──────────────────────────────────────────────────
   let _confirmCallback = null;
 
-  function showConfirm(message, onConfirm, title = 'Confirm Deletion') {
+  function showConfirm(message, onConfirm, title) {
+    title = title || T.confirm_deletion;
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMessage').textContent = message;
     _confirmCallback = onConfirm;
@@ -574,11 +633,11 @@
 
   function confirmDeleteProject(id, name) {
     showConfirm(
-      `Delete "${name}" and all its phases? This cannot be undone.`,
+      T.confirm_delete_project_index.replace('%s', name),
       async () => {
         const resp = await api.deleteProject(id);
-        if (resp.ok) { toast.success('Project deleted'); await refresh(); }
-        else toast.error('Failed to delete project');
+        if (resp.ok) { toast.success(T.toast_project_deleted); await refresh(); }
+        else toast.error(T.toast_project_delete_failed);
       }
     );
   }

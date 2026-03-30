@@ -1,9 +1,13 @@
+<?php
+// Resolve lang for this template
+$lang = current_lang();
+?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= $lang ?>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Plotly — Sign In</title>
+  <title><?= htmlspecialchars(t('page_title_login')) ?></title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -105,26 +109,61 @@
       font-size: 13px;
       margin-bottom: 1.25rem;
     }
+    /* ── Language switcher ── */
+    .lang-switcher {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+    }
+    .lang-switcher form { display: inline; }
+    .lang-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      padding: 0.2rem 0.55rem;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .lang-btn:hover,
+    .lang-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,0.1); }
   </style>
 </head>
 <body>
   <div class="card">
     <p class="logo">Plot<span>ly</span></p>
-    <p class="subtitle">Sign in to continue</p>
+    <p class="subtitle"><?= htmlspecialchars(t('sign_in_subtitle')) ?></p>
 
     <?php if (!empty($error)): ?>
       <div class="error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
     <form method="post" action="/login">
-      <label for="username">Username</label>
+      <label for="username"><?= htmlspecialchars(t('username')) ?></label>
       <input type="text" id="username" name="username" autocomplete="username" required autofocus>
 
-      <label for="password">Password</label>
+      <label for="password"><?= htmlspecialchars(t('password')) ?></label>
       <input type="password" id="password" name="password" autocomplete="current-password" required>
 
-      <button type="submit" class="btn">Sign In</button>
+      <button type="submit" class="btn"><?= htmlspecialchars(t('sign_in')) ?></button>
     </form>
+
+    <!-- Language switcher -->
+    <div class="lang-switcher">
+      <form method="post" action="/set-lang">
+        <input type="hidden" name="lang" value="en">
+        <button type="submit" class="lang-btn<?= $lang === 'en' ? ' active' : '' ?>"><?= t('lang_en') ?></button>
+      </form>
+      <form method="post" action="/set-lang">
+        <input type="hidden" name="lang" value="cs">
+        <button type="submit" class="lang-btn<?= $lang === 'cs' ? ' active' : '' ?>"><?= t('lang_cs') ?></button>
+      </form>
+    </div>
   </div>
 </body>
 </html>

@@ -18,3 +18,8 @@ define('AUTH_PASS_HASH', getenv('AUTH_PASS_HASH') ?: '$2y$12$CHANGE_ME_run_setup
 // Included in all ICS URLs as ?token=... so Google Calendar can reach the feed
 // without a browser session. Set to any long random string.
 define('ICS_TOKEN', getenv('ICS_TOKEN') ?: 'change-this-to-a-long-random-secret');
+
+// ── Language ───────────────────────────────────────────────────────────────────
+// Default UI language. Supported: 'en' | 'cs'.
+// Per-user language is stored in the session (overrides this default).
+define('APP_LANG', in_array(getenv('APP_LANG'), ['en','cs']) ? getenv('APP_LANG') : 'en');

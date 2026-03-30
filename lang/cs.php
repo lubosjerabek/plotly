@@ -1,0 +1,184 @@
+<?php
+// Czech translations (čeština)
+return [
+    // ── Meta / page titles ─────────────────────────────────────
+    'app_name'              => 'Plotly',
+    'page_title_login'      => 'Plotly — Přihlášení',
+    'page_title_projects'   => 'Plotly — Správa projektů',
+    'page_title_project'    => 'Projekt — Plotly',
+
+    // ── Auth ───────────────────────────────────────────────────
+    'sign_in'               => 'Přihlásit se',
+    'sign_out'              => 'Odhlásit se',
+    'sign_in_subtitle'      => 'Přihlaste se pro pokračování',
+    'username'              => 'Uživatelské jméno',
+    'password'              => 'Heslo',
+
+    // ── General buttons ────────────────────────────────────────
+    'cancel'                => 'Zrušit',
+    'close'                 => 'Zavřít',
+    'save'                  => 'Uložit',
+    'save_changes'          => 'Uložit změny',
+    'delete'                => 'Smazat',
+    'edit'                  => 'Upravit',
+    'apply'                 => 'Použít',
+    'copy'                  => 'Kopírovat',
+    'create'                => 'Vytvořit',
+    'submit'                => 'Odeslat',
+    'add'                   => '+ Přidat',
+    'subscribe'             => 'Odebírat',
+
+    // ── Projects page ──────────────────────────────────────────
+    'projects'              => 'Projekty',
+    'new_project'           => 'Nový projekt',
+    'no_projects_title'     => 'Zatím žádné projekty',
+    'no_projects_body'      => 'Vytvořte svůj první projekt a začněte sledovat fáze a milníky.',
+    'no_description'        => 'Bez popisu',
+    'project_name'          => 'Název projektu',
+    'description'           => 'Popis',
+    'description_optional'  => 'Volitelný popis',
+    'project_name_example'  => 'např. Redesign webu',
+    'confirm_deletion'      => 'Potvrdit smazání',
+    'confirm'               => 'Potvrdit',
+    'open_arrow'            => 'Otevřít →',
+
+    // ── Toast messages — projects ──────────────────────────────
+    'toast_project_created'         => 'Projekt vytvořen',
+    'toast_project_updated'         => 'Projekt aktualizován',
+    'toast_project_deleted'         => 'Projekt smazán',
+    'toast_project_delete_failed'   => 'Nepodařilo se smazat projekt',
+    'toast_something_wrong'         => 'Něco se pokazilo',
+
+    // ── Project page ───────────────────────────────────────────
+    'dashboard'             => '← Přehled',
+    'phases_tab'            => 'Fáze',
+    'timeline_tab'          => 'Časová osa',
+    'add_phase'             => 'Přidat fázi',
+    'project_wide'          => 'Celý projekt',
+    'no_description_provided' => 'Popis není k dispozici.',
+    'gantt_view_label'      => 'Zobrazení:',
+    'gantt_day'             => 'Den',
+    'gantt_week'            => 'Týden',
+    'gantt_month'           => 'Měsíc',
+
+    // ── Phase card / phases panel ──────────────────────────────
+    'milestones'            => 'Milníky',
+    'events'                => 'Události',
+    'none'                  => 'Žádné',
+    'no_phases'             => 'Zatím žádné fáze. Přidejte první fázi.',
+    'no_phases_gantt'       => 'Žádné fáze k zobrazení.',
+    'status_active'         => 'Probíhá',
+    'status_upcoming'       => 'Nadcházející',
+    'status_past'           => 'Dokončeno',
+    'after_prefix'          => 'Po',
+    'expand_phase'          => 'Rozbalit fázi',
+    'collapse_phase'        => 'Sbalit fázi',
+
+    // ── Phase labels in Gantt / dependency ─────────────────────
+    'milestones_on'         => 'milníků k datu',
+
+    // ── Fields ─────────────────────────────────────────────────
+    'phase_name'            => 'Název fáze',
+    'milestone_name'        => 'Název milníku',
+    'milestone_name_label'  => 'Název milníku',
+    'event_name'            => 'Název události',
+    'target_date'           => 'Cílové datum',
+    'start_date'            => 'Datum zahájení',
+    'end_date'              => 'Datum ukončení',
+    'color'                 => 'Barva',
+    'dependency_label'      => 'Tato fáze začíná po…',
+    'select_milestone'      => 'Vyberte milník',
+
+    // ── Modal titles ───────────────────────────────────────────
+    'modal_add_phase'               => 'Přidat fázi',
+    'modal_edit_phase'              => 'Upravit fázi',
+    'modal_set_dependency'          => 'Nastavit závislost fáze',
+    'modal_add_milestone'           => 'Přidat milník',
+    'modal_add_project_milestone'   => 'Přidat milník projektu',
+    'modal_edit_milestone'          => 'Upravit milník',
+    'modal_add_event'               => 'Přidat událost',
+    'modal_add_project_event'       => 'Přidat událost projektu',
+    'modal_edit_event'              => 'Upravit událost',
+    'modal_edit_project'            => 'Upravit projekt',
+    'modal_confirm_change'          => 'Potvrdit změnu',
+    'modal_confirm_deletion'        => 'Potvrdit smazání',
+    'modal_edit_milestone_label'    => 'Upravit milník',
+
+    // ── Confirmation messages ──────────────────────────────────
+    'confirm_delete_project'         => 'Smazat celý projekt včetně všech fází? Tuto akci nelze vrátit.',
+    'confirm_delete_phase'           => 'Smazat fázi „%s" včetně všech milníků a událostí? Tuto akci nelze vrátit.',
+    'confirm_delete_milestone'       => 'Smazat milník „%s"?',
+    'confirm_delete_event'           => 'Smazat událost „%s"?',
+    'confirm_delete_project_index'   => 'Smazat „%s" včetně všech fází? Tuto akci nelze vrátit.',
+
+    // ── Impact / dependency dialog ─────────────────────────────
+    'impact_shifts'         => 'posouvá se o',
+    'impact_day'            => 'den',
+    'impact_days'           => 'dní',
+    'impact_also_shifts'    => 'Promítne se také do',
+    'impact_dependent'      => 'závislé fáze',
+    'impact_dependents'     => 'závislých fází',
+
+    // ── Toast messages — phases ────────────────────────────────
+    'toast_phase_added'             => 'Fáze přidána',
+    'toast_phase_updated'           => 'Fáze aktualizována',
+    'toast_phase_deleted'           => 'Fáze smazána',
+    'toast_phase_add_failed'        => 'Nepodařilo se přidat fázi',
+    'toast_phase_update_failed'     => 'Nepodařilo se aktualizovat fázi',
+    'toast_phase_delete_failed'     => 'Nepodařilo se smazat fázi',
+    'toast_dep_updated'             => 'Závislost nastavena',
+    'toast_dep_update_failed'       => 'Nepodařilo se nastavit závislost',
+    'toast_save_failed'             => 'Nepodařilo se uložit',
+
+    // ── Toast messages — milestones ────────────────────────────
+    'toast_milestone_added'         => 'Milník přidán',
+    'toast_milestone_updated'       => 'Milník aktualizován',
+    'toast_milestone_deleted'       => 'Milník smazán',
+    'toast_milestone_add_failed'    => 'Nepodařilo se přidat milník',
+    'toast_milestone_update_failed' => 'Nepodařilo se aktualizovat milník',
+    'toast_milestone_delete_failed' => 'Nepodařilo se smazat milník',
+
+    // ── Toast messages — events ────────────────────────────────
+    'toast_event_added'             => 'Událost přidána',
+    'toast_event_updated'           => 'Událost aktualizována',
+    'toast_event_deleted'           => 'Událost smazána',
+    'toast_event_add_failed'        => 'Nepodařilo se přidat událost',
+    'toast_event_update_failed'     => 'Nepodařilo se aktualizovat událost',
+    'toast_event_delete_failed'     => 'Nepodařilo se smazat událost',
+
+    // ── Toast messages — misc ──────────────────────────────────
+    'toast_load_failed'     => 'Nepodařilo se načíst projekt',
+    'toast_url_copied'      => 'URL zkopírována do schránky',
+    'toast_copy_manual'     => 'Označte vše a zkopírujte ručně',
+
+    // ── Subscribe / ICS modal ──────────────────────────────────
+    'subscribe_title'       => 'Odebírat kalendář',
+    'ics_feed_label'        => 'URL ICS feedu (tento projekt)',
+    'subscribe_instructions' => 'V Google Kalendáři: <strong>Další kalendáře → Z URL</strong> → vložte výše uvedenou URL → <strong>Přidat kalendář</strong>.<br>Feed se aktualizuje automaticky. Změny provedené zde se v Google Kalendáři projeví do několika hodin.',
+
+    // ── Date / count plurals ───────────────────────────────────
+    'months'                => ['Led','Úno','Bře','Dub','Kvě','Čvn','Čvc','Srp','Zář','Říj','Lis','Pro'],
+    'n_projects'            => '%d projekt',
+    'n_projects_plural'     => '%d projekty',   // 2–4
+    'n_projects_plural5'    => '%d projektů',   // 5+
+    'no_projects_count'     => 'Zatím žádné projekty',
+    'n_phases'              => '%d fáze',
+    'n_phases_plural'       => '%d fáze',
+    'n_phases_plural5'      => '%d fází',
+
+    // ── Tooltips ───────────────────────────────────────────────
+    'tooltip_edit_project'        => 'Upravit projekt',
+    'tooltip_delete_project'      => 'Smazat projekt',
+    'tooltip_edit_phase'          => 'Upravit fázi',
+    'tooltip_set_dependency'      => 'Nastavit závislost',
+    'tooltip_delete_phase'        => 'Smazat fázi',
+    'tooltip_edit_milestone'      => 'Upravit datum milníku',
+    'tooltip_delete_milestone'    => 'Smazat milník',
+    'tooltip_delete_event'        => 'Smazat událost',
+    'tooltip_copy_url'            => 'Kopírovat URL',
+
+    // ── Language switcher ──────────────────────────────────────
+    'lang_en'               => 'EN',
+    'lang_cs'               => 'CS',
+    'lang_label'            => 'Jazyk',
+];

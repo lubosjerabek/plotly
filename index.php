@@ -4,6 +4,38 @@ session_start();
 
 require __DIR__ . '/config.php';
 
+// ── i18n ─────────────────────────────────────────────────────────────────────
+
+function load_lang(): array {
+    static $strings = null;
+    if ($strings === null) {
+        $lang = $_SESSION['lang'] ?? APP_LANG;
+        if (!in_array($lang, ['en', 'cs'], true)) $lang = 'en';
+        $strings = require __DIR__ . '/lang/' . $lang . '.php';
+    }
+    return $strings;
+}
+
+/** Translate a key, optionally sprintf-formatting with $args */
+function t(string $key, mixed ...$args): string {
+    $str = load_lang()[$key] ?? $key;
+    if (!is_string($str)) return $key;
+    return $args ? sprintf($str, ...$args) : $str;
+}
+
+/** Return the full translation map as a JSON object for window.T injection */
+function t_js(): string {
+    $map = load_lang();
+    // months array is already an array and JSON-encodes fine
+    return json_encode($map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}
+
+/** Current active language code */
+function current_lang(): string {
+    $lang = $_SESSION['lang'] ?? APP_LANG;
+    return in_array($lang, ['en', 'cs'], true) ? $lang : 'en';
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function pdo(): PDO {
@@ -555,6 +587,21 @@ $path   = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/') ?: '/';
 if ($method === 'GET'  && $path === '/login')  { page_login();  }
 if ($method === 'POST' && $path === '/login')  { page_login();  }
 if ($method === 'GET'  && $path === '/logout') { page_logout(); }
+
+// Language switcher (no auth required)
+if ($method === 'POST' && $path === '/set-lang') {
+    $lang = $_POST['lang'] ?? '';
+    if (in_array($lang, ['en', 'cs'], true)) {
+        $_SESSION['lang'] = $lang;
+    }
+    $back = $_SERVER['HTTP_REFERER'] ?? '/';
+    // Only redirect to same-origin paths
+    $parsed = parse_url($back);
+    $redirect = isset($parsed['path']) ? $parsed['path'] : '/';
+    if (!empty($parsed['query'])) $redirect .= '?' . $parsed['query'];
+    header('Location: ' . $redirect);
+    exit;
+}
 
 // ICS feeds (token-protected, no session required)
 if ($method === 'GET' && $path === '/calendar.ics') { ics_all(); }

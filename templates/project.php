@@ -1,9 +1,10 @@
+<?php $lang = current_lang(); ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= $lang ?>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Project — Plotly</title>
+  <title><?= htmlspecialchars(t('page_title_project')) ?></title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -574,20 +575,33 @@
   </symbol>
 </svg>
 
+<?php
+// inline lang-btn style (reuse project.php's existing CSS vars)
+$_lbStyle = 'background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);font-family:inherit;font-size:11px;font-weight:600;letter-spacing:0.05em;padding:0.2rem 0.5rem;cursor:pointer;transition:all .15s;';
+$_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,102,241,0.1);';
+?>
 <!-- Topbar -->
 <nav class="topbar">
   <div class="topbar__left">
-    <a class="back-link" href="/">← Dashboard</a>
+    <a class="back-link" href="/"><?= htmlspecialchars(t('dashboard')) ?></a>
   </div>
-  <div class="topbar__center" id="topbarTitle">Loading…</div>
+  <div class="topbar__center" id="topbarTitle"></div>
   <div class="topbar__right">
+    <form method="post" action="/set-lang" style="display:inline">
+      <input type="hidden" name="lang" value="en">
+      <button type="submit" style="<?= $_lbStyle . ($lang === 'en' ? $_lbActive : '') ?>"><?= t('lang_en') ?></button>
+    </form>
+    <form method="post" action="/set-lang" style="display:inline">
+      <input type="hidden" name="lang" value="cs">
+      <button type="submit" style="<?= $_lbStyle . ($lang === 'cs' ? $_lbActive : '') ?>"><?= t('lang_cs') ?></button>
+    </form>
     <button class="btn btn-ghost" id="subscribeBtn" onclick="openSubscribeModal()">
       <svg><use href="#icon-calendar"/></svg>
-      Subscribe
+      <?= htmlspecialchars(t('subscribe')) ?>
     </button>
     <button class="btn btn-danger-outline" id="deleteProjectBtn" onclick="confirmDeleteProject()">
       <svg><use href="#icon-trash"/></svg>
-      Delete
+      <?= htmlspecialchars(t('delete')) ?>
     </button>
   </div>
 </nav>
@@ -602,23 +616,23 @@
     </div>
     <button class="btn btn-ghost" onclick="editProject()">
       <svg><use href="#icon-pencil"/></svg>
-      Edit
+      <?= htmlspecialchars(t('edit')) ?>
     </button>
   </div>
 
   <!-- Tabs -->
   <div class="tabs" role="tablist">
-    <button class="tab-btn active" data-tab="phases" role="tab" aria-selected="true" onclick="switchTab('phases')">Phases</button>
-    <button class="tab-btn" data-tab="timeline" role="tab" aria-selected="false" onclick="switchTab('timeline')">Timeline</button>
+    <button class="tab-btn active" data-tab="phases" role="tab" aria-selected="true" onclick="switchTab('phases')"><?= htmlspecialchars(t('phases_tab')) ?></button>
+    <button class="tab-btn" data-tab="timeline" role="tab" aria-selected="false" onclick="switchTab('timeline')"><?= htmlspecialchars(t('timeline_tab')) ?></button>
   </div>
 
   <!-- Phases tab -->
   <div id="tab-phases" role="tabpanel">
     <div class="panel-toolbar">
-      <span class="panel-toolbar__label" id="phaseCount">0 phases</span>
+      <span class="panel-toolbar__label" id="phaseCount"></span>
       <button class="btn btn-primary" onclick="addPhase()">
         <svg><use href="#icon-plus"/></svg>
-        Add Phase
+        <?= htmlspecialchars(t('add_phase')) ?>
       </button>
     </div>
     <!-- Project-wide milestones & events (not tied to any phase) -->
@@ -627,12 +641,12 @@
         <div style="display:flex;align-items:center;gap:0.6rem;flex:1;">
           <div class="phase-card__color-dot" style="background:var(--accent);--dot-color:var(--accent)"></div>
           <div class="phase-card__title-area">
-            <h3 class="phase-card__name">Project-wide</h3>
+            <h3 class="phase-card__name"><?= htmlspecialchars(t('project_wide')) ?></h3>
           </div>
         </div>
         <div class="phase-card__actions">
-          <button class="btn btn-ghost btn-xs" onclick="addProjectMilestone()">+ Milestone</button>
-          <button class="btn btn-ghost btn-xs" onclick="addProjectEvent()">+ Event</button>
+          <button class="btn btn-ghost btn-xs" onclick="addProjectMilestone()">+ <?= htmlspecialchars(t('milestones')) ?></button>
+          <button class="btn btn-ghost btn-xs" onclick="addProjectEvent()">+ <?= htmlspecialchars(t('events')) ?></button>
         </div>
       </div>
       <div id="projectItemsBody" class="phase-card__body" style="max-height:none;opacity:1;"></div>
@@ -644,11 +658,11 @@
   <!-- Timeline tab -->
   <div id="tab-timeline" role="tabpanel" style="display:none">
     <div class="gantt-toolbar">
-      <span>View:</span>
+      <span><?= htmlspecialchars(t('gantt_view_label')) ?></span>
       <div class="gantt-view-btns" id="ganttViewBtns">
-        <button data-view="Day"   onclick="setGanttView('Day')">Day</button>
-        <button data-view="Week"  onclick="setGanttView('Week')">Week</button>
-        <button class="active" data-view="Month" onclick="setGanttView('Month')">Month</button>
+        <button data-view="Day"   onclick="setGanttView('Day')"><?= htmlspecialchars(t('gantt_day')) ?></button>
+        <button data-view="Week"  onclick="setGanttView('Week')"><?= htmlspecialchars(t('gantt_week')) ?></button>
+        <button class="active" data-view="Month" onclick="setGanttView('Month')"><?= htmlspecialchars(t('gantt_month')) ?></button>
       </div>
     </div>
     <div class="gantt-container">
@@ -666,8 +680,8 @@
     </div>
     <div class="modal__body" id="modalFields"></div>
     <div class="modal__footer">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" id="modalSubmitBtn">Submit</button>
+      <button class="btn btn-ghost" onclick="closeModal()"><?= htmlspecialchars(t('cancel')) ?></button>
+      <button class="btn btn-primary" id="modalSubmitBtn"><?= htmlspecialchars(t('submit')) ?></button>
     </div>
   </div>
 </div>
@@ -676,25 +690,24 @@
 <div class="modal-overlay" id="subscribeModal" role="dialog" aria-modal="true" aria-labelledby="subscribeTitle">
   <div class="modal">
     <div class="modal__header">
-      <h2 class="modal__title" id="subscribeTitle">Subscribe to Calendar</h2>
-      <button class="modal__close" onclick="closeSubscribeModal()" aria-label="Close">✕</button>
+      <h2 class="modal__title" id="subscribeTitle"><?= htmlspecialchars(t('subscribe_title')) ?></h2>
+      <button class="modal__close" onclick="closeSubscribeModal()" aria-label="<?= htmlspecialchars(t('close')) ?>">✕</button>
     </div>
     <div class="modal__body">
-      <label class="field-label">ICS Feed URL (this project)</label>
+      <label class="field-label"><?= htmlspecialchars(t('ics_feed_label')) ?></label>
       <div class="subscribe-url-row">
         <input type="text" id="icsUrl" readonly>
-        <button class="btn btn-ghost btn-xs" onclick="copyIcsUrl()" title="Copy URL">
+        <button class="btn btn-ghost btn-xs" onclick="copyIcsUrl()" title="<?= htmlspecialchars(t('tooltip_copy_url')) ?>">
           <svg><use href="#icon-copy"/></svg>
-          Copy
+          <?= htmlspecialchars(t('copy')) ?>
         </button>
       </div>
       <p class="subscribe-instructions">
-        In Google Calendar: <strong>Other calendars → From URL</strong> → paste the URL above → <strong>Add calendar</strong>.<br>
-        The feed refreshes automatically. Changes you make here appear in Google Calendar within a few hours.
+        <?= t('subscribe_instructions') ?>
       </p>
     </div>
     <div class="modal__footer">
-      <button class="btn btn-ghost" onclick="closeSubscribeModal()">Close</button>
+      <button class="btn btn-ghost" onclick="closeSubscribeModal()"><?= htmlspecialchars(t('close')) ?></button>
     </div>
   </div>
 </div>
@@ -703,14 +716,14 @@
 <div class="modal-overlay" id="confirmModal" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
   <div class="modal modal--sm">
     <div class="modal__header">
-      <h2 class="modal__title" id="confirmTitle">Confirm</h2>
+      <h2 class="modal__title" id="confirmTitle"><?= htmlspecialchars(t('confirm')) ?></h2>
     </div>
     <div class="modal__body">
       <p class="confirm-message" id="confirmMessage"></p>
     </div>
     <div class="modal__footer">
-      <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
-      <button class="btn btn-danger-outline" id="confirmOkBtn">Delete</button>
+      <button class="btn btn-ghost" onclick="closeConfirm()"><?= htmlspecialchars(t('cancel')) ?></button>
+      <button class="btn btn-danger-outline" id="confirmOkBtn"><?= htmlspecialchars(t('delete')) ?></button>
     </div>
   </div>
 </div>
@@ -719,6 +732,9 @@
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
 <script>
+  // ── Translations (PHP-injected) ──────────────────────────────
+  const T = <?= t_js() ?>;
+
   // ── Constants & State ────────────────────────────────────────
   const projectId = <?= (int)$project_id ?>;
   const state = { project: null, activeTab: 'phases', ganttView: 'Month', ganttInstance: null };
@@ -756,7 +772,7 @@
   function fmtDate(d) {
     if (!d) return '';
     const [y, m, day] = d.split('-');
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const months = T.months;
     return `${months[parseInt(m,10)-1]} ${parseInt(day,10)}, ${y}`;
   }
 
@@ -790,10 +806,11 @@
 
   function buildImpactHTML(movedLabel, delta, dependents) {
     const sign   = delta > 0 ? `+${delta}` : `${delta}`;
-    const dUnit  = Math.abs(delta) === 1 ? 'day' : 'days';
-    let html = `<strong>${escHtml(movedLabel)}</strong> shifts <strong>${sign} ${dUnit}</strong>.`;
+    const dUnit  = Math.abs(delta) === 1 ? T.impact_day : T.impact_days;
+    let html = `<strong>${escHtml(movedLabel)}</strong> ${T.impact_shifts} <strong>${sign} ${dUnit}</strong>.`;
     if (dependents.length) {
-      html += `<br><br><span style="font-size:12px;color:var(--text-muted)">Also shifts ${dependents.length} dependent phase${dependents.length > 1 ? 's' : ''}:</span>`;
+      const depLabel = dependents.length > 1 ? T.impact_dependents : T.impact_dependent;
+      html += `<br><br><span style="font-size:12px;color:var(--text-muted)">${T.impact_also_shifts} ${dependents.length} ${depLabel}:</span>`;
       html += `<ul style="margin:.5rem 0 0;padding-left:1.25rem;font-size:13px;color:var(--text-muted);line-height:1.8">`;
       dependents.forEach(d => { html += `<li>${escHtml(d.name)} → ${fmtDate(d.newStart)}</li>`; });
       html += '</ul>';
@@ -810,7 +827,7 @@
   }
 
   function statusBadge(status) {
-    const labels = { past: 'Past', active: 'Active', upcoming: 'Upcoming' };
+    const labels = { past: T.status_past, active: T.status_active, upcoming: T.status_upcoming };
     return `<span class="badge badge-${status}">${labels[status]}</span>`;
   }
 
@@ -818,10 +835,18 @@
   function renderProject(p) {
     document.title = `${p.name} — Plotly`;
     document.getElementById('pName').textContent = p.name;
-    document.getElementById('pDesc').textContent = p.description || 'No description provided.';
+    document.getElementById('pDesc').textContent = p.description || T.no_description_provided;
     document.getElementById('topbarTitle').textContent = p.name;
     const pc = p.phases.length;
-    document.getElementById('phaseCount').textContent = `${pc} phase${pc !== 1 ? 's' : ''}`;
+    let phasesLabel;
+    if (pc === 1) {
+      phasesLabel = T.n_phases.replace('%d', pc);
+    } else if (pc >= 5 && T.n_phases_plural5) {
+      phasesLabel = T.n_phases_plural5.replace('%d', pc);
+    } else {
+      phasesLabel = (T.n_phases_plural || T.n_phases).replace('%d', pc);
+    }
+    document.getElementById('phaseCount').textContent = phasesLabel;
     renderProjectItems(p.milestones || [], p.events || []);
     renderPhases(p.phases);
     if (state.activeTab === 'timeline') renderGantt(p);
@@ -846,7 +871,7 @@
               <svg><use href="#icon-trash"/></svg>
             </button>
           </li>`).join('')
-      : `<li class="item-empty" style="background:none;padding:0.25rem 0;">None</li>`;
+      : `<li class="item-empty" style="background:none;padding:0.25rem 0;">${T.none}</li>`;
 
     const evItems = events.length > 0
       ? events.map(e => `
@@ -858,20 +883,20 @@
               <svg><use href="#icon-trash"/></svg>
             </button>
           </li>`).join('')
-      : `<li class="item-empty" style="background:none;padding:0.25rem 0;">None</li>`;
+      : `<li class="item-empty" style="background:none;padding:0.25rem 0;">${T.none}</li>`;
 
     container.innerHTML = `
       <div class="phase-section">
         <div class="phase-section__header">
-          <span class="phase-section__label">Milestones</span>
-          <button class="btn btn-ghost btn-xs" onclick="addProjectMilestone()">+ Add</button>
+          <span class="phase-section__label">${T.milestones}</span>
+          <button class="btn btn-ghost btn-xs" onclick="addProjectMilestone()">+ ${T.add}</button>
         </div>
         <ul class="item-list">${msItems}</ul>
       </div>
       <div class="phase-section">
         <div class="phase-section__header">
-          <span class="phase-section__label">Events</span>
-          <button class="btn btn-ghost btn-xs" onclick="addProjectEvent()">+ Add</button>
+          <span class="phase-section__label">${T.events}</span>
+          <button class="btn btn-ghost btn-xs" onclick="addProjectEvent()">+ ${T.add}</button>
         </div>
         <ul class="item-list">${evItems}</ul>
       </div>`;
@@ -892,7 +917,7 @@
     list.innerHTML = '';
     if (phases.length === 0) {
       list.innerHTML = `<div class="item-empty" style="text-align:center;padding:2rem;">
-        No phases yet. Add your first phase to get started.
+        ${T.no_phases}
       </div>`;
       return;
     }
@@ -933,7 +958,7 @@
                 <svg><use href="#icon-trash"/></svg>
               </button>
             </li>`).join('')
-        : `<li class="item-empty" style="background:none;padding:0.25rem 0;">None</li>`;
+        : `<li class="item-empty" style="background:none;padding:0.25rem 0;">${T.none}</li>`;
 
       const evItems = phase.events.length > 0
         ? phase.events.map(e => `
@@ -945,11 +970,11 @@
                 <svg><use href="#icon-trash"/></svg>
               </button>
             </li>`).join('')
-        : `<li class="item-empty" style="background:none;padding:0.25rem 0;">None</li>`;
+        : `<li class="item-empty" style="background:none;padding:0.25rem 0;">${T.none}</li>`;
 
       card.innerHTML = `
         <div class="phase-card__header">
-          <div class="phase-card__toggle-area" onclick="togglePhase(${phase.id})" title="${collapsed ? 'Expand' : 'Collapse'} phase">
+          <div class="phase-card__toggle-area" onclick="togglePhase(${phase.id})" title="${collapsed ? T.expand_phase : T.collapse_phase}">
             <svg class="phase-card__chevron"><use href="#icon-chevron-down"/></svg>
             <div class="phase-card__color-dot" style="background:${color};--dot-color:${color}"></div>
             <div class="phase-card__title-area">
@@ -957,19 +982,19 @@
               <div class="phase-card__meta">
                 ${statusBadge(status)}
                 <span class="phase-card__dates">${fmtDate(phase.start_date)} → ${fmtDate(phase.end_date)}</span>
-                ${depName ? `<span class="badge badge-dep">↳ After ${escHtml(depName)}</span>` : ''}
-                ${depMsName ? `<span class="badge badge-dep">◆ After ${escHtml(depMsName)}</span>` : ''}
+                ${depName ? `<span class="badge badge-dep">↳ ${T.after_prefix} ${escHtml(depName)}</span>` : ''}
+                ${depMsName ? `<span class="badge badge-dep">◆ ${T.after_prefix} ${escHtml(depMsName)}</span>` : ''}
               </div>
             </div>
           </div>
           <div class="phase-card__actions">
-            <button class="btn btn-icon btn-ghost" title="Edit phase" onclick="editPhase(${phase.id})">
+            <button class="btn btn-icon btn-ghost" title="${T.tooltip_edit_phase}" onclick="editPhase(${phase.id})">
               <svg><use href="#icon-pencil"/></svg>
             </button>
-            <button class="btn btn-icon btn-ghost" title="Set dependency" onclick="setDependency(${phase.id})">
+            <button class="btn btn-icon btn-ghost" title="${T.tooltip_set_dependency}" onclick="setDependency(${phase.id})">
               <svg><use href="#icon-link"/></svg>
             </button>
-            <button class="btn btn-icon btn-danger-outline" title="Delete phase" onclick="confirmDeletePhase(${phase.id}, '${escHtml(phase.name).replace(/'/g,"\\'")}')">
+            <button class="btn btn-icon btn-danger-outline" title="${T.tooltip_delete_phase}" onclick="confirmDeletePhase(${phase.id}, '${escHtml(phase.name).replace(/'/g,"\\'")}')">
               <svg><use href="#icon-trash"/></svg>
             </button>
           </div>
@@ -979,16 +1004,16 @@
           ${phase.description ? `<p class="phase-description">${escHtml(phase.description)}</p>` : ''}
           <div class="phase-section">
             <div class="phase-section__header">
-              <span class="phase-section__label">Milestones</span>
-              <button class="btn btn-ghost btn-xs" onclick="addMilestone(${phase.id})">+ Add</button>
+              <span class="phase-section__label">${T.milestones}</span>
+              <button class="btn btn-ghost btn-xs" onclick="addMilestone(${phase.id})">+ ${T.add}</button>
             </div>
             <ul class="item-list" id="ms-list-${phase.id}">${msItems}</ul>
           </div>
 
           <div class="phase-section">
             <div class="phase-section__header">
-              <span class="phase-section__label">Events</span>
-              <button class="btn btn-ghost btn-xs" onclick="addEvent(${phase.id})">+ Add</button>
+              <span class="phase-section__label">${T.events}</span>
+              <button class="btn btn-ghost btn-xs" onclick="addEvent(${phase.id})">+ ${T.add}</button>
             </div>
             <ul class="item-list" id="ev-list-${phase.id}">${evItems}</ul>
           </div>
@@ -1013,7 +1038,7 @@
     ];
 
     if (phases.length === 0 && allMilestones.length === 0 && allEvents.length === 0) {
-      container.innerHTML = `<div class="item-empty" style="text-align:center;padding:2rem;">No phases to display.</div>`;
+      container.innerHTML = `<div class="item-empty" style="text-align:center;padding:2rem;">${T.no_phases_gantt}</div>`;
       return;
     }
 
@@ -1111,7 +1136,7 @@
                 depends_on_id: phase.depends_on_id ?? null,
                 depends_on_milestone_id: phase.depends_on_milestone_id ?? null,
               });
-              if (r.ok) refresh(); else { toast.error('Failed to save'); revert(); }
+              if (r.ok) refresh(); else { toast.error(T.toast_save_failed); revert(); }
             },
             revert
           );
@@ -1155,7 +1180,7 @@
             buildImpactHTML(ev.name, delta, []),
             async () => {
               const r = await api.updateEvent(evId, { start_date: newStart, end_date: newEnd });
-              if (r.ok) refresh(); else { toast.error('Failed to save'); revert(); }
+              if (r.ok) refresh(); else { toast.error(T.toast_save_failed); revert(); }
             },
             revert
           );
@@ -1229,10 +1254,10 @@
     const url = document.getElementById('icsUrl').value;
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('URL copied to clipboard');
+      toast.success(T.toast_url_copied);
     } catch {
       document.getElementById('icsUrl').select();
-      toast.info('Select all and copy manually');
+      toast.info(T.toast_copy_manual);
     }
   }
 
@@ -1306,7 +1331,8 @@
   let _confirmCallback       = null;
   let _confirmCancelCallback = null;
 
-  function showConfirm(message, onConfirm, title = 'Confirm Deletion') {
+  function showConfirm(message, onConfirm, title) {
+    title = title || T.modal_confirm_deletion;
     const okBtn = document.getElementById('confirmOkBtn');
     okBtn.textContent = 'Delete';
     okBtn.className = 'btn btn-danger-outline';
@@ -1317,7 +1343,8 @@
     document.getElementById('confirmModal').classList.add('is-open');
   }
 
-  function showImpactConfirm(htmlMessage, onApply, onCancel, title = 'Confirm Change') {
+  function showImpactConfirm(htmlMessage, onApply, onCancel, title) {
+    title = title || T.modal_confirm_change;
     const okBtn = document.getElementById('confirmOkBtn');
     okBtn.textContent = 'Apply';
     okBtn.className = 'btn btn-primary';
@@ -1376,17 +1403,17 @@
     const collapsing = !card.classList.contains('is-collapsed');
     card.classList.toggle('is-collapsed', collapsing);
     const toggleArea = card.querySelector('.phase-card__toggle-area');
-    if (toggleArea) toggleArea.title = collapsing ? 'Expand phase' : 'Collapse phase';
+    if (toggleArea) toggleArea.title = collapsing ? T.expand_phase : T.collapse_phase;
   }
 
   // ── Phase Actions ────────────────────────────────────────────
   function addPhase() {
-    showModal('Add Phase', [
-      { id: 'name',  label: 'Phase Name',  type: 'text' },
-      { id: 'desc',  label: 'Description', type: 'textarea' },
-      { id: 'start', label: 'Start Date',  type: 'date', defaultValue: todayStr() },
-      { id: 'end',   label: 'End Date',    type: 'date', defaultValue: todayStr() },
-      { id: 'color', label: 'Color',       type: 'color', defaultValue: '#6366f1' },
+    showModal(T.modal_add_phase, [
+      { id: 'name',  label: T.phase_name,   type: 'text' },
+      { id: 'desc',  label: T.description,  type: 'textarea' },
+      { id: 'start', label: T.start_date,   type: 'date', defaultValue: todayStr() },
+      { id: 'end',   label: T.end_date,     type: 'date', defaultValue: todayStr() },
+      { id: 'color', label: T.color,        type: 'color', defaultValue: '#6366f1' },
     ], async () => {
       const name  = document.getElementById('modal_input_name').value.trim();
       const desc  = document.getElementById('modal_input_desc').value.trim();
@@ -1398,21 +1425,21 @@
       btn.disabled = true;
       try {
         const resp = await api.createPhase(projectId, { name, description: desc || null, start_date: start, end_date: end, color });
-        if (resp.ok) { toast.success('Phase added'); closeModal(); await refresh(); }
-        else toast.error('Failed to add phase');
+        if (resp.ok) { toast.success(T.toast_phase_added); closeModal(); await refresh(); }
+        else toast.error(T.toast_phase_add_failed);
       } finally { btn.disabled = false; }
-    }, 'Add Phase');
+    }, T.modal_add_phase);
   }
 
   function editPhase(phaseId) {
     const phase = state.project.phases.find(p => p.id === phaseId);
     if (!phase) return;
-    showModal('Edit Phase', [
-      { id: 'name',  label: 'Phase Name',  type: 'text',     defaultValue: phase.name },
-      { id: 'desc',  label: 'Description', type: 'textarea', defaultValue: phase.description || '' },
-      { id: 'start', label: 'Start Date',  type: 'date',     defaultValue: phase.start_date },
-      { id: 'end',   label: 'End Date',    type: 'date',     defaultValue: phase.end_date },
-      { id: 'color', label: 'Color',       type: 'color',    defaultValue: phase.color || '#6366f1' },
+    showModal(T.modal_edit_phase, [
+      { id: 'name',  label: T.phase_name,   type: 'text',     defaultValue: phase.name },
+      { id: 'desc',  label: T.description,  type: 'textarea', defaultValue: phase.description || '' },
+      { id: 'start', label: T.start_date,   type: 'date',     defaultValue: phase.start_date },
+      { id: 'end',   label: T.end_date,     type: 'date',     defaultValue: phase.end_date },
+      { id: 'color', label: T.color,        type: 'color',    defaultValue: phase.color || '#6366f1' },
     ], async () => {
       const name  = document.getElementById('modal_input_name').value.trim();
       const desc  = document.getElementById('modal_input_desc').value.trim();
@@ -1428,10 +1455,10 @@
           depends_on_id: phase.depends_on_id ?? null,
           depends_on_milestone_id: phase.depends_on_milestone_id ?? null,
         });
-        if (resp.ok) { toast.success('Phase updated'); closeModal(); await refresh(); }
-        else toast.error('Failed to update phase');
+        if (resp.ok) { toast.success(T.toast_phase_updated); closeModal(); await refresh(); }
+        else toast.error(T.toast_phase_update_failed);
       } finally { btn.disabled = false; }
-    }, 'Save Changes');
+    }, T.save_changes);
   }
 
   function setDependency(phaseId) {
@@ -1470,20 +1497,20 @@
 
   function confirmDeletePhase(id, name) {
     showConfirm(
-      `Delete phase "${name}" and all its milestones and events? This cannot be undone.`,
+      T.confirm_delete_phase.replace('%s', name),
       async () => {
         const resp = await api.deletePhase(id);
-        if (resp.ok) { toast.success('Phase deleted'); await refresh(); }
-        else toast.error('Failed to delete phase');
+        if (resp.ok) { toast.success(T.toast_phase_deleted); await refresh(); }
+        else toast.error(T.toast_phase_delete_failed);
       }
     );
   }
 
   // ── Project-level Actions ────────────────────────────────────
   function addProjectMilestone() {
-    showModal('Add Project Milestone', [
-      { id: 'name',   label: 'Milestone Name', type: 'text' },
-      { id: 'target', label: 'Target Date',    type: 'date', defaultValue: todayStr() },
+    showModal(T.modal_add_project_milestone, [
+      { id: 'name',   label: T.milestone_name, type: 'text' },
+      { id: 'target', label: T.target_date,    type: 'date', defaultValue: todayStr() },
     ], async () => {
       const name = document.getElementById('modal_input_name').value.trim();
       const date = document.getElementById('modal_input_target').value;
@@ -1492,17 +1519,17 @@
       btn.disabled = true;
       try {
         const resp = await api.createProjectMilestone(projectId, { name, target_date: date });
-        if (resp.ok) { toast.success('Milestone added'); closeModal(); await refresh(); }
-        else toast.error('Failed to add milestone');
+        if (resp.ok) { toast.success(T.toast_milestone_added); closeModal(); await refresh(); }
+        else toast.error(T.toast_milestone_add_failed);
       } finally { btn.disabled = false; }
-    }, 'Add Milestone');
+    }, T.modal_add_milestone);
   }
 
   function addProjectEvent() {
-    showModal('Add Project Event', [
-      { id: 'name',  label: 'Event Name', type: 'text' },
-      { id: 'start', label: 'Start Date', type: 'date', defaultValue: todayStr() },
-      { id: 'end',   label: 'End Date',   type: 'date', defaultValue: todayStr() },
+    showModal(T.modal_add_project_event, [
+      { id: 'name',  label: T.event_name,  type: 'text' },
+      { id: 'start', label: T.start_date,  type: 'date', defaultValue: todayStr() },
+      { id: 'end',   label: T.end_date,    type: 'date', defaultValue: todayStr() },
     ], async () => {
       const name  = document.getElementById('modal_input_name').value.trim();
       const start = document.getElementById('modal_input_start').value;
@@ -1512,17 +1539,17 @@
       btn.disabled = true;
       try {
         const resp = await api.createProjectEvent(projectId, { name, start_date: start, end_date: end });
-        if (resp.ok) { toast.success('Event added'); closeModal(); await refresh(); }
-        else toast.error('Failed to add event');
+        if (resp.ok) { toast.success(T.toast_event_added); closeModal(); await refresh(); }
+        else toast.error(T.toast_event_add_failed);
       } finally { btn.disabled = false; }
-    }, 'Add Event');
+    }, T.modal_add_event);
   }
 
   // ── Milestone Actions ────────────────────────────────────────
   function addMilestone(phaseId) {
-    showModal('Add Milestone', [
-      { id: 'name',   label: 'Milestone Name', type: 'text' },
-      { id: 'target', label: 'Target Date',    type: 'date', defaultValue: todayStr() },
+    showModal(T.modal_add_milestone, [
+      { id: 'name',   label: T.milestone_name, type: 'text' },
+      { id: 'target', label: T.target_date,    type: 'date', defaultValue: todayStr() },
     ], async () => {
       const name = document.getElementById('modal_input_name').value.trim();
       const date = document.getElementById('modal_input_target').value;
@@ -1531,15 +1558,15 @@
       btn.disabled = true;
       try {
         const resp = await api.createMilestone(phaseId, { name, target_date: date });
-        if (resp.ok) { toast.success('Milestone added'); closeModal(); await refresh(); }
-        else toast.error('Failed to add milestone');
+        if (resp.ok) { toast.success(T.toast_milestone_added); closeModal(); await refresh(); }
+        else toast.error(T.toast_milestone_add_failed);
       } finally { btn.disabled = false; }
-    }, 'Add Milestone');
+    }, T.modal_add_milestone);
   }
 
   function editMilestone(id, name, currentDate) {
-    showModal(`Edit Milestone: ${name}`, [
-      { id: 'target', label: 'Target Date', type: 'date', defaultValue: currentDate },
+    showModal(`${T.modal_edit_milestone}: ${name}`, [
+      { id: 'target', label: T.target_date, type: 'date', defaultValue: currentDate },
     ], async () => {
       const date = document.getElementById('modal_input_target').value;
       if (!date) return;
@@ -1547,29 +1574,29 @@
       btn.disabled = true;
       try {
         const resp = await api.updateMilestone(id, { target_date: date });
-        if (resp.ok) { toast.success('Milestone updated'); closeModal(); await refresh(); }
-        else toast.error('Failed to update milestone');
+        if (resp.ok) { toast.success(T.toast_milestone_updated); closeModal(); await refresh(); }
+        else toast.error(T.toast_milestone_update_failed);
       } finally { btn.disabled = false; }
-    }, 'Save');
+    }, T.save);
   }
 
   function confirmDeleteMilestone(id, name) {
     showConfirm(
-      `Delete milestone "${name}"?`,
+      T.confirm_delete_milestone.replace('%s', name),
       async () => {
         const resp = await api.deleteMilestone(id);
-        if (resp.ok) { toast.success('Milestone deleted'); await refresh(); }
-        else toast.error('Failed to delete milestone');
+        if (resp.ok) { toast.success(T.toast_milestone_deleted); await refresh(); }
+        else toast.error(T.toast_milestone_delete_failed);
       }
     );
   }
 
   // ── Event Actions ────────────────────────────────────────────
   function addEvent(phaseId) {
-    showModal('Add Event', [
-      { id: 'name',  label: 'Event Name', type: 'text' },
-      { id: 'start', label: 'Start Date', type: 'date', defaultValue: todayStr() },
-      { id: 'end',   label: 'End Date',   type: 'date', defaultValue: todayStr() },
+    showModal(T.modal_add_event, [
+      { id: 'name',  label: T.event_name,  type: 'text' },
+      { id: 'start', label: T.start_date,  type: 'date', defaultValue: todayStr() },
+      { id: 'end',   label: T.end_date,    type: 'date', defaultValue: todayStr() },
     ], async () => {
       const name  = document.getElementById('modal_input_name').value.trim();
       const start = document.getElementById('modal_input_start').value;
@@ -1579,10 +1606,10 @@
       btn.disabled = true;
       try {
         const resp = await api.createEvent(phaseId, { name, start_date: start, end_date: end });
-        if (resp.ok) { toast.success('Event added'); closeModal(); await refresh(); }
-        else toast.error('Failed to add event');
+        if (resp.ok) { toast.success(T.toast_event_added); closeModal(); await refresh(); }
+        else toast.error(T.toast_event_add_failed);
       } finally { btn.disabled = false; }
-    }, 'Add Event');
+    }, T.modal_add_event);
   }
 
   function editEvent(evId) {
@@ -1592,10 +1619,10 @@
     ];
     const ev = allEvents.find(e => e.id === evId);
     if (!ev) return;
-    showModal('Edit Event', [
-      { id: 'name',  label: 'Event Name', type: 'text', defaultValue: ev.name },
-      { id: 'start', label: 'Start Date', type: 'date', defaultValue: ev.start_date },
-      { id: 'end',   label: 'End Date',   type: 'date', defaultValue: ev.end_date },
+    showModal(T.modal_edit_event, [
+      { id: 'name',  label: T.event_name,  type: 'text', defaultValue: ev.name },
+      { id: 'start', label: T.start_date,  type: 'date', defaultValue: ev.start_date },
+      { id: 'end',   label: T.end_date,    type: 'date', defaultValue: ev.end_date },
     ], async () => {
       const name  = document.getElementById('modal_input_name').value.trim();
       const start = document.getElementById('modal_input_start').value;
@@ -1605,19 +1632,19 @@
       btn.disabled = true;
       try {
         const resp = await api.updateEvent(evId, { name, start_date: start, end_date: end });
-        if (resp.ok) { toast.success('Event updated'); closeModal(); await refresh(); }
-        else toast.error('Failed to update event');
+        if (resp.ok) { toast.success(T.toast_event_updated); closeModal(); await refresh(); }
+        else toast.error(T.toast_event_update_failed);
       } finally { btn.disabled = false; }
-    }, 'Save Changes');
+    }, T.save_changes);
   }
 
   function confirmDeleteEvent(id, name) {
     showConfirm(
-      `Delete event "${name}"?`,
+      T.confirm_delete_event.replace('%s', name),
       async () => {
         const resp = await api.deleteEvent(id);
-        if (resp.ok) { toast.success('Event deleted'); await refresh(); }
-        else toast.error('Failed to delete event');
+        if (resp.ok) { toast.success(T.toast_event_deleted); await refresh(); }
+        else toast.error(T.toast_event_delete_failed);
       }
     );
   }
@@ -1625,29 +1652,29 @@
   // ── Project Actions ──────────────────────────────────────────
   function editProject() {
     const p = state.project;
-    showModal('Edit Project', [
-      { id: 'name', label: 'Project Name', type: 'text', defaultValue: p.name },
-      { id: 'desc', label: 'Description',  type: 'text', defaultValue: p.description || '' },
+    showModal(T.modal_edit_project, [
+      { id: 'name', label: T.project_name, type: 'text', defaultValue: p.name },
+      { id: 'desc', label: T.description,  type: 'text', defaultValue: p.description || '' },
     ], async () => {
       const name = document.getElementById('modal_input_name').value.trim();
       const description = document.getElementById('modal_input_desc').value.trim();
       if (!name) return;
       const resp = await api.updateProject(projectId, { name, description });
-      if (resp.ok) { toast.success('Project updated'); closeModal(); await refresh(); }
-      else toast.error('Failed to update project');
-    }, 'Save Changes');
+      if (resp.ok) { toast.success(T.toast_project_updated); closeModal(); await refresh(); }
+      else toast.error(T.toast_something_wrong);
+    }, T.save_changes);
   }
 
   function confirmDeleteProject() {
     showConfirm(
-      'Delete this entire project and all its phases? This cannot be undone.',
+      T.confirm_delete_project,
       async () => {
         const resp = await api.deleteProject(projectId);
         if (resp.ok) {
-          toast.success('Project deleted');
+          toast.success(T.toast_project_deleted);
           setTimeout(() => { window.location.href = '/'; }, 800);
         } else {
-          toast.error('Failed to delete project');
+          toast.error(T.toast_project_delete_failed);
         }
       }
     );
@@ -1679,7 +1706,7 @@
       state.project = await api.getProject(projectId);
       renderProject(state.project);
     } catch (err) {
-      toast.error('Failed to load project');
+      toast.error(T.toast_load_failed);
     }
   }
 
