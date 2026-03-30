@@ -739,6 +739,7 @@
     createProjectMilestone: (pid, d)   => fetch(`/api/projects/${pid}/milestones`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
     createProjectEvent:     (pid, d)   => fetch(`/api/projects/${pid}/events`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
     updateMilestone:        (id, d)    => fetch(`/api/milestones/${id}`, { method: 'PATCH', headers: H, body: JSON.stringify(d) }),
+    updateEvent:            (id, d)    => fetch(`/api/events/${id}`,     { method: 'PATCH', headers: H, body: JSON.stringify(d) }),
   };
 
   // ── Utilities ────────────────────────────────────────────────
@@ -837,6 +838,16 @@
 
   function renderPhases(phases) {
     const list = document.getElementById('phasesList');
+
+    // Preserve collapse state across re-renders
+    const wasCollapsed = new Set();
+    const wasExpanded  = new Set();
+    list.querySelectorAll('.phase-card[data-phase-id]').forEach(c => {
+      const pid = parseInt(c.dataset.phaseId);
+      (c.classList.contains('is-collapsed') ? wasCollapsed : wasExpanded).add(pid);
+    });
+    const hadState = wasCollapsed.size + wasExpanded.size > 0;
+
     list.innerHTML = '';
     if (phases.length === 0) {
       list.innerHTML = `<div class="item-empty" style="text-align:center;padding:2rem;">
@@ -858,7 +869,9 @@
       const color = phase.color || '#6366f1';
       const depName = phase.depends_on_id ? phaseMap[phase.depends_on_id] : null;
       const depMsName = phase.depends_on_milestone_id ? msMap[phase.depends_on_milestone_id] : null;
-      const collapsed = status !== 'active';
+      const collapsed = hadState
+        ? !wasExpanded.has(phase.id)  // preserve: expanded stays expanded, everything else stays collapsed
+        : status !== 'active';        // first render: default by status
 
       const card = document.createElement('div');
       card.className = 'phase-card' + (collapsed ? ' is-collapsed' : '');
@@ -1025,6 +1038,8 @@
 
     container.innerHTML = '<svg id="gantt"></svg>';
 
+    const fmtD = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
     state.ganttInstance = new Gantt('#gantt', tasks, {
       header_height: 50,
       column_width: 30,
@@ -1035,6 +1050,67 @@
       padding: 18,
       view_mode: state.ganttView,
       view_modes: ['Day', 'Week', 'Month'],
+
+      on_date_change(task, start, end) {
+        if (task.id.startsWith('p')) {
+          const phaseId = parseInt(task.id.slice(1));
+          const phase = state.project.phases.find(p => p.id === phaseId);
+          if (!phase) return;
+          api.updatePhase(phaseId, {
+            name: phase.name, description: phase.description,
+            start_date: fmtD(start), end_date: fmtD(end),
+            color: phase.color || '#6366f1',
+            depends_on_id: phase.depends_on_id ?? null,
+            depends_on_milestone_id: phase.depends_on_milestone_id ?? null,
+          }).then(r => { if (r.ok) refresh(); else toast.error('Failed to save'); });
+
+        } else if (task.id.startsWith('ms-')) {
+          const origDate = task.id.slice(3);
+          const newDate  = fmtD(start);
+          const allMs = [
+            ...(state.project.milestones || []),
+            ...state.project.phases.flatMap(p => p.milestones || []),
+          ];
+          Promise.all(
+            allMs.filter(m => m.target_date === origDate)
+                 .map(m => api.updateMilestone(m.id, { target_date: newDate }))
+          ).then(() => refresh()).catch(() => toast.error('Failed to save'));
+
+        } else if (task.id.startsWith('ev')) {
+          const evId = parseInt(task.id.slice(2));
+          api.updateEvent(evId, { start_date: fmtD(start), end_date: fmtD(end) })
+            .then(r => { if (r.ok) refresh(); else toast.error('Failed to save'); });
+        }
+      },
+
+      on_click(task) {
+        if (task.id.startsWith('p')) {
+          editPhase(parseInt(task.id.slice(1)));
+
+        } else if (task.id.startsWith('ms-')) {
+          const date = task.id.slice(3);
+          const allMs = [
+            ...(state.project.milestones || []),
+            ...state.project.phases.flatMap(p => p.milestones || []),
+          ];
+          const group = allMs.filter(m => m.target_date === date);
+          if (group.length === 1) {
+            editMilestone(group[0].id, group[0].name, group[0].target_date);
+          } else {
+            showModal('Edit Milestone', [
+              { id: 'ms_pick', label: 'Select milestone', type: 'select',
+                options: group.map(m => ({ value: m.id, text: m.name })) },
+            ], () => {
+              const id = parseInt(document.getElementById('modal_input_ms_pick').value);
+              const ms = group.find(m => m.id === id);
+              if (ms) { closeModal(); editMilestone(ms.id, ms.name, ms.target_date); }
+            }, 'Edit');
+          }
+
+        } else if (task.id.startsWith('ev')) {
+          editEvent(parseInt(task.id.slice(2)));
+        }
+      },
     });
   }
 
@@ -1242,6 +1318,7 @@
         const resp = await api.updatePhase(phaseId, {
           name, description: desc || null, start_date: start, end_date: end, color,
           depends_on_id: phase.depends_on_id ?? null,
+          depends_on_milestone_id: phase.depends_on_milestone_id ?? null,
         });
         if (resp.ok) { toast.success('Phase updated'); closeModal(); await refresh(); }
         else toast.error('Failed to update phase');
@@ -1398,6 +1475,32 @@
         else toast.error('Failed to add event');
       } finally { btn.disabled = false; }
     }, 'Add Event');
+  }
+
+  function editEvent(evId) {
+    const allEvents = [
+      ...(state.project.events || []),
+      ...state.project.phases.flatMap(p => p.events || []),
+    ];
+    const ev = allEvents.find(e => e.id === evId);
+    if (!ev) return;
+    showModal('Edit Event', [
+      { id: 'name',  label: 'Event Name', type: 'text', defaultValue: ev.name },
+      { id: 'start', label: 'Start Date', type: 'date', defaultValue: ev.start_date },
+      { id: 'end',   label: 'End Date',   type: 'date', defaultValue: ev.end_date },
+    ], async () => {
+      const name  = document.getElementById('modal_input_name').value.trim();
+      const start = document.getElementById('modal_input_start').value;
+      const end   = document.getElementById('modal_input_end').value;
+      if (!name || !start || !end) return;
+      const btn = document.getElementById('modalSubmitBtn');
+      btn.disabled = true;
+      try {
+        const resp = await api.updateEvent(evId, { name, start_date: start, end_date: end });
+        if (resp.ok) { toast.success('Event updated'); closeModal(); await refresh(); }
+        else toast.error('Failed to update event');
+      } finally { btn.disabled = false; }
+    }, 'Save Changes');
   }
 
   function confirmDeleteEvent(id, name) {

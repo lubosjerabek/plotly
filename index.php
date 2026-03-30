@@ -487,6 +487,26 @@ function api_create_event(int $phase_id): void {
     json_out(['id' => $new_id, 'phase_id' => $phase_id, 'name' => $b['name'] ?? '', 'start_date' => $b['start_date'] ?? '', 'end_date' => $b['end_date'] ?? '', 'google_event_id' => null], 201);
 }
 
+function api_update_event(int $id): void {
+    require_auth();
+    $b = body();
+    $sel = pdo()->prepare('SELECT * FROM events WHERE id = ?');
+    $sel->execute([$id]);
+    $existing = $sel->fetch();
+    if (!$existing) not_found();
+    $upd = pdo()->prepare('UPDATE events SET name=?, start_date=?, end_date=? WHERE id=?');
+    $upd->execute([
+        $b['name']       ?? $existing['name'],
+        $b['start_date'] ?? $existing['start_date'],
+        $b['end_date']   ?? $existing['end_date'],
+        $id,
+    ]);
+    $sel->execute([$id]);
+    $ev = $sel->fetch();
+    $ev['id'] = (int)$ev['id'];
+    json_out($ev);
+}
+
 function api_delete_event(int $id): void {
     require_auth();
     $del = pdo()->prepare('DELETE FROM events WHERE id = ?');
@@ -565,6 +585,7 @@ if ($method === 'DELETE' && preg_match('#^/api/milestones/(\d+)$#', $path, $m)) 
 // Events API
 if ($method === 'POST'   && preg_match('#^/api/projects/(\d+)/events$#', $path, $m)) { api_create_project_event((int)$m[1]); }
 if ($method === 'POST'   && preg_match('#^/api/phases/(\d+)/events$#', $path, $m))   { api_create_event((int)$m[1]); }
+if ($method === 'PATCH'  && preg_match('#^/api/events/(\d+)$#', $path, $m))          { api_update_event((int)$m[1]); }
 if ($method === 'DELETE' && preg_match('#^/api/events/(\d+)$#', $path, $m))          { api_delete_event((int)$m[1]); }
 
 // Nothing matched
