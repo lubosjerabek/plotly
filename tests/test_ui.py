@@ -308,10 +308,11 @@ class TestProjectDetail:
         page.locator("#ganttViewBtns button", has_text="Week").click()
         expect(page.locator("#ganttViewBtns button", has_text="Week")).to_have_class(re.compile(r"active"))
 
-    def test_gcal_button_shows_info_toast(self, page: Page):
+    def test_subscribe_button_opens_modal(self, page: Page):
         navigate_to_test_project(page, "Playwright Test Project")
-        page.locator("#gcalBtn").click()
-        expect(page.locator(".toast--info")).to_be_visible()
+        page.locator("#subscribeBtn").click()
+        expect(page.locator("#subscribeModal")).to_have_class(re.compile(r"is-open"))
+        expect(page.locator("#icsUrl")).to_be_visible()
 
     def test_delete_milestone_via_confirmation_modal(self, page: Page):
         navigate_to_test_project(page, "Playwright Test Project")

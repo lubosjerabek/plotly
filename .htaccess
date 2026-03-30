@@ -1,0 +1,16 @@
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
+
+# Block direct access to config.php
+<Files "config.php">
+    Order deny,allow
+    Deny from all
+</Files>
+
+# Block direct access to setup.php (delete this file after use anyway)
+<Files "setup.php">
+    Order deny,allow
+    Deny from all
+</Files>

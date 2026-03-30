@@ -1,0 +1,21 @@
+# Version control
+.git
+.gitignore
+
+# Dev tools
+venv/
+__pycache__/
+*.pyc
+tests/
+
+# Credentials (never bake into the image)
+token.json
+credentials.json
+
+# Docker build files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Docs
+README.md

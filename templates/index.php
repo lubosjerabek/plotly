@@ -76,6 +76,11 @@
       background: var(--accent);
       box-shadow: 0 0 8px var(--accent);
     }
+    .topbar__right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
 
     /* ── Page ── */
     .page {
@@ -361,6 +366,9 @@
     <div class="topbar__brand-dot"></div>
     Plotly
   </div>
+  <div class="topbar__right">
+    <a class="btn btn-ghost" href="/logout" style="font-size:12px">Sign out</a>
+  </div>
 </nav>
 
 <main class="page">
@@ -429,8 +437,8 @@
   // ── API ──────────────────────────────────────────────────────
   const h = { 'Content-Type': 'application/json' };
   const api = {
-    getProjects:   ()         => fetch('/api/projects/').then(r => r.json()),
-    createProject: (data)     => fetch('/api/projects/', { method: 'POST', headers: h, body: JSON.stringify(data) }),
+    getProjects:   ()         => fetch('/api/projects').then(r => r.json()),
+    createProject: (data)     => fetch('/api/projects', { method: 'POST', headers: h, body: JSON.stringify(data) }),
     updateProject: (id, data) => fetch(`/api/projects/${id}`, { method: 'PUT', headers: h, body: JSON.stringify(data) }),
     deleteProject: (id)       => fetch(`/api/projects/${id}`, { method: 'DELETE' }),
   };
@@ -576,7 +584,7 @@
 
   // ── Toast ────────────────────────────────────────────────────
   const toast = {
-    _show(message, type, icon) {
+    _show(message, type) {
       const el = document.createElement('div');
       el.className = `toast toast--${type}`;
       el.innerHTML = `<span class="toast__body">${escHtml(message)}</span>

@@ -1,13 +1,44 @@
 version: '3.8'
 
 services:
-  plotly-app:
+  app:
     build: .
     container_name: plotly-app
     ports:
-      - "8000:8000"
-    volumes:
-      - .:/app
+      - "8000:80"
     environment:
-      - PYTHONUNBUFFERED=1
+      DB_HOST: db
+      DB_NAME: plotly
+      DB_USER: plotly
+      DB_PASS: plotly_secret
+      AUTH_USER: admin
+      # Generate a hash after first start:
+      #   docker-compose exec app php -r "echo password_hash('yourpassword', PASSWORD_DEFAULT) . PHP_EOL;"
+      # Then replace the value below and restart.
+      AUTH_PASS_HASH: "$$2y$$12$$CHANGE_ME_generate_via_setup.php"
+      ICS_TOKEN: "change-this-to-a-long-random-secret"
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    container_name: plotly-db
+    environment:
+      MYSQL_DATABASE: plotly
+      MYSQL_USER: plotly
+      MYSQL_PASSWORD: plotly_secret
+      MYSQL_ROOT_PASSWORD: root_secret
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "plotly", "-pplotly_secret"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  db_data:

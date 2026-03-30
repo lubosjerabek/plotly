@@ -1,15 +1,24 @@
-FROM python:3.11-slim
+FROM php:8.2-apache
 
-WORKDIR /app
+# Enable mod_rewrite (required for .htaccess routing)
+RUN a2enmod rewrite
 
-COPY requirements.txt .
+# Allow .htaccess overrides in the document root
+RUN sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
 
-RUN pip install --no-cache-dir -r requirements.txt
+# Install PDO + MySQL driver
+RUN docker-php-ext-install pdo pdo_mysql
 
-# Copy all the content from the current directory
-COPY . /app
+# Copy application files
+COPY . /var/www/html/
 
-EXPOSE 8000
+# Remove files that should not be served from this image
+RUN rm -f /var/www/html/schema.sql \
+           /var/www/html/setup.php \
+           /var/www/html/.gitignore \
+           /var/www/html/Dockerfile \
+           /var/www/html/docker-compose.yml
 
-# We use host 0.0.0.0 to make sure it's accessible externally from the container
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+RUN chown -R www-data:www-data /var/www/html
+
+EXPOSE 80

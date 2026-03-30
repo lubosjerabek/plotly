@@ -463,6 +463,29 @@
     }
     .confirm-message { color: var(--text-muted); margin: 0; line-height: 1.6; }
 
+    /* ── Subscribe modal ── */
+    .subscribe-url-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .subscribe-url-row input[type="text"] {
+      flex: 1;
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      padding: 0.5rem 0.75rem;
+    }
+    .subscribe-instructions {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: 0.75rem 0 0;
+      line-height: 1.6;
+    }
+
     /* ── Toasts ── */
     .toast-container {
       position: fixed; bottom: 1.5rem; right: 1.5rem;
@@ -530,6 +553,9 @@
   <symbol id="icon-chevron-down" viewBox="0 0 16 16">
     <path d="M4.427 7.427l3.396 3.396a.25.25 0 0 0 .354 0l3.396-3.396A.25.25 0 0 0 11.396 7H4.604a.25.25 0 0 0-.177.427z"/>
   </symbol>
+  <symbol id="icon-copy" viewBox="0 0 16 16">
+    <path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25v-7.5z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25v-7.5zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25h-7.5z"/>
+  </symbol>
 </svg>
 
 <!-- Topbar -->
@@ -539,9 +565,9 @@
   </div>
   <div class="topbar__center" id="topbarTitle">Loading…</div>
   <div class="topbar__right">
-    <button class="btn btn-ghost" id="gcalBtn" onclick="onGcalClick()">
+    <button class="btn btn-ghost" id="subscribeBtn" onclick="openSubscribeModal()">
       <svg><use href="#icon-calendar"/></svg>
-      <span class="gcal-label">Auto-synced</span>
+      Subscribe
     </button>
     <button class="btn btn-danger-outline" id="deleteProjectBtn" onclick="confirmDeleteProject()">
       <svg><use href="#icon-trash"/></svg>
@@ -613,6 +639,33 @@
   </div>
 </div>
 
+<!-- Subscribe / ICS Modal -->
+<div class="modal-overlay" id="subscribeModal" role="dialog" aria-modal="true" aria-labelledby="subscribeTitle">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="subscribeTitle">Subscribe to Calendar</h2>
+      <button class="modal__close" onclick="closeSubscribeModal()" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body">
+      <label class="field-label">ICS Feed URL (this project)</label>
+      <div class="subscribe-url-row">
+        <input type="text" id="icsUrl" readonly>
+        <button class="btn btn-ghost btn-xs" onclick="copyIcsUrl()" title="Copy URL">
+          <svg><use href="#icon-copy"/></svg>
+          Copy
+        </button>
+      </div>
+      <p class="subscribe-instructions">
+        In Google Calendar: <strong>Other calendars → From URL</strong> → paste the URL above → <strong>Add calendar</strong>.<br>
+        The feed refreshes automatically. Changes you make here appear in Google Calendar within a few hours.
+      </p>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" onclick="closeSubscribeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Confirmation Modal -->
 <div class="modal-overlay" id="confirmModal" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
   <div class="modal modal--sm">
@@ -634,7 +687,7 @@
 
 <script>
   // ── Constants & State ────────────────────────────────────────
-  const projectId = {{ project_id }};
+  const projectId = <?= (int)$project_id ?>;
   const state = { project: null, activeTab: 'phases', ganttView: 'Day', ganttInstance: null };
 
   // ── API ──────────────────────────────────────────────────────
@@ -643,12 +696,12 @@
     getProject:      (id)       => fetch(`/api/projects/${id}`).then(r => r.json()),
     updateProject:   (id, data) => fetch(`/api/projects/${id}`, { method: 'PUT', headers: H, body: JSON.stringify(data) }),
     deleteProject:   (id)       => fetch(`/api/projects/${id}`, { method: 'DELETE' }),
-    createPhase:     (pid, data)=> fetch(`/api/phases/?project_id=${pid}`, { method: 'POST', headers: H, body: JSON.stringify(data) }),
+    createPhase:     (pid, data)=> fetch(`/api/phases?project_id=${pid}`, { method: 'POST', headers: H, body: JSON.stringify(data) }),
     updatePhase:     (id, data) => fetch(`/api/phases/${id}`, { method: 'PUT', headers: H, body: JSON.stringify(data) }),
     deletePhase:     (id)       => fetch(`/api/phases/${id}`, { method: 'DELETE' }),
-    createMilestone: (phid, d)  => fetch(`/api/phases/${phid}/milestones/`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
+    createMilestone: (phid, d)  => fetch(`/api/phases/${phid}/milestones`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
     deleteMilestone: (id)       => fetch(`/api/milestones/${id}`, { method: 'DELETE' }),
-    createEvent:     (phid, d)  => fetch(`/api/phases/${phid}/events/`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
+    createEvent:     (phid, d)  => fetch(`/api/phases/${phid}/events`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
     deleteEvent:     (id)       => fetch(`/api/events/${id}`, { method: 'DELETE' }),
   };
 
@@ -705,7 +758,6 @@
       return;
     }
 
-    // Build a quick lookup for dependency names
     const phaseMap = {};
     phases.forEach(p => { phaseMap[p.id] = p.name; });
 
@@ -713,7 +765,6 @@
       const status = getPhaseStatus(phase.start_date, phase.end_date);
       const color = phase.color || '#6366f1';
       const depName = phase.depends_on_id ? phaseMap[phase.depends_on_id] : null;
-      // Only active phases start expanded
       const collapsed = status !== 'active';
 
       const card = document.createElement('div');
@@ -721,7 +772,6 @@
       card.dataset.phaseId = phase.id;
       card.dataset.status = status;
 
-      // Milestones
       const msItems = phase.milestones.length > 0
         ? phase.milestones.map(m => `
             <li>
@@ -734,7 +784,6 @@
             </li>`).join('')
         : `<li class="item-empty" style="background:none;padding:0.25rem 0;">None</li>`;
 
-      // Events
       const evItems = phase.events.length > 0
         ? phase.events.map(e => `
             <li>
@@ -802,7 +851,6 @@
       document.querySelector('.gantt-container').innerHTML = `<div class="item-empty" style="text-align:center;padding:2rem;">No phases to display.</div>`;
       return;
     }
-    // Inject per-phase color styles
     const styleId = 'gantt-phase-colors';
     let styleTag = document.getElementById(styleId);
     if (!styleTag) { styleTag = document.createElement('style'); styleTag.id = styleId; document.head.appendChild(styleTag); }
@@ -820,7 +868,6 @@
       custom_class: 'phase-bar-' + p.id,
     }));
 
-    // Reset SVG
     const svgEl = document.getElementById('gantt');
     if (svgEl) svgEl.innerHTML = '';
     const container = document.querySelector('.gantt-container');
@@ -860,6 +907,28 @@
     }
   }
 
+  // ── Subscribe / ICS Modal ────────────────────────────────────
+  function openSubscribeModal() {
+    const url = window.location.origin + '/project/' + projectId + '/calendar.ics?token=<?= htmlspecialchars(ICS_TOKEN, ENT_QUOTES) ?>';
+    document.getElementById('icsUrl').value = url;
+    document.getElementById('subscribeModal').classList.add('is-open');
+  }
+
+  function closeSubscribeModal() {
+    document.getElementById('subscribeModal').classList.remove('is-open');
+  }
+
+  async function copyIcsUrl() {
+    const url = document.getElementById('icsUrl').value;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('URL copied to clipboard');
+    } catch {
+      document.getElementById('icsUrl').select();
+      toast.info('Select all and copy manually');
+    }
+  }
+
   // ── Generic Modal ────────────────────────────────────────────
   let _modalCallback = null;
 
@@ -874,7 +943,6 @@
       wrap.innerHTML = buildFieldHTML(f);
       container.appendChild(wrap);
     });
-    // Wire color picker live preview
     fields.filter(f => f.type === 'color').forEach(f => {
       const input = document.getElementById(`modal_input_${f.id}`);
       const preview = document.getElementById(`color_preview_${f.id}`);
@@ -1143,13 +1211,9 @@
     );
   }
 
-  function onGcalClick() {
-    toast.info('Phases are automatically synced to Google Calendar on create and update.');
-  }
-
   // ── Keyboard Shortcuts ───────────────────────────────────────
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeModal(); closeConfirm(); }
+    if (e.key === 'Escape') { closeModal(); closeConfirm(); closeSubscribeModal(); }
   });
   document.getElementById('genericModal').addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey && e.target.tagName !== 'SELECT' && e.target.tagName !== 'TEXTAREA') {
@@ -1162,6 +1226,9 @@
   });
   document.getElementById('confirmModal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeConfirm();
+  });
+  document.getElementById('subscribeModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeSubscribeModal();
   });
 
   // ── Init ─────────────────────────────────────────────────────
