@@ -1241,7 +1241,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
 
   // ── Subscribe / ICS Modal ────────────────────────────────────
   function openSubscribeModal() {
-    const url = window.location.origin + '/project/' + projectId + '/calendar.ics?token=<?= htmlspecialchars(ICS_TOKEN, ENT_QUOTES) ?>';
+    const url = window.location.origin + '/project/' + projectId + '/calendar.ics?token=<?= htmlspecialchars(get_ics_token(), ENT_QUOTES) ?>';
     document.getElementById('icsUrl').value = url;
     document.getElementById('subscribeModal').classList.add('is-open');
   }
