@@ -760,6 +760,47 @@
     return `${months[parseInt(m,10)-1]} ${parseInt(day,10)}, ${y}`;
   }
 
+  function dateToYMD(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function parseDateLocal(str) {
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  function shiftDateStr(str, days) {
+    const d = parseDateLocal(str);
+    d.setDate(d.getDate() + days);
+    return dateToYMD(d);
+  }
+
+  // Recursively collect all phases that cascade from a moved phase
+  function collectPhaseDependents(rootId, delta, phases) {
+    const results = [];
+    const visit = id => phases.forEach(p => {
+      if (p.depends_on_id === id) {
+        results.push({ name: p.name, newStart: shiftDateStr(p.start_date, delta), newEnd: shiftDateStr(p.end_date, delta) });
+        visit(p.id);
+      }
+    });
+    visit(rootId);
+    return results;
+  }
+
+  function buildImpactHTML(movedLabel, delta, dependents) {
+    const sign   = delta > 0 ? `+${delta}` : `${delta}`;
+    const dUnit  = Math.abs(delta) === 1 ? 'day' : 'days';
+    let html = `<strong>${escHtml(movedLabel)}</strong> shifts <strong>${sign} ${dUnit}</strong>.`;
+    if (dependents.length) {
+      html += `<br><br><span style="font-size:12px;color:var(--text-muted)">Also shifts ${dependents.length} dependent phase${dependents.length > 1 ? 's' : ''}:</span>`;
+      html += `<ul style="margin:.5rem 0 0;padding-left:1.25rem;font-size:13px;color:var(--text-muted);line-height:1.8">`;
+      dependents.forEach(d => { html += `<li>${escHtml(d.name)} → ${fmtDate(d.newStart)}</li>`; });
+      html += '</ul>';
+    }
+    return html;
+  }
+
   function getPhaseStatus(start, end) {
     const today = new Date(); today.setHours(0,0,0,0);
     const s = new Date(start), e = new Date(end);
@@ -1038,8 +1079,6 @@
 
     container.innerHTML = '<svg id="gantt"></svg>';
 
-    const fmtD = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-
     state.ganttInstance = new Gantt('#gantt', tasks, {
       header_height: 50,
       column_width: 30,
@@ -1052,34 +1091,74 @@
       view_modes: ['Day', 'Week', 'Month'],
 
       on_date_change(task, start, end) {
+        const revert = () => renderGantt(state.project);
+
         if (task.id.startsWith('p')) {
           const phaseId = parseInt(task.id.slice(1));
-          const phase = state.project.phases.find(p => p.id === phaseId);
-          if (!phase) return;
-          api.updatePhase(phaseId, {
-            name: phase.name, description: phase.description,
-            start_date: fmtD(start), end_date: fmtD(end),
-            color: phase.color || '#6366f1',
-            depends_on_id: phase.depends_on_id ?? null,
-            depends_on_milestone_id: phase.depends_on_milestone_id ?? null,
-          }).then(r => { if (r.ok) refresh(); else toast.error('Failed to save'); });
+          const phase   = state.project.phases.find(p => p.id === phaseId);
+          if (!phase) return revert();
+          const newStart = dateToYMD(start), newEnd = dateToYMD(end);
+          const delta      = Math.round((parseDateLocal(newStart) - parseDateLocal(phase.start_date)) / 86400000);
+          if (delta === 0) return;
+          const dependents = collectPhaseDependents(phaseId, delta, state.project.phases);
+          showImpactConfirm(
+            buildImpactHTML(phase.name, delta, dependents),
+            async () => {
+              const r = await api.updatePhase(phaseId, {
+                name: phase.name, description: phase.description,
+                start_date: newStart, end_date: newEnd,
+                color: phase.color || '#6366f1',
+                depends_on_id: phase.depends_on_id ?? null,
+                depends_on_milestone_id: phase.depends_on_milestone_id ?? null,
+              });
+              if (r.ok) refresh(); else { toast.error('Failed to save'); revert(); }
+            },
+            revert
+          );
 
         } else if (task.id.startsWith('ms-')) {
           const origDate = task.id.slice(3);
-          const newDate  = fmtD(start);
-          const allMs = [
+          const newDate  = dateToYMD(start);
+          if (newDate === origDate) return;
+          const allMs     = [
             ...(state.project.milestones || []),
             ...state.project.phases.flatMap(p => p.milestones || []),
           ];
-          Promise.all(
-            allMs.filter(m => m.target_date === origDate)
-                 .map(m => api.updateMilestone(m.id, { target_date: newDate }))
-          ).then(() => refresh()).catch(() => toast.error('Failed to save'));
+          const group     = allMs.filter(m => m.target_date === origDate);
+          const delta     = Math.round((parseDateLocal(newDate) - parseDateLocal(origDate)) / 86400000);
+          // collect phases that depend on any milestone in the group
+          const msDeps = group.flatMap(m => {
+            const sign = delta > 0 ? `+${delta}` : `${delta}`;
+            return state.project.phases
+              .filter(p => p.depends_on_milestone_id === m.id)
+              .map(p => ({ name: p.name, newStart: shiftDateStr(p.start_date, delta), newEnd: shiftDateStr(p.end_date, delta) }));
+          });
+          const label = group.length === 1 ? group[0].name : `${group.length} milestones on ${fmtDate(origDate)}`;
+          showImpactConfirm(
+            buildImpactHTML(label, delta, msDeps),
+            async () => {
+              await Promise.all(group.map(m => api.updateMilestone(m.id, { target_date: newDate })));
+              refresh();
+            },
+            revert
+          );
 
         } else if (task.id.startsWith('ev')) {
-          const evId = parseInt(task.id.slice(2));
-          api.updateEvent(evId, { start_date: fmtD(start), end_date: fmtD(end) })
-            .then(r => { if (r.ok) refresh(); else toast.error('Failed to save'); });
+          const evId     = parseInt(task.id.slice(2));
+          const allEvs   = [...(state.project.events || []), ...state.project.phases.flatMap(p => p.events || [])];
+          const ev       = allEvs.find(e => e.id === evId);
+          if (!ev) return revert();
+          const newStart = dateToYMD(start), newEnd = dateToYMD(end);
+          const delta    = Math.round((parseDateLocal(newStart) - parseDateLocal(ev.start_date)) / 86400000);
+          if (delta === 0) return;
+          showImpactConfirm(
+            buildImpactHTML(ev.name, delta, []),
+            async () => {
+              const r = await api.updateEvent(evId, { start_date: newStart, end_date: newEnd });
+              if (r.ok) refresh(); else { toast.error('Failed to save'); revert(); }
+            },
+            revert
+          );
         }
       },
 
@@ -1224,23 +1303,52 @@
   });
 
   // ── Confirmation Modal ───────────────────────────────────────
-  let _confirmCallback = null;
+  let _confirmCallback       = null;
+  let _confirmCancelCallback = null;
 
   function showConfirm(message, onConfirm, title = 'Confirm Deletion') {
+    const okBtn = document.getElementById('confirmOkBtn');
+    okBtn.textContent = 'Delete';
+    okBtn.className = 'btn btn-danger-outline';
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMessage').textContent = message;
-    _confirmCallback = onConfirm;
+    _confirmCallback       = onConfirm;
+    _confirmCancelCallback = null;
+    document.getElementById('confirmModal').classList.add('is-open');
+  }
+
+  function showImpactConfirm(htmlMessage, onApply, onCancel, title = 'Confirm Change') {
+    const okBtn = document.getElementById('confirmOkBtn');
+    okBtn.textContent = 'Apply';
+    okBtn.className = 'btn btn-primary';
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').innerHTML = htmlMessage;
+    _confirmCallback       = onApply;
+    _confirmCancelCallback = onCancel;
     document.getElementById('confirmModal').classList.add('is-open');
   }
 
   function closeConfirm() {
     document.getElementById('confirmModal').classList.remove('is-open');
-    _confirmCallback = null;
+    const cancelCb = _confirmCancelCallback;
+    _confirmCallback       = null;
+    _confirmCancelCallback = null;
+    // reset button to delete style for next showConfirm call
+    const okBtn = document.getElementById('confirmOkBtn');
+    okBtn.textContent = 'Delete';
+    okBtn.className = 'btn btn-danger-outline';
+    if (cancelCb) cancelCb();
   }
 
   document.getElementById('confirmOkBtn').addEventListener('click', () => {
-    if (_confirmCallback) _confirmCallback();
-    closeConfirm();
+    const cb = _confirmCallback;
+    _confirmCallback       = null;
+    _confirmCancelCallback = null;
+    document.getElementById('confirmModal').classList.remove('is-open');
+    const okBtn = document.getElementById('confirmOkBtn');
+    okBtn.textContent = 'Delete';
+    okBtn.className = 'btn btn-danger-outline';
+    if (cb) cb();
   });
 
   // ── Toast ────────────────────────────────────────────────────
