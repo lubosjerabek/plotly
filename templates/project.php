@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Project — Plotly</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.css" />
@@ -605,6 +606,23 @@
         Add Phase
       </button>
     </div>
+    <!-- Project-wide milestones & events (not tied to any phase) -->
+    <div id="projectItemsCard" class="phase-card" style="display:none;border-left:3px solid var(--accent);margin-bottom:1.25rem;">
+      <div class="phase-card__header">
+        <div style="display:flex;align-items:center;gap:0.6rem;flex:1;">
+          <div class="phase-card__color-dot" style="background:var(--accent);--dot-color:var(--accent)"></div>
+          <div class="phase-card__title-area">
+            <h3 class="phase-card__name">Project-wide</h3>
+          </div>
+        </div>
+        <div class="phase-card__actions">
+          <button class="btn btn-ghost btn-xs" onclick="addProjectMilestone()">+ Milestone</button>
+          <button class="btn btn-ghost btn-xs" onclick="addProjectEvent()">+ Event</button>
+        </div>
+      </div>
+      <div id="projectItemsBody" class="phase-card__body" style="max-height:none;opacity:1;"></div>
+    </div>
+
     <div id="phasesList"></div>
   </div>
 
@@ -699,10 +717,12 @@
     createPhase:     (pid, data)=> fetch(`/api/phases?project_id=${pid}`, { method: 'POST', headers: H, body: JSON.stringify(data) }),
     updatePhase:     (id, data) => fetch(`/api/phases/${id}`, { method: 'PUT', headers: H, body: JSON.stringify(data) }),
     deletePhase:     (id)       => fetch(`/api/phases/${id}`, { method: 'DELETE' }),
-    createMilestone: (phid, d)  => fetch(`/api/phases/${phid}/milestones`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
-    deleteMilestone: (id)       => fetch(`/api/milestones/${id}`, { method: 'DELETE' }),
-    createEvent:     (phid, d)  => fetch(`/api/phases/${phid}/events`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
-    deleteEvent:     (id)       => fetch(`/api/events/${id}`, { method: 'DELETE' }),
+    createMilestone:        (phid, d)  => fetch(`/api/phases/${phid}/milestones`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
+    deleteMilestone:        (id)       => fetch(`/api/milestones/${id}`, { method: 'DELETE' }),
+    createEvent:            (phid, d)  => fetch(`/api/phases/${phid}/events`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
+    deleteEvent:            (id)       => fetch(`/api/events/${id}`, { method: 'DELETE' }),
+    createProjectMilestone: (pid, d)   => fetch(`/api/projects/${pid}/milestones`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
+    createProjectEvent:     (pid, d)   => fetch(`/api/projects/${pid}/events`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
   };
 
   // ── Utilities ────────────────────────────────────────────────
@@ -744,8 +764,60 @@
     document.getElementById('topbarTitle').textContent = p.name;
     const pc = p.phases.length;
     document.getElementById('phaseCount').textContent = `${pc} phase${pc !== 1 ? 's' : ''}`;
+    renderProjectItems(p.milestones || [], p.events || []);
     renderPhases(p.phases);
     if (state.activeTab === 'timeline') renderGantt(p.phases);
+  }
+
+  function renderProjectItems(milestones, events) {
+    const card = document.getElementById('projectItemsCard');
+    const container = document.getElementById('projectItemsBody');
+    if (!card || !container) return;
+    if (milestones.length === 0 && events.length === 0) {
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = '';
+
+    const msItems = milestones.length > 0
+      ? milestones.map(m => `
+          <li>
+            <span class="item-list__name">${escHtml(m.name)}</span>
+            <span class="item-list__meta">${fmtDate(m.target_date)}</span>
+            <button class="btn btn-icon btn-danger-outline" title="Delete milestone" style="width:22px;height:22px;padding:2px;"
+              onclick="confirmDeleteMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}')">
+              <svg><use href="#icon-trash"/></svg>
+            </button>
+          </li>`).join('')
+      : `<li class="item-empty" style="background:none;padding:0.25rem 0;">None</li>`;
+
+    const evItems = events.length > 0
+      ? events.map(e => `
+          <li>
+            <span class="item-list__name">${escHtml(e.name)}</span>
+            <span class="item-list__meta">${fmtDate(e.start_date)} → ${fmtDate(e.end_date)}</span>
+            <button class="btn btn-icon btn-danger-outline" title="Delete event" style="width:22px;height:22px;padding:2px;"
+              onclick="confirmDeleteEvent(${e.id}, '${escHtml(e.name).replace(/'/g,"\\'")}')">
+              <svg><use href="#icon-trash"/></svg>
+            </button>
+          </li>`).join('')
+      : `<li class="item-empty" style="background:none;padding:0.25rem 0;">None</li>`;
+
+    container.innerHTML = `
+      <div class="phase-section">
+        <div class="phase-section__header">
+          <span class="phase-section__label">Milestones</span>
+          <button class="btn btn-ghost btn-xs" onclick="addProjectMilestone()">+ Add</button>
+        </div>
+        <ul class="item-list">${msItems}</ul>
+      </div>
+      <div class="phase-section">
+        <div class="phase-section__header">
+          <span class="phase-section__label">Events</span>
+          <button class="btn btn-ghost btn-xs" onclick="addProjectEvent()">+ Add</button>
+        </div>
+        <ul class="item-list">${evItems}</ul>
+      </div>`;
   }
 
   function renderPhases(phases) {
@@ -1116,6 +1188,45 @@
         else toast.error('Failed to delete phase');
       }
     );
+  }
+
+  // ── Project-level Actions ────────────────────────────────────
+  function addProjectMilestone() {
+    showModal('Add Project Milestone', [
+      { id: 'name',   label: 'Milestone Name', type: 'text' },
+      { id: 'target', label: 'Target Date',    type: 'date', defaultValue: todayStr() },
+    ], async () => {
+      const name = document.getElementById('modal_input_name').value.trim();
+      const date = document.getElementById('modal_input_target').value;
+      if (!name || !date) return;
+      const btn = document.getElementById('modalSubmitBtn');
+      btn.disabled = true;
+      try {
+        const resp = await api.createProjectMilestone(projectId, { name, target_date: date });
+        if (resp.ok) { toast.success('Milestone added'); closeModal(); await refresh(); }
+        else toast.error('Failed to add milestone');
+      } finally { btn.disabled = false; }
+    }, 'Add Milestone');
+  }
+
+  function addProjectEvent() {
+    showModal('Add Project Event', [
+      { id: 'name',  label: 'Event Name', type: 'text' },
+      { id: 'start', label: 'Start Date', type: 'date', defaultValue: todayStr() },
+      { id: 'end',   label: 'End Date',   type: 'date', defaultValue: todayStr() },
+    ], async () => {
+      const name  = document.getElementById('modal_input_name').value.trim();
+      const start = document.getElementById('modal_input_start').value;
+      const end   = document.getElementById('modal_input_end').value;
+      if (!name || !start || !end) return;
+      const btn = document.getElementById('modalSubmitBtn');
+      btn.disabled = true;
+      try {
+        const resp = await api.createProjectEvent(projectId, { name, start_date: start, end_date: end });
+        if (resp.ok) { toast.success('Event added'); closeModal(); await refresh(); }
+        else toast.error('Failed to add event');
+      } finally { btn.disabled = false; }
+    }, 'Add Event');
   }
 
   // ── Milestone Actions ────────────────────────────────────────

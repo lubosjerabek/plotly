@@ -1,4 +1,5 @@
 -- Run this once via your hosting panel's SQL / phpMyAdmin console.
+-- Safe to re-run: all statements use IF NOT EXISTS / IF EXISTS guards.
 
 CREATE TABLE IF NOT EXISTS projects (
   id          INT AUTO_INCREMENT PRIMARY KEY,
@@ -20,21 +21,42 @@ CREATE TABLE IF NOT EXISTS phases (
   FOREIGN KEY (depends_on_id) REFERENCES phases(id)   ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- phase_id is nullable so milestones can belong to a project directly
+-- (project_id set, phase_id NULL) or to a phase (phase_id set, project_id NULL).
 CREATE TABLE IF NOT EXISTS milestones (
   id              INT AUTO_INCREMENT PRIMARY KEY,
-  phase_id        INT NOT NULL,
+  phase_id        INT NULL,
+  project_id      INT NULL,
   name            VARCHAR(255) NOT NULL,
   target_date     DATE NOT NULL,
   google_event_id VARCHAR(255),
-  FOREIGN KEY (phase_id) REFERENCES phases(id) ON DELETE CASCADE
+  FOREIGN KEY (phase_id)   REFERENCES phases(id)   ON DELETE CASCADE,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Same dual-ownership pattern for events.
 CREATE TABLE IF NOT EXISTS events (
   id              INT AUTO_INCREMENT PRIMARY KEY,
-  phase_id        INT NOT NULL,
+  phase_id        INT NULL,
+  project_id      INT NULL,
   name            VARCHAR(255) NOT NULL,
   start_date      DATE NOT NULL,
   end_date        DATE NOT NULL,
   google_event_id VARCHAR(255),
-  FOREIGN KEY (phase_id) REFERENCES phases(id) ON DELETE CASCADE
+  FOREIGN KEY (phase_id)   REFERENCES phases(id)   ON DELETE CASCADE,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ── Live-server migration (run once if upgrading from an earlier schema) ──────
+-- If you are starting fresh, these ALTER statements are harmless no-ops because
+-- the tables above already have the correct structure.
+--
+-- ALTER TABLE milestones
+--   MODIFY phase_id INT NULL,
+--   ADD COLUMN IF NOT EXISTS project_id INT NULL,
+--   ADD CONSTRAINT IF NOT EXISTS fk_ms_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE events
+--   MODIFY phase_id INT NULL,
+--   ADD COLUMN IF NOT EXISTS project_id INT NULL,
+--   ADD CONSTRAINT IF NOT EXISTS fk_ev_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;

@@ -110,6 +110,27 @@ function get_full_project(int $id): ?array {
     unset($phase);
 
     $project['phases'] = $phases;
+
+    // Project-level milestones (not tied to any phase)
+    $ms = pdo()->prepare('SELECT id, project_id, name, target_date, google_event_id FROM milestones WHERE project_id = ? AND phase_id IS NULL ORDER BY target_date');
+    $ms->execute([$id]);
+    $project['milestones'] = array_map(function($m) {
+        $m['id']         = (int)$m['id'];
+        $m['project_id'] = (int)$m['project_id'];
+        $m['phase_id']   = null;
+        return $m;
+    }, $ms->fetchAll());
+
+    // Project-level events (not tied to any phase)
+    $ev = pdo()->prepare('SELECT id, project_id, name, start_date, end_date, google_event_id FROM events WHERE project_id = ? AND phase_id IS NULL ORDER BY start_date');
+    $ev->execute([$id]);
+    $project['events'] = array_map(function($e) {
+        $e['id']         = (int)$e['id'];
+        $e['project_id'] = (int)$e['project_id'];
+        $e['phase_id']   = null;
+        return $e;
+    }, $ev->fetchAll());
+
     return $project;
 }
 
@@ -190,6 +211,26 @@ function collect_project_ics_items(array $project): array {
                 'description' => '',
             ];
         }
+    }
+    // Project-level milestones
+    foreach ($project['milestones'] ?? [] as $ms) {
+        $items[] = [
+            'uid'         => 'proj-ms-' . $ms['id'] . '@plotly',
+            'start'       => $ms['target_date'],
+            'end'         => $ms['target_date'],
+            'summary'     => '[Milestone] ' . $ms['name'],
+            'description' => '',
+        ];
+    }
+    // Project-level events
+    foreach ($project['events'] ?? [] as $ev) {
+        $items[] = [
+            'uid'         => 'proj-ev-' . $ev['id'] . '@plotly',
+            'start'       => $ev['start_date'],
+            'end'         => $ev['end_date'],
+            'summary'     => $ev['name'],
+            'description' => '',
+        ];
     }
     return $items;
 }
@@ -360,6 +401,15 @@ function api_delete_phase(int $id): void {
 
 // ── Milestones API ────────────────────────────────────────────────────────────
 
+function api_create_project_milestone(int $project_id): void {
+    require_auth();
+    $b    = body();
+    $stmt = pdo()->prepare('INSERT INTO milestones (project_id, phase_id, name, target_date) VALUES (?,NULL,?,?)');
+    $stmt->execute([$project_id, $b['name'] ?? '', $b['target_date'] ?? '']);
+    $new_id = (int)pdo()->lastInsertId();
+    json_out(['id' => $new_id, 'project_id' => $project_id, 'phase_id' => null, 'name' => $b['name'] ?? '', 'target_date' => $b['target_date'] ?? '', 'google_event_id' => null], 201);
+}
+
 function api_create_milestone(int $phase_id): void {
     require_auth();
     $b    = body();
@@ -377,6 +427,15 @@ function api_delete_milestone(int $id): void {
 }
 
 // ── Events API ────────────────────────────────────────────────────────────────
+
+function api_create_project_event(int $project_id): void {
+    require_auth();
+    $b    = body();
+    $stmt = pdo()->prepare('INSERT INTO events (project_id, phase_id, name, start_date, end_date) VALUES (?,NULL,?,?,?)');
+    $stmt->execute([$project_id, $b['name'] ?? '', $b['start_date'] ?? '', $b['end_date'] ?? '']);
+    $new_id = (int)pdo()->lastInsertId();
+    json_out(['id' => $new_id, 'project_id' => $project_id, 'phase_id' => null, 'name' => $b['name'] ?? '', 'start_date' => $b['start_date'] ?? '', 'end_date' => $b['end_date'] ?? '', 'google_event_id' => null], 201);
+}
 
 function api_create_event(int $phase_id): void {
     require_auth();
@@ -457,12 +516,14 @@ if ($method === 'PUT'    && preg_match('#^/api/phases/(\d+)$#', $path, $m))     
 if ($method === 'DELETE' && preg_match('#^/api/phases/(\d+)$#', $path, $m))      { api_delete_phase((int)$m[1]); }
 
 // Milestones API
-if ($method === 'POST'   && preg_match('#^/api/phases/(\d+)/milestones$#', $path, $m)) { api_create_milestone((int)$m[1]); }
-if ($method === 'DELETE' && preg_match('#^/api/milestones/(\d+)$#', $path, $m))        { api_delete_milestone((int)$m[1]); }
+if ($method === 'POST'   && preg_match('#^/api/projects/(\d+)/milestones$#', $path, $m)) { api_create_project_milestone((int)$m[1]); }
+if ($method === 'POST'   && preg_match('#^/api/phases/(\d+)/milestones$#', $path, $m))   { api_create_milestone((int)$m[1]); }
+if ($method === 'DELETE' && preg_match('#^/api/milestones/(\d+)$#', $path, $m))          { api_delete_milestone((int)$m[1]); }
 
 // Events API
-if ($method === 'POST'   && preg_match('#^/api/phases/(\d+)/events$#', $path, $m)) { api_create_event((int)$m[1]); }
-if ($method === 'DELETE' && preg_match('#^/api/events/(\d+)$#', $path, $m))        { api_delete_event((int)$m[1]); }
+if ($method === 'POST'   && preg_match('#^/api/projects/(\d+)/events$#', $path, $m)) { api_create_project_event((int)$m[1]); }
+if ($method === 'POST'   && preg_match('#^/api/phases/(\d+)/events$#', $path, $m))   { api_create_event((int)$m[1]); }
+if ($method === 'DELETE' && preg_match('#^/api/events/(\d+)$#', $path, $m))          { api_delete_event((int)$m[1]); }
 
 // Nothing matched
 not_found();

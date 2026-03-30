@@ -1,45 +1,28 @@
-# Plotly
+# Plotly 📌
 
-A self-hosted project management tool for tracking **Projects → Phases → Milestones / Events**, with automatic sync to Google Calendar. Built on FastAPI + SQLite + Jinja2.
+> Track **Projects → Phases → Milestones & Events**. Stay in sync with Google Calendar via a zero-config ICS feed. Self-hosted, no cloud lock-in.
 
----
-
-## Features
-
-- **Hierarchical structure** — Projects contain Phases; each Phase holds Milestones and Events.
-- **Phase dependencies** — Shifting one phase cascades date changes to all dependent phases automatically.
-- **Phase descriptions** — Add rich context notes to each phase.
-- **Expand/collapse phases** — Active phases open by default; past and upcoming phases collapse to save screen space.
-- **Status badges** — Phases are automatically marked Past / Active / Upcoming based on today's date.
-- **Google Calendar sync** — Every phase, milestone, and event is pushed to your primary Google Calendar on create/update/delete.
-- **Gantt chart** — Visual project timeline with Day / Week / Month view modes.
-- **Self-hosted** — Runs on a Raspberry Pi, VPS, or Proxmox VM. No cloud lock-in.
+Built with pure PHP + MySQL + vanilla JS. Runs on a Raspberry Pi, a VPS, a Proxmox VM, or any shared PHP host (tested on Wedos NoLimit).
 
 ---
 
-## Quickstart
+## ✨ Features
 
-### Prerequisites
+- 📁 **Hierarchical structure** — Projects → Phases → Milestones & Events, plus project-wide milestones & events that don't belong to any phase
+- 🔗 **Phase dependencies** — shift one phase and all dependent phases cascade automatically
+- 📝 **Phase descriptions** — rich context notes on each phase
+- 🪗 **Expand / collapse phases** — active phases open by default; past & upcoming collapse to keep the screen tidy
+- 🏷️ **Status badges** — Past / Active / Upcoming, auto-calculated from today's date
+- 📅 **Google Calendar sync** — subscribe to the ICS feed; no API keys, no OAuth, no fuss
+- 📊 **Gantt chart** — visual timeline with Day / Week / Month view modes
+- 🔒 **Password-protected** — simple bcrypt session auth; nobody else can touch your data
+- 🚀 **Self-hosted** — pure PHP + MySQL, zero Composer dependencies, FTP-deployable
 
-- Python 3.10+
-- A Google Cloud project with the Calendar API enabled *(required only for Google Calendar sync — the app works in mock mode without it)*
+---
 
-### Installation
+## 🚀 Quickstart
 
-```bash
-git clone https://github.com/yourusername/plotly.git
-cd plotly
-
-python3 -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-uvicorn main:app --reload
-```
-
-Open `http://localhost:8000` in your browser.
-
-### Docker / Proxmox
+### Docker (recommended)
 
 ```bash
 git clone https://github.com/yourusername/plotly.git
@@ -47,157 +30,124 @@ cd plotly
 docker-compose up -d
 ```
 
-Open `http://YOUR_SERVER_IP:8000`.
+Open `http://localhost:8000`. The database is initialised automatically from `schema.sql`.
+
+> **First run:** generate your password hash, paste it into `docker-compose.yml` as `AUTH_PASS_HASH`, then restart:
+> ```bash
+> docker-compose exec app php -r "echo password_hash('yourpassword', PASSWORD_DEFAULT) . PHP_EOL;"
+> # Paste the output into AUTH_PASS_HASH in docker-compose.yml, then:
+> docker-compose up -d --force-recreate app
+> ```
 
 ---
 
-## Google Calendar Setup
+### Wedos / shared PHP hosting
 
-The app syncs phases, milestones, and events to your **primary** Google Calendar. Without credentials the app runs fine — API calls are mocked and logged to the console instead.
-
-### How it works
-
-On startup, `sync.py` looks for a `token.json` file in the project root. If found, it connects to the Google Calendar API. If not, it falls back to mock mode (prints `Mock Sync / Mock Delete` to the console).
-
-There are two credential files involved:
-
-| File | What it is | How you get it |
-|------|-----------|----------------|
-| `credentials.json` | Your OAuth2 client ID & secret from Google Cloud | Downloaded from Google Cloud Console |
-| `token.json` | Your personal OAuth2 access + refresh token | Generated once by running a script |
-
-Both files are excluded from git via `.gitignore`.
+1. FTP all files to your document root
+2. Run `schema.sql` once via phpMyAdmin / hosting panel SQL console
+3. Visit `https://yoursite.com/setup.php` → copy the generated hash → paste into `config.php` as `AUTH_PASS_HASH` → set a real `ICS_TOKEN` → fill in DB credentials → **delete `setup.php` via FTP**
+4. Done 🎉
 
 ---
 
-### Step 1 — Create a Google Cloud project
+## 🗄️ Database
 
-1. Go to [console.cloud.google.com](https://console.cloud.google.com/).
-2. Click the project dropdown at the top → **New Project**.
-3. Give it a name (e.g. `plotly-sync`) and click **Create**.
+| Deployment | How the schema is applied |
+|------------|--------------------------|
+| Docker | Automatically on first `docker-compose up` via `docker-entrypoint-initdb.d` |
+| Wedos / shared hosting | Run `schema.sql` once in phpMyAdmin |
 
----
-
-### Step 2 — Enable the Google Calendar API
-
-1. In your new project, go to **APIs & Services → Library**.
-2. Search for **Google Calendar API** and click it.
-3. Click **Enable**.
+SQLite is gone. It's MySQL all the way. No migrations needed — `CREATE TABLE IF NOT EXISTS` keeps restarts idempotent.
 
 ---
 
-### Step 3 — Configure the OAuth consent screen
+## 🔑 Authentication
 
-1. Go to **APIs & Services → OAuth consent screen**.
-2. Select **External** (or **Internal** if you're on a Google Workspace organisation).
-3. Fill in:
-   - **App name** — anything, e.g. `Plotly`
-   - **User support email** — your email
-   - **Developer contact information** — your email
-4. Click **Save and Continue**.
-5. On the **Scopes** step, click **Add or Remove Scopes**, search for `calendar.events`, and add:
-   ```
-   https://www.googleapis.com/auth/calendar.events
-   ```
-6. Click **Save and Continue**.
-7. On the **Test users** step, click **Add Users** and add your own Google account.
-   *(This is required while the app is in "Testing" status — skip if you chose Internal.)*
-8. Click **Save and Continue** then **Back to Dashboard**.
+The app is protected by a single admin password stored as a bcrypt hash.
 
----
+**Docker** — set env vars in `docker-compose.yml`:
 
-### Step 4 — Create OAuth2 credentials
-
-1. Go to **APIs & Services → Credentials**.
-2. Click **Create Credentials → OAuth client ID**.
-3. Application type: **Desktop app**.
-4. Name it anything (e.g. `Plotly Desktop`).
-5. Click **Create**.
-6. In the dialog that appears, click **Download JSON**.
-7. Rename the downloaded file to `credentials.json` and place it in the **project root** (next to `main.py`).
-
----
-
-### Step 5 — Generate token.json (one-time)
-
-This step opens a browser window, asks you to log in with your Google account, and writes a `token.json` file to the project root. You only do this once.
-
-With your virtualenv active and `credentials.json` in the project root:
-
-```bash
-python - <<'EOF'
-from google_auth_oauthlib.flow import InstalledAppFlow
-SCOPES = ['https://www.googleapis.com/auth/calendar.events']
-flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-creds = flow.run_local_server(port=0)
-with open('token.json', 'w') as f:
-    f.write(creds.to_json())
-print("token.json created — you can now start the server.")
-EOF
+```yaml
+AUTH_USER: admin
+AUTH_PASS_HASH: "$2y$12$..."   # generated by the command above
 ```
 
-A browser window will open. Log in with the Google account whose calendar you want to sync to, and click **Allow** when prompted.
-
----
-
-### Step 6 — Start (or restart) the server
+**Wedos / FTP** — edit `config.php` directly. Use `setup.php` to generate the hash (then delete it), or run locally:
 
 ```bash
-uvicorn main:app --reload
+php -r "echo password_hash('yourpassword', PASSWORD_DEFAULT) . PHP_EOL;"
 ```
 
-You should now see the **Auto-synced** indicator in the project header turn meaningful — phases, milestones, and events will appear in your Google Calendar the moment they are created.
+`config.php` is blocked from direct HTTP access via `.htaccess` and is excluded from every automated FTP deploy — it lives on the server and is never overwritten by CI.
 
 ---
 
-### Token refresh and expiry
+## 📅 Google Calendar Sync
 
-The `token.json` file includes a **refresh token**, so it stays valid indefinitely as long as you don't revoke access. If it ever stops working:
+No OAuth. No API keys. No token refresh drama. Just an ICS feed.
 
-1. Delete `token.json`.
-2. Re-run the Step 5 script.
+1. Open a project page → click **Subscribe** in the topbar
+2. Copy the URL shown (it includes a secret `?token=...` parameter)
+3. In Google Calendar → **Other calendars → From URL** → paste → **Add calendar**
 
-To revoke access entirely, visit [myaccount.google.com/permissions](https://myaccount.google.com/permissions) and remove the Plotly app.
+Google polls the feed on its own schedule (typically every few hours). Every phase, milestone, and event shows up as an all-day calendar event. To revoke access, change `ICS_TOKEN` in `config.php`.
 
----
-
-### Troubleshooting
-
-| Symptom | Likely cause | Fix |
-|---------|-------------|-----|
-| Console shows `Mock Sync: …` | `token.json` not found | Complete steps 4–5 |
-| `FileNotFoundError: credentials.json` | Script can't find the file | Make sure you're in the project root when running the script |
-| `Access blocked: app has not been verified` | Consent screen is in Testing mode but your account isn't a test user | Add your account in Step 3 → Test users |
-| `Token has been expired or revoked` | Token was manually revoked or has been inactive for 6 months | Delete `token.json` and re-run Step 5 |
-| Events sync but go to wrong calendar | App always syncs to the **primary** calendar | There is currently no calendar selector; to change this you would modify `calendarId='primary'` in `sync.py` |
+There's also a global feed at `/calendar.ics?token=...` that includes all projects.
 
 ---
 
-## Running Tests
+## 🚢 Deploying Changes
 
-The test suite uses Playwright and requires the server to be running on port 8000.
+Push to `main` — GitHub Actions handles the rest.
 
 ```bash
+git push origin main
+# → .github/workflows/deploy.yml triggers
+# → FTP-Deploy-Action uploads changed files to your server
+# → config.php is NEVER overwritten (it's in .ftp-deploy-ignore)
+```
+
+**Required GitHub Secrets:**
+
+| Secret | Value |
+|--------|-------|
+| `FTP_SERVER` | Your hosting FTP hostname |
+| `FTP_USERNAME` | FTP username |
+| `FTP_PASSWORD` | FTP password |
+| `FTP_SERVER_DIR` | Document root on the server, e.g. `/web/` |
+
+---
+
+## 🧪 Tests
+
+The test suite uses Playwright and runs against the live Docker stack.
+
+```bash
+# Make sure the stack is up and AUTH_PASS_HASH matches TEST_AUTH_PASS
+docker-compose up -d
+
 # Install test dependencies (once)
 pip install pytest playwright pytest-playwright
 playwright install chromium
 
-# Run all tests (server auto-starts if not already running)
-pytest tests/test_ui.py -v
+# Run
+TEST_AUTH_PASS=yourpassword pytest tests/test_ui.py -v
 ```
+
+The test session logs in once, reuses the session cookie for all 33 tests, and cleans up after itself. `conftest.py` spins up `docker-compose` automatically if port 8000 isn't already reachable.
 
 ---
 
-## Database
+## 🛠️ Troubleshooting
 
-SQLite (`pm_app.db`) is created automatically on first start. No setup required. Schema migrations (e.g. new columns) are applied automatically at startup.
-
-To reset the database entirely:
-
-```bash
-rm pm_app.db
-uvicorn main:app --reload   # re-creates the schema from scratch
-```
+| Symptom | Likely cause | Fix |
+|---------|-------------|-----|
+| Blank page / 500 | PHP error | Add `<?php ini_set('display_errors',1);` temporarily to `index.php` |
+| All URLs → 404 | mod_rewrite not active or wrong doc root | Check `.htaccess` is in the document root |
+| DB connection error | Wrong `DB_HOST` | Wedos may use `mysql.wedos.net` instead of `localhost` |
+| Login loop | Hash mismatch | Regenerate hash via `setup.php` or `php -r "..."` |
+| ICS returns 403 | Missing or wrong token | Check `?token=` matches `ICS_TOKEN` in `config.php` |
+| Google Calendar not updating | GCal polls on its own schedule | Wait up to a few hours for first sync |
 
 ---
 
