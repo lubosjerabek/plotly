@@ -35,3 +35,4 @@ jobs:
             **/.git*
             **/.git*/**
             **/node_modules/**
+            config.php
