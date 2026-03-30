@@ -1,0 +1,37 @@
+name: Deploy to Wedos via FTP
+
+on:
+  push:
+    branches:
+      - main
+  # Allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: FTP Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server:       ${{ secrets.FTP_SERVER }}
+          username:     ${{ secrets.FTP_USERNAME }}
+          password:     ${{ secrets.FTP_PASSWORD }}
+          # Adjust server-dir to match your Wedos document root.
+          # Common values: /  or  /web/  or  /public_html/
+          server-dir:   ${{ secrets.FTP_SERVER_DIR }}
+          local-dir:    ./
+          # Only upload files that changed since the last deploy.
+          # A .ftp-deploy-sync-state.json is stored on the server to track this.
+          dry-run:      false
+          log-level:    standard
+          # Respect .ftp-deploy-ignore (like .gitignore, excludes config.php etc.)
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
