@@ -458,19 +458,24 @@
       min-height: 80px;
       line-height: 1.5;
     }
-    .color-picker-row {
+    .color-swatches {
       display: flex;
-      align-items: center;
-      gap: 0.75rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
     }
-    .color-picker-row input[type="color"] {
-      width: 48px; height: 38px; padding: 2px 4px;
-      cursor: pointer; flex-shrink: 0;
+    .color-swatch {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.1s, border-color 0.1s;
+      flex-shrink: 0;
     }
-    .color-preview {
-      font-size: 13px;
-      color: var(--text-muted);
-      font-family: 'SF Mono', 'Fira Code', monospace;
+    .color-swatch:hover { transform: scale(1.15); }
+    .color-swatch.is-selected {
+      border-color: #fff;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.4);
+      transform: scale(1.15);
     }
     .confirm-message { color: var(--text-muted); margin: 0; line-height: 1.6; }
 
@@ -1090,12 +1095,13 @@
       wrap.innerHTML = buildFieldHTML(f);
       container.appendChild(wrap);
     });
+    // colour swatches: click to select
     fields.filter(f => f.type === 'color').forEach(f => {
-      const input = document.getElementById(`modal_input_${f.id}`);
-      const preview = document.getElementById(`color_preview_${f.id}`);
-      if (input && preview) {
-        input.addEventListener('input', () => { preview.textContent = input.value; });
-      }
+      const swatches = document.querySelectorAll(`[data-swatch-for="${f.id}"]`);
+      swatches.forEach(sw => sw.addEventListener('click', () => {
+        document.getElementById(`modal_input_${f.id}`).value = sw.dataset.color;
+        swatches.forEach(s => s.classList.toggle('is-selected', s === sw));
+      }));
     });
     _modalCallback = callback;
     document.getElementById('genericModal').classList.add('is-open');
@@ -1105,10 +1111,20 @@
   function buildFieldHTML(f) {
     const label = `<label class="field-label" for="modal_input_${f.id}">${escHtml(f.label)}</label>`;
     if (f.type === 'color') {
-      return `${label}<div class="color-picker-row">
-        <input type="color" id="modal_input_${f.id}" value="${escHtml(f.defaultValue || '#6366f1')}">
-        <span class="color-preview" id="color_preview_${f.id}">${escHtml(f.defaultValue || '#6366f1')}</span>
-      </div>`;
+      const palette = [
+        '#6366f1','#8b5cf6','#ec4899','#ef4444',
+        '#f97316','#f59e0b','#eab308','#84cc16',
+        '#22c55e','#10b981','#14b8a6','#06b6d4',
+        '#3b82f6','#0ea5e9','#64748b','#94a3b8',
+      ];
+      const selected = f.defaultValue || palette[0];
+      const swatchHTML = palette.map(c =>
+        `<button type="button" class="color-swatch${c === selected ? ' is-selected' : ''}"
+          data-swatch-for="${f.id}" data-color="${c}"
+          style="background:${c}" title="${c}" aria-label="${c}"></button>`
+      ).join('');
+      return `${label}<input type="hidden" id="modal_input_${f.id}" value="${escHtml(selected)}">
+        <div class="color-swatches">${swatchHTML}</div>`;
     }
     if (f.type === 'select') {
       const opts = (f.options || []).map(o =>
