@@ -130,10 +130,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_dml'])) {
                 $admin_row = $existing->fetch();
 
                 if (!$admin_row) {
-                    $ins = $pdo->prepare(
+                    // Support both old (AUTH_PASS_HASH) and new (LEGACY_AUTH_PASS_HASH) config
+                $pass_hash = defined('LEGACY_AUTH_PASS_HASH') ? LEGACY_AUTH_PASS_HASH
+                           : (defined('AUTH_PASS_HASH')        ? AUTH_PASS_HASH : '');
+                $ins = $pdo->prepare(
                         "INSERT INTO users (email, name, password_hash, role, ics_token) VALUES (?, ?, ?, 'admin', ?)"
                     );
-                    $ins->execute([$admin_email, $admin_name, LEGACY_AUTH_PASS_HASH, $ics_token]);
+                    $ins->execute([$admin_email, $admin_name, $pass_hash, $ics_token]);
                     $admin_id = (int)$pdo->lastInsertId();
                     mig_log("✔ Admin user created (id=$admin_id, email=$admin_email)");
                 } else {
@@ -228,7 +231,7 @@ $schema_done = table_exists($pdo, 'users') && column_exists($pdo, 'projects', 'u
       <?php if (!$schema_done): ?>
         <div class="info">Complete Step 1 first — the required tables are not yet present.</div>
       <?php else: ?>
-        <p>Enter your email address for the admin account. Your existing password (from <code>LEGACY_AUTH_PASS_HASH</code> in config.php) will be kept.</p>
+        <p>Enter your email address for the admin account. Your existing password (from <code>AUTH_PASS_HASH</code> in config.php) will be kept — nothing changes.</p>
         <form method="post">
           <input type="hidden" name="run_dml" value="1">
 
