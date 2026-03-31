@@ -11,12 +11,15 @@ services:
       DB_NAME: plotly
       DB_USER: plotly
       DB_PASS: plotly_secret
-      AUTH_USER: admin
-      # Generate a hash after first start:
-      #   docker-compose exec app php -r "echo password_hash('yourpassword', PASSWORD_DEFAULT) . PHP_EOL;"
-      # Then replace the value below and restart.
+      # First admin user seeded automatically on first start (if users table is empty).
+      # Change these before first start, or run migrate.php on an existing install.
+      ADMIN_EMAIL: "admin@example.com"
+      ADMIN_NAME:  "Admin"
+      ADMIN_PASS:  "plotly"
+      # Legacy — used only by migrate.php when upgrading from a single-user install.
+      AUTH_USER:      admin
       AUTH_PASS_HASH: "$$2y$$12$$CHANGE_ME_generate_via_setup.php"
-      ICS_TOKEN: "change-this-to-a-long-random-secret"
+      ICS_TOKEN:      "change-this-to-a-long-random-secret"
     depends_on:
       db:
         condition: service_healthy

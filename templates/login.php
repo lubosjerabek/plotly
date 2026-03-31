@@ -69,7 +69,7 @@ $lang = current_lang();
       letter-spacing: .06em;
       margin-bottom: .4rem;
     }
-    input[type=text], input[type=password] {
+    input[type=email], input[type=text], input[type=password] {
       width: 100%;
       padding: .625rem .875rem;
       background: var(--surface-2);
@@ -82,7 +82,7 @@ $lang = current_lang();
       transition: border-color .15s;
       margin-bottom: 1rem;
     }
-    input[type=text]:focus, input[type=password]:focus {
+    input[type=email]:focus, input[type=text]:focus, input[type=password]:focus {
       border-color: var(--accent);
     }
     .btn {
@@ -144,8 +144,8 @@ $lang = current_lang();
     <?php endif; ?>
 
     <form method="post" action="/login">
-      <label for="username"><?= htmlspecialchars(t('username')) ?></label>
-      <input type="text" id="username" name="username" autocomplete="username" required autofocus>
+      <label for="email"><?= htmlspecialchars(t('email')) ?></label>
+      <input type="email" id="email" name="email" autocomplete="email" required autofocus>
 
       <label for="password"><?= htmlspecialchars(t('password')) ?></label>
       <input type="password" id="password" name="password" autocomplete="current-password" required>

@@ -599,10 +599,12 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
       <svg><use href="#icon-calendar"/></svg>
       <?= htmlspecialchars(t('subscribe')) ?>
     </button>
+    <?php if (is_project_owner($project_id)): ?>
     <button class="btn btn-danger-outline" id="deleteProjectBtn" onclick="confirmDeleteProject()">
       <svg><use href="#icon-trash"/></svg>
       <?= htmlspecialchars(t('delete')) ?>
     </button>
+    <?php endif; ?>
   </div>
 </nav>
 
@@ -614,26 +616,31 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
       <h1 id="pName">Loading…</h1>
       <p class="project-header__desc" id="pDesc"></p>
     </div>
+    <?php if (can_write_project($project_id)): ?>
     <button class="btn btn-ghost" onclick="editProject()">
       <svg><use href="#icon-pencil"/></svg>
       <?= htmlspecialchars(t('edit')) ?>
     </button>
+    <?php endif; ?>
   </div>
 
   <!-- Tabs -->
   <div class="tabs" role="tablist">
     <button class="tab-btn active" data-tab="phases" role="tab" aria-selected="true" onclick="switchTab('phases')"><?= htmlspecialchars(t('phases_tab')) ?></button>
     <button class="tab-btn" data-tab="timeline" role="tab" aria-selected="false" onclick="switchTab('timeline')"><?= htmlspecialchars(t('timeline_tab')) ?></button>
+    <button class="tab-btn" data-tab="collaborators" role="tab" aria-selected="false" onclick="switchTab('collaborators')"><?= htmlspecialchars(t('collaborators')) ?></button>
   </div>
 
   <!-- Phases tab -->
   <div id="tab-phases" role="tabpanel">
     <div class="panel-toolbar">
       <span class="panel-toolbar__label" id="phaseCount"></span>
+      <?php if (can_write_project($project_id)): ?>
       <button class="btn btn-primary" onclick="addPhase()">
         <svg><use href="#icon-plus"/></svg>
         <?= htmlspecialchars(t('add_phase')) ?>
       </button>
+      <?php endif; ?>
     </div>
     <!-- Project-wide milestones & events (not tied to any phase) -->
     <div id="projectItemsCard" class="phase-card" style="border-left:3px solid var(--accent);margin-bottom:1.25rem;">
@@ -644,10 +651,12 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
             <h3 class="phase-card__name"><?= htmlspecialchars(t('project_wide')) ?></h3>
           </div>
         </div>
+        <?php if (can_write_project($project_id)): ?>
         <div class="phase-card__actions">
           <button class="btn btn-ghost btn-xs" onclick="addProjectMilestone()">+ <?= htmlspecialchars(t('milestones')) ?></button>
           <button class="btn btn-ghost btn-xs" onclick="addProjectEvent()">+ <?= htmlspecialchars(t('events')) ?></button>
         </div>
+        <?php endif; ?>
       </div>
       <div id="projectItemsBody" class="phase-card__body" style="max-height:none;opacity:1;"></div>
     </div>
@@ -668,6 +677,18 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
     <div class="gantt-container">
       <svg id="gantt"></svg>
     </div>
+  </div>
+
+  <!-- Collaborators tab -->
+  <div id="tab-collaborators" role="tabpanel" style="display:none">
+    <div class="panel-toolbar">
+      <span class="panel-toolbar__label"><?= htmlspecialchars(t('collaborators')) ?></span>
+      <button class="btn btn-primary" id="addCollaboratorBtn" onclick="openAddCollaboratorModal()" style="display:none">
+        <svg><use href="#icon-plus"/></svg>
+        <?= htmlspecialchars(t('add_collaborator')) ?>
+      </button>
+    </div>
+    <div id="collaboratorsList"></div>
   </div>
 </main>
 
@@ -737,6 +758,9 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
 
   // ── Constants & State ────────────────────────────────────────
   const projectId = <?= (int)$project_id ?>;
+  const canEdit   = <?= can_write_project($project_id) ? 'true' : 'false' ?>;
+  const isOwner   = <?= is_project_owner($project_id) ? 'true' : 'false' ?>;
+  const icsToken  = <?= json_encode(current_user_ics_token()) ?>;
   const state = { project: null, activeTab: 'phases', ganttView: 'Month', ganttInstance: null };
 
   // ── API ──────────────────────────────────────────────────────
@@ -756,6 +780,10 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
     createProjectEvent:     (pid, d)   => fetch(`/api/projects/${pid}/events`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
     updateMilestone:        (id, d)    => fetch(`/api/milestones/${id}`, { method: 'PATCH', headers: H, body: JSON.stringify(d) }),
     updateEvent:            (id, d)    => fetch(`/api/events/${id}`,     { method: 'PATCH', headers: H, body: JSON.stringify(d) }),
+    getCollaborators:       (pid)      => fetch(`/api/projects/${pid}/collaborators`).then(r => r.json()),
+    addCollaborator:        (pid, d)   => fetch(`/api/projects/${pid}/collaborators`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
+    updateCollaborator:     (pid, uid, d) => fetch(`/api/projects/${pid}/collaborators/${uid}`, { method: 'PATCH', headers: H, body: JSON.stringify(d) }),
+    removeCollaborator:     (pid, uid) => fetch(`/api/projects/${pid}/collaborators/${uid}`, { method: 'DELETE' }),
   };
 
   // ── Utilities ────────────────────────────────────────────────
@@ -862,6 +890,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
           <li>
             <span class="item-list__name">${escHtml(m.name)}</span>
             <span class="item-list__meta">${fmtDate(m.target_date)}</span>
+            ${canEdit ? `
             <button class="btn btn-icon btn-ghost" title="Edit milestone date" style="width:22px;height:22px;padding:2px;"
               onclick="editMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}', '${m.target_date}')">
               <svg><use href="#icon-pencil"/></svg>
@@ -869,7 +898,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
             <button class="btn btn-icon btn-danger-outline" title="Delete milestone" style="width:22px;height:22px;padding:2px;"
               onclick="confirmDeleteMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}')">
               <svg><use href="#icon-trash"/></svg>
-            </button>
+            </button>` : ''}
           </li>`).join('')
       : `<li class="item-empty" style="background:none;padding:0.25rem 0;">${T.none}</li>`;
 
@@ -878,10 +907,11 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
           <li>
             <span class="item-list__name">${escHtml(e.name)}</span>
             <span class="item-list__meta">${fmtDate(e.start_date)} → ${fmtDate(e.end_date)}</span>
+            ${canEdit ? `
             <button class="btn btn-icon btn-danger-outline" title="Delete event" style="width:22px;height:22px;padding:2px;"
               onclick="confirmDeleteEvent(${e.id}, '${escHtml(e.name).replace(/'/g,"\\'")}')">
               <svg><use href="#icon-trash"/></svg>
-            </button>
+            </button>` : ''}
           </li>`).join('')
       : `<li class="item-empty" style="background:none;padding:0.25rem 0;">${T.none}</li>`;
 
@@ -889,14 +919,14 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
       <div class="phase-section">
         <div class="phase-section__header">
           <span class="phase-section__label">${T.milestones}</span>
-          <button class="btn btn-ghost btn-xs" onclick="addProjectMilestone()">${T.add}</button>
+          ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addProjectMilestone()">${T.add}</button>` : ''}
         </div>
         <ul class="item-list">${msItems}</ul>
       </div>
       <div class="phase-section">
         <div class="phase-section__header">
           <span class="phase-section__label">${T.events}</span>
-          <button class="btn btn-ghost btn-xs" onclick="addProjectEvent()">${T.add}</button>
+          ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addProjectEvent()">${T.add}</button>` : ''}
         </div>
         <ul class="item-list">${evItems}</ul>
       </div>`;
@@ -949,6 +979,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
             <li>
               <span class="item-list__name">${escHtml(m.name)}</span>
               <span class="item-list__meta">${fmtDate(m.target_date)}</span>
+              ${canEdit ? `
               <button class="btn btn-icon btn-ghost" title="Edit milestone date" style="width:22px;height:22px;padding:2px;"
                 onclick="editMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}', '${m.target_date}')">
                 <svg><use href="#icon-pencil"/></svg>
@@ -956,7 +987,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
               <button class="btn btn-icon btn-danger-outline" title="Delete milestone" style="width:22px;height:22px;padding:2px;"
                 onclick="confirmDeleteMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}')">
                 <svg><use href="#icon-trash"/></svg>
-              </button>
+              </button>` : ''}
             </li>`).join('')
         : `<li class="item-empty" style="background:none;padding:0.25rem 0;">${T.none}</li>`;
 
@@ -965,10 +996,11 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
             <li>
               <span class="item-list__name">${escHtml(e.name)}</span>
               <span class="item-list__meta">${fmtDate(e.start_date)} → ${fmtDate(e.end_date)}</span>
+              ${canEdit ? `
               <button class="btn btn-icon btn-danger-outline" title="Delete event" style="width:22px;height:22px;padding:2px;"
                 onclick="confirmDeleteEvent(${e.id}, '${escHtml(e.name).replace(/'/g,"\\'")}')">
                 <svg><use href="#icon-trash"/></svg>
-              </button>
+              </button>` : ''}
             </li>`).join('')
         : `<li class="item-empty" style="background:none;padding:0.25rem 0;">${T.none}</li>`;
 
@@ -987,6 +1019,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
               </div>
             </div>
           </div>
+          ${canEdit ? `
           <div class="phase-card__actions">
             <button class="btn btn-icon btn-ghost" title="${T.tooltip_edit_phase}" onclick="editPhase(${phase.id})">
               <svg><use href="#icon-pencil"/></svg>
@@ -997,7 +1030,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
             <button class="btn btn-icon btn-danger-outline" title="${T.tooltip_delete_phase}" onclick="confirmDeletePhase(${phase.id}, '${escHtml(phase.name).replace(/'/g,"\\'")}')">
               <svg><use href="#icon-trash"/></svg>
             </button>
-          </div>
+          </div>` : ''}
         </div>
 
         <div class="phase-card__body">
@@ -1005,7 +1038,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
           <div class="phase-section">
             <div class="phase-section__header">
               <span class="phase-section__label">${T.milestones}</span>
-              <button class="btn btn-ghost btn-xs" onclick="addMilestone(${phase.id})">${T.add}</button>
+              ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addMilestone(${phase.id})">${T.add}</button>` : ''}
             </div>
             <ul class="item-list" id="ms-list-${phase.id}">${msItems}</ul>
           </div>
@@ -1013,7 +1046,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
           <div class="phase-section">
             <div class="phase-section__header">
               <span class="phase-section__label">${T.events}</span>
-              <button class="btn btn-ghost btn-xs" onclick="addEvent(${phase.id})">${T.add}</button>
+              ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addEvent(${phase.id})">${T.add}</button>` : ''}
             </div>
             <ul class="item-list" id="ev-list-${phase.id}">${evItems}</ul>
           </div>
@@ -1021,6 +1054,83 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
 
       list.appendChild(card);
     });
+  }
+
+  // ── Collaborators ────────────────────────────────────────────
+  async function renderCollaborators() {
+    const list = document.getElementById('collaboratorsList');
+    const addBtn = document.getElementById('addCollaboratorBtn');
+    if (!list) return;
+    if (addBtn) addBtn.style.display = isOwner ? '' : 'none';
+
+    const collaborators = await api.getCollaborators(projectId);
+    if (!collaborators.length) {
+      list.innerHTML = `<div class="item-empty" style="text-align:center;padding:2rem;color:var(--text-subtle)">${T.no_collaborators}</div>`;
+      return;
+    }
+    list.innerHTML = `<table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="font-size:11px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.06em;padding:.5rem .75rem;text-align:left;border-bottom:1px solid var(--border)">${T.user_name}</th>
+        <th style="font-size:11px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.06em;padding:.5rem .75rem;text-align:left;border-bottom:1px solid var(--border)">${T.user_email}</th>
+        <th style="font-size:11px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.06em;padding:.5rem .75rem;text-align:left;border-bottom:1px solid var(--border)">${T.collaborator_role}</th>
+        ${isOwner ? `<th style="font-size:11px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.06em;padding:.5rem .75rem;text-align:left;border-bottom:1px solid var(--border)">${T.actions}</th>` : ''}
+      </tr></thead>
+      <tbody>
+        ${collaborators.map(c => `
+          <tr>
+            <td style="padding:.65rem .75rem;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04)">${escHtml(c.name)}</td>
+            <td style="padding:.65rem .75rem;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text-muted)">${escHtml(c.email)}</td>
+            <td style="padding:.65rem .75rem;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04)">
+              ${isOwner ? `
+                <select onchange="changeCollaboratorRole(${c.id}, this.value)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:.2rem .5rem;font-size:12px">
+                  <option value="viewer" ${c.role==='viewer'?'selected':''}>${T.role_viewer}</option>
+                  <option value="editor" ${c.role==='editor'?'selected':''}>${T.role_editor}</option>
+                </select>` : `<span style="font-size:12px;color:var(--text-muted)">${c.role === 'editor' ? T.role_editor : T.role_viewer}</span>`}
+            </td>
+            ${isOwner ? `
+            <td style="padding:.65rem .75rem;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04)">
+              <button class="btn btn-ghost" style="font-size:12px;padding:.25rem .6rem" onclick="removeCollaborator(${c.id}, '${escHtml(c.name).replace(/'/g,"\\'")}')">
+                ${T.revoke}
+              </button>
+            </td>` : ''}
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  async function changeCollaboratorRole(userId, role) {
+    await api.updateCollaborator(projectId, userId, { role });
+    toast.success(T.toast_collaborator_updated);
+  }
+
+  async function removeCollaborator(userId, name) {
+    if (!confirm(T.confirm_remove_collaborator.replace('%s', name))) return;
+    const res = await api.removeCollaborator(projectId, userId);
+    if (res.ok) {
+      toast.success(T.toast_collaborator_removed);
+      renderCollaborators();
+    }
+  }
+
+  function openAddCollaboratorModal() {
+    showModal(T.add_collaborator, [
+      { id: 'collab_email', label: T.collaborator_email, type: 'text', defaultValue: '' },
+      { id: 'collab_role',  label: T.collaborator_role,  type: 'select',
+        options: [{value:'viewer',text:T.role_viewer},{value:'editor',text:T.role_editor}] },
+    ], async () => {
+      const email = document.getElementById('modal_input_collab_email').value.trim();
+      const role  = document.getElementById('modal_input_collab_role').value || 'viewer';
+      const res = await api.addCollaborator(projectId, { email, role });
+      if (res.ok) {
+        toast.success(T.toast_collaborator_added);
+        closeModal();
+        renderCollaborators();
+      } else {
+        const err = await res.json();
+        toast.error(err.detail || T.toast_collaborator_add_failed);
+      }
+    }, T.add_collaborator);
   }
 
   function renderGantt(project) {
@@ -1226,9 +1336,11 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
       b.classList.toggle('active', active);
       b.setAttribute('aria-selected', active);
     });
-    document.getElementById('tab-phases').style.display   = tab === 'phases'   ? '' : 'none';
-    document.getElementById('tab-timeline').style.display = tab === 'timeline' ? '' : 'none';
-    if (tab === 'timeline' && state.project) renderGantt(state.project);
+    document.getElementById('tab-phases').style.display        = tab === 'phases'        ? '' : 'none';
+    document.getElementById('tab-timeline').style.display      = tab === 'timeline'      ? '' : 'none';
+    document.getElementById('tab-collaborators').style.display = tab === 'collaborators' ? '' : 'none';
+    if (tab === 'timeline'      && state.project) renderGantt(state.project);
+    if (tab === 'collaborators') renderCollaborators();
   }
 
   function setGanttView(view) {
@@ -1241,7 +1353,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
 
   // ── Subscribe / ICS Modal ────────────────────────────────────
   function openSubscribeModal() {
-    const url = window.location.origin + '/project/' + projectId + '/calendar.ics?token=<?= htmlspecialchars(get_ics_token(), ENT_QUOTES) ?>';
+    const url = window.location.origin + '/project/' + projectId + '/calendar.ics?token=' + encodeURIComponent(icsToken);
     document.getElementById('icsUrl').value = url;
     document.getElementById('subscribeModal').classList.add('is-open');
   }

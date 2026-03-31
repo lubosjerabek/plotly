@@ -26,7 +26,6 @@ function t(string $key, mixed ...$args): string {
 /** Return the full translation map as a JSON object for window.T injection */
 function t_js(): string {
     $map = load_lang();
-    // months array is already an array and JSON-encodes fine
     return json_encode($map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
 
@@ -71,8 +70,10 @@ function not_found(): void {
     json_out(['detail' => 'Not found'], 404);
 }
 
+// ── Auth ───────────────────────────────────────────────────────────────────────
+
 function require_auth(): void {
-    if (empty($_SESSION['authed'])) {
+    if (empty($_SESSION['authed']) || empty($_SESSION['user_id'])) {
         if (str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/api/')) {
             json_out(['detail' => 'Unauthorized'], 401);
         }
@@ -81,24 +82,28 @@ function require_auth(): void {
     }
 }
 
-function get_ics_token(): string {
-    static $token = null;
-    if ($token === null) {
-        $stmt = pdo()->prepare("SELECT `value` FROM settings WHERE `key` = 'ics_token'");
-        $stmt->execute();
-        $row   = $stmt->fetch();
-        $token = $row ? $row['value'] : ICS_TOKEN;
-    }
-    return $token;
-}
-
-function require_ics_token(): void {
-    if (($_GET['token'] ?? '') !== get_ics_token()) {
+function require_admin(): void {
+    require_auth();
+    if (($_SESSION['user_role'] ?? '') !== 'admin') {
+        if (str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/api/')) {
+            json_out(['detail' => 'Forbidden'], 403);
+        }
         http_response_code(403);
-        header('Content-Type: text/plain');
-        echo 'Forbidden: invalid or missing token.';
+        echo 'Forbidden';
         exit;
     }
+}
+
+/** Return the current authenticated user row (cached for the request) */
+function current_user(): array {
+    static $user = null;
+    if ($user === null) {
+        $stmt = pdo()->prepare('SELECT id, email, name, role, ics_token, lang, is_active FROM users WHERE id = ?');
+        $stmt->execute([(int)$_SESSION['user_id']]);
+        $user = $stmt->fetch() ?: [];
+        if ($user) $user['id'] = (int)$user['id'];
+    }
+    return $user;
 }
 
 function serve_template(string $name, array $vars = []): void {
@@ -107,20 +112,160 @@ function serve_template(string $name, array $vars = []): void {
     exit;
 }
 
+// ── Project access helpers ─────────────────────────────────────────────────────
+
+/** True if the current user can read this project (owner, collaborator, or admin) */
+function can_read_project(int $project_id): bool {
+    $user = current_user();
+    if (!$user) return false;
+    if ($user['role'] === 'admin') return true;
+    $uid = $user['id'];
+    $stmt = pdo()->prepare(
+        'SELECT 1 FROM projects p
+         LEFT JOIN project_collaborators pc ON pc.project_id = p.id AND pc.user_id = :uid
+         WHERE p.id = :pid AND (p.user_id = :uid2 OR pc.user_id = :uid3)
+         LIMIT 1'
+    );
+    $stmt->execute([':uid' => $uid, ':pid' => $project_id, ':uid2' => $uid, ':uid3' => $uid]);
+    return (bool)$stmt->fetch();
+}
+
+/** True if the current user can write to this project (owner, editor-collaborator, or admin) */
+function can_write_project(int $project_id): bool {
+    $user = current_user();
+    if (!$user) return false;
+    if ($user['role'] === 'admin') return true;
+    $uid = $user['id'];
+    $stmt = pdo()->prepare(
+        'SELECT 1 FROM projects p
+         LEFT JOIN project_collaborators pc ON pc.project_id = p.id AND pc.user_id = :uid AND pc.role = \'editor\'
+         WHERE p.id = :pid AND (p.user_id = :uid2 OR pc.user_id = :uid3)
+         LIMIT 1'
+    );
+    $stmt->execute([':uid' => $uid, ':pid' => $project_id, ':uid2' => $uid, ':uid3' => $uid]);
+    return (bool)$stmt->fetch();
+}
+
+/** True if the current user owns this project (or is admin) */
+function is_project_owner(int $project_id): bool {
+    $user = current_user();
+    if (!$user) return false;
+    if ($user['role'] === 'admin') return true;
+    $stmt = pdo()->prepare('SELECT 1 FROM projects WHERE id = ? AND user_id = ? LIMIT 1');
+    $stmt->execute([$project_id, $user['id']]);
+    return (bool)$stmt->fetch();
+}
+
+function assert_project_read(int $project_id): void {
+    if (!can_read_project($project_id)) json_out(['detail' => 'Forbidden'], 403);
+}
+
+function assert_project_write(int $project_id): void {
+    if (!can_write_project($project_id)) json_out(['detail' => 'Forbidden'], 403);
+}
+
+/** Get project_id for a phase (returns 0 if not found) */
+function project_id_for_phase(int $phase_id): int {
+    $stmt = pdo()->prepare('SELECT project_id FROM phases WHERE id = ?');
+    $stmt->execute([$phase_id]);
+    $row = $stmt->fetch();
+    return $row ? (int)$row['project_id'] : 0;
+}
+
+/** Get project_id for a milestone */
+function project_id_for_milestone(int $milestone_id): int {
+    $stmt = pdo()->prepare('SELECT project_id, phase_id FROM milestones WHERE id = ?');
+    $stmt->execute([$milestone_id]);
+    $row = $stmt->fetch();
+    if (!$row) return 0;
+    if ($row['project_id']) return (int)$row['project_id'];
+    if ($row['phase_id'])   return project_id_for_phase((int)$row['phase_id']);
+    return 0;
+}
+
+/** Get project_id for an event */
+function project_id_for_event(int $event_id): int {
+    $stmt = pdo()->prepare('SELECT project_id, phase_id FROM events WHERE id = ?');
+    $stmt->execute([$event_id]);
+    $row = $stmt->fetch();
+    if (!$row) return 0;
+    if ($row['project_id']) return (int)$row['project_id'];
+    if ($row['phase_id'])   return project_id_for_phase((int)$row['phase_id']);
+    return 0;
+}
+
+// ── ICS token helpers ──────────────────────────────────────────────────────────
+
+/** Find user by ICS token. Returns user row or null. */
+function user_by_ics_token(string $token): ?array {
+    if ($token === '') return null;
+    $stmt = pdo()->prepare('SELECT id, role FROM users WHERE ics_token = ? AND is_active = 1 LIMIT 1');
+    $stmt->execute([$token]);
+    $row = $stmt->fetch() ?: null;
+    if ($row) $row['id'] = (int)$row['id'];
+    return $row;
+}
+
+/** Get per-user ICS token for the currently authenticated user */
+function current_user_ics_token(): string {
+    $u = current_user();
+    if (!$u || $u['ics_token'] === '') {
+        // Generate on first use
+        $token = bin2hex(random_bytes(32));
+        $stmt  = pdo()->prepare('UPDATE users SET ics_token = ? WHERE id = ?');
+        $stmt->execute([$token, $u['id']]);
+        return $token;
+    }
+    return $u['ics_token'];
+}
+
+function require_ics_token(): ?array {
+    $token = $_GET['token'] ?? '';
+    $user  = user_by_ics_token($token);
+    if (!$user) {
+        http_response_code(403);
+        header('Content-Type: text/plain');
+        echo 'Forbidden: invalid or missing token.';
+        exit;
+    }
+    return $user;
+}
+
 // ── Database helpers ──────────────────────────────────────────────────────────
 
 function get_projects(): array {
-    $rows = pdo()->query('SELECT id, name, description FROM projects ORDER BY id')->fetchAll();
-    return array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'description' => $r['description'], 'phases' => []], $rows);
+    $user = current_user();
+    if ($user['role'] === 'admin') {
+        $rows = pdo()->query('SELECT id, user_id, name, description FROM projects ORDER BY id')->fetchAll();
+    } else {
+        $uid  = $user['id'];
+        $stmt = pdo()->prepare(
+            'SELECT DISTINCT p.id, p.user_id, p.name, p.description
+             FROM projects p
+             LEFT JOIN project_collaborators pc ON pc.project_id = p.id AND pc.user_id = ?
+             WHERE p.user_id = ? OR pc.user_id = ?
+             ORDER BY p.id'
+        );
+        $stmt->execute([$uid, $uid, $uid]);
+        $rows = $stmt->fetchAll();
+    }
+    return array_map(fn($r) => [
+        'id'          => (int)$r['id'],
+        'user_id'     => $r['user_id'] !== null ? (int)$r['user_id'] : null,
+        'name'        => $r['name'],
+        'description' => $r['description'],
+        'phases'      => [],
+    ], $rows);
 }
 
 function get_full_project(int $id): ?array {
-    $stmt = pdo()->prepare('SELECT id, name, description FROM projects WHERE id = ?');
+    $stmt = pdo()->prepare('SELECT id, user_id, name, description FROM projects WHERE id = ?');
     $stmt->execute([$id]);
     $project = $stmt->fetch();
     if (!$project) return null;
 
-    $project['id'] = (int)$project['id'];
+    $project['id']      = (int)$project['id'];
+    $project['user_id'] = $project['user_id'] !== null ? (int)$project['user_id'] : null;
 
     // Phases
     $stmt = pdo()->prepare('SELECT id, project_id, name, start_date, end_date, color, description, google_event_id, depends_on_id, depends_on_milestone_id FROM phases WHERE project_id = ? ORDER BY start_date');
@@ -128,10 +273,10 @@ function get_full_project(int $id): ?array {
     $phases = $stmt->fetchAll();
 
     foreach ($phases as &$phase) {
-        $phase['id']                     = (int)$phase['id'];
-        $phase['project_id']             = (int)$phase['project_id'];
-        $phase['depends_on_id']          = $phase['depends_on_id'] !== null ? (int)$phase['depends_on_id'] : null;
-        $phase['depends_on_milestone_id']= $phase['depends_on_milestone_id'] !== null ? (int)$phase['depends_on_milestone_id'] : null;
+        $phase['id']                      = (int)$phase['id'];
+        $phase['project_id']              = (int)$phase['project_id'];
+        $phase['depends_on_id']           = $phase['depends_on_id'] !== null ? (int)$phase['depends_on_id'] : null;
+        $phase['depends_on_milestone_id'] = $phase['depends_on_milestone_id'] !== null ? (int)$phase['depends_on_milestone_id'] : null;
 
         // Milestones
         $ms = pdo()->prepare('SELECT id, phase_id, name, target_date, google_event_id FROM milestones WHERE phase_id = ? ORDER BY target_date');
@@ -175,6 +320,20 @@ function get_full_project(int $id): ?array {
         return $e;
     }, $ev->fetchAll());
 
+    // Collaborators
+    $co = pdo()->prepare(
+        'SELECT u.id, u.name, u.email, pc.role
+         FROM project_collaborators pc
+         JOIN users u ON u.id = pc.user_id
+         WHERE pc.project_id = ?
+         ORDER BY pc.added_at'
+    );
+    $co->execute([$id]);
+    $project['collaborators'] = array_map(function($c) {
+        $c['id'] = (int)$c['id'];
+        return $c;
+    }, $co->fetchAll());
+
     return $project;
 }
 
@@ -210,7 +369,6 @@ function build_ics(array $items): string {
         'METHOD:PUBLISH',
     ];
     foreach ($items as $ev) {
-        // DTEND is exclusive in ICS for all-day events
         $dtend = date('Ymd', strtotime($ev['end'] . ' +1 day'));
         $lines[] = 'BEGIN:VEVENT';
         $lines[] = 'UID:' . $ev['uid'];
@@ -256,7 +414,6 @@ function collect_project_ics_items(array $project): array {
             ];
         }
     }
-    // Project-level milestones
     foreach ($project['milestones'] ?? [] as $ms) {
         $items[] = [
             'uid'         => 'proj-ms-' . $ms['id'] . '@plotly',
@@ -266,7 +423,6 @@ function collect_project_ics_items(array $project): array {
             'description' => '',
         ];
     }
-    // Project-level events
     foreach ($project['events'] ?? [] as $ev) {
         $items[] = [
             'uid'         => 'proj-ev-' . $ev['id'] . '@plotly',
@@ -284,14 +440,23 @@ function collect_project_ics_items(array $project): array {
 function page_login(): void {
     $error = '';
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $user = $_POST['username'] ?? '';
-        $pass = $_POST['password'] ?? '';
-        if ($user === AUTH_USER && password_verify($pass, AUTH_PASS_HASH)) {
-            $_SESSION['authed'] = true;
+        $email = trim($_POST['email'] ?? '');
+        $pass  = $_POST['password'] ?? '';
+        $stmt  = pdo()->prepare('SELECT id, password_hash, role, lang, is_active FROM users WHERE email = ? LIMIT 1');
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+        if ($user && $user['is_active'] && password_verify($pass, $user['password_hash'])) {
+            $_SESSION['authed']    = true;
+            $_SESSION['user_id']   = (int)$user['id'];
+            $_SESSION['user_role'] = $user['role'];
+            // Restore user's language preference
+            if (!empty($user['lang'])) {
+                $_SESSION['lang'] = $user['lang'];
+            }
             header('Location: /');
             exit;
         }
-        $error = 'Invalid username or password.';
+        $error = t('invalid_credentials');
     }
     serve_template('login.php', ['error' => $error]);
 }
@@ -300,6 +465,103 @@ function page_logout(): void {
     session_destroy();
     header('Location: /login');
     exit;
+}
+
+function page_register(string $token): void {
+    // Validate token
+    $stmt = pdo()->prepare(
+        'SELECT id, label FROM invites WHERE token = ? AND used_by IS NULL AND expires_at > NOW() LIMIT 1'
+    );
+    $stmt->execute([$token]);
+    $invite = $stmt->fetch();
+
+    $error = '';
+    if (!$invite) {
+        serve_template('register.php', ['error' => t('invite_invalid'), 'invite' => null, 'token' => $token]);
+        return;
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $name     = trim($_POST['name']             ?? '');
+        $email    = strtolower(trim($_POST['email'] ?? ''));
+        $pass     = $_POST['password']              ?? '';
+        $pass2    = $_POST['password_confirm']       ?? '';
+
+        if ($name === '' || $email === '') {
+            $error = t('register_fields_required');
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error = t('email_invalid');
+        } elseif (strlen($pass) < 8) {
+            $error = t('password_too_short');
+        } elseif ($pass !== $pass2) {
+            $error = t('password_mismatch');
+        } else {
+            // Check email uniqueness
+            $chk = pdo()->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
+            $chk->execute([$email]);
+            if ($chk->fetch()) {
+                $error = t('email_taken');
+            } else {
+                // Create user
+                $hash  = password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]);
+                $token_ics = bin2hex(random_bytes(32));
+                $ins   = pdo()->prepare(
+                    'INSERT INTO users (email, name, password_hash, role, ics_token) VALUES (?, ?, ?, \'user\', ?)'
+                );
+                $ins->execute([$email, $name, $hash, $token_ics]);
+                $new_id = (int)pdo()->lastInsertId();
+
+                // Mark invite used
+                $upd = pdo()->prepare('UPDATE invites SET used_by = ? WHERE id = ?');
+                $upd->execute([$new_id, (int)$invite['id']]);
+
+                // Log in
+                $_SESSION['authed']    = true;
+                $_SESSION['user_id']   = $new_id;
+                $_SESSION['user_role'] = 'user';
+                header('Location: /');
+                exit;
+            }
+        }
+    }
+
+    serve_template('register.php', ['error' => $error, 'invite' => $invite, 'token' => $token]);
+}
+
+function page_reset_password(string $token): void {
+    $stmt = pdo()->prepare(
+        'SELECT id, user_id FROM password_resets WHERE token = ? AND used_at IS NULL AND expires_at > NOW() LIMIT 1'
+    );
+    $stmt->execute([$token]);
+    $reset = $stmt->fetch();
+
+    $error   = '';
+    $success = false;
+
+    if (!$reset) {
+        serve_template('reset_password.php', ['error' => t('reset_token_invalid'), 'valid' => false, 'success' => false]);
+        return;
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $pass  = $_POST['password']         ?? '';
+        $pass2 = $_POST['password_confirm'] ?? '';
+
+        if (strlen($pass) < 8) {
+            $error = t('password_too_short');
+        } elseif ($pass !== $pass2) {
+            $error = t('password_mismatch');
+        } else {
+            $hash = password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]);
+            pdo()->prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+                 ->execute([$hash, (int)$reset['user_id']]);
+            pdo()->prepare('UPDATE password_resets SET used_at = NOW() WHERE id = ?')
+                 ->execute([(int)$reset['id']]);
+            $success = true;
+        }
+    }
+
+    serve_template('reset_password.php', ['error' => $error, 'valid' => true, 'success' => $success, 'token' => $token]);
 }
 
 // ── Page handlers ─────────────────────────────────────────────────────────────
@@ -311,7 +573,16 @@ function page_index(): void {
 
 function page_project(int $project_id): void {
     require_auth();
+    if (!can_read_project($project_id)) {
+        header('Location: /');
+        exit;
+    }
     serve_template('project.php', ['project_id' => $project_id]);
+}
+
+function page_admin_users(): void {
+    require_admin();
+    serve_template('admin.php');
 }
 
 // ── Projects API ──────────────────────────────────────────────────────────────
@@ -323,35 +594,43 @@ function api_get_projects(): void {
 
 function api_create_project(): void {
     require_auth();
-    $b = body();
+    $b    = body();
     $name = trim($b['name'] ?? '');
     if ($name === '') json_out(['detail' => 'name required'], 422);
-    $stmt = pdo()->prepare('INSERT INTO projects (name, description) VALUES (?, ?)');
-    $stmt->execute([$name, $b['description'] ?? null]);
+    $uid  = current_user()['id'];
+    $stmt = pdo()->prepare('INSERT INTO projects (user_id, name, description) VALUES (?, ?, ?)');
+    $stmt->execute([$uid, $name, $b['description'] ?? null]);
     $id = (int)pdo()->lastInsertId();
-    json_out(['id' => $id, 'name' => $name, 'description' => $b['description'] ?? null, 'phases' => []], 201);
+    json_out(['id' => $id, 'user_id' => $uid, 'name' => $name, 'description' => $b['description'] ?? null, 'phases' => []], 201);
 }
 
 function api_get_project(int $id): void {
     require_auth();
+    assert_project_read($id);
     $project = get_full_project($id);
     if (!$project) not_found();
+    // Annotate with current user's write capability
+    $project['can_edit'] = can_write_project($id);
     json_out($project);
 }
 
 function api_update_project(int $id): void {
     require_auth();
+    assert_project_write($id);
     $b = body();
     $stmt = pdo()->prepare('SELECT id FROM projects WHERE id = ?');
     $stmt->execute([$id]);
     if (!$stmt->fetch()) not_found();
     $upd = pdo()->prepare('UPDATE projects SET name = ?, description = ? WHERE id = ?');
     $upd->execute([trim($b['name'] ?? ''), $b['description'] ?? null, $id]);
-    json_out(get_full_project($id));
+    $project = get_full_project($id);
+    $project['can_edit'] = true;
+    json_out($project);
 }
 
 function api_delete_project(int $id): void {
     require_auth();
+    if (!is_project_owner($id)) json_out(['detail' => 'Forbidden'], 403);
     $del = pdo()->prepare('DELETE FROM projects WHERE id = ?');
     $del->execute([$id]);
     json_out(['ok' => true]);
@@ -364,6 +643,7 @@ function api_create_phase(): void {
     $b          = body();
     $project_id = (int)($_GET['project_id'] ?? 0);
     if (!$project_id) json_out(['detail' => 'project_id required'], 422);
+    assert_project_write($project_id);
 
     $stmt = pdo()->prepare(
         'INSERT INTO phases (project_id, name, start_date, end_date, color, description, depends_on_id) VALUES (?,?,?,?,?,?,?)'
@@ -382,11 +662,11 @@ function api_create_phase(): void {
     $row = pdo()->prepare('SELECT * FROM phases WHERE id = ?');
     $row->execute([$new_id]);
     $phase = $row->fetch();
-    $phase['id']           = (int)$phase['id'];
-    $phase['project_id']   = (int)$phase['project_id'];
-    $phase['depends_on_id']= $phase['depends_on_id'] !== null ? (int)$phase['depends_on_id'] : null;
-    $phase['milestones']   = [];
-    $phase['events']       = [];
+    $phase['id']            = (int)$phase['id'];
+    $phase['project_id']    = (int)$phase['project_id'];
+    $phase['depends_on_id'] = $phase['depends_on_id'] !== null ? (int)$phase['depends_on_id'] : null;
+    $phase['milestones']    = [];
+    $phase['events']        = [];
     json_out($phase, 201);
 }
 
@@ -398,6 +678,7 @@ function api_update_phase(int $id): void {
     $sel->execute([$id]);
     $existing = $sel->fetch();
     if (!$existing) not_found();
+    assert_project_write((int)$existing['project_id']);
 
     $old_start  = $existing['start_date'];
     $new_start  = $b['start_date'] ?? $old_start;
@@ -421,12 +702,11 @@ function api_update_phase(int $id): void {
 
     $sel->execute([$id]);
     $phase = $sel->fetch();
-    $phase['id']                     = (int)$phase['id'];
-    $phase['project_id']             = (int)$phase['project_id'];
-    $phase['depends_on_id']          = $phase['depends_on_id'] !== null ? (int)$phase['depends_on_id'] : null;
-    $phase['depends_on_milestone_id']= $phase['depends_on_milestone_id'] !== null ? (int)$phase['depends_on_milestone_id'] : null;
+    $phase['id']                      = (int)$phase['id'];
+    $phase['project_id']              = (int)$phase['project_id'];
+    $phase['depends_on_id']           = $phase['depends_on_id'] !== null ? (int)$phase['depends_on_id'] : null;
+    $phase['depends_on_milestone_id'] = $phase['depends_on_milestone_id'] !== null ? (int)$phase['depends_on_milestone_id'] : null;
 
-    // Attach milestones + events
     $ms = pdo()->prepare('SELECT * FROM milestones WHERE phase_id = ? ORDER BY target_date');
     $ms->execute([$id]);
     $phase['milestones'] = array_map(fn($m) => array_merge($m, ['id' => (int)$m['id'], 'phase_id' => (int)$m['phase_id']]), $ms->fetchAll());
@@ -440,6 +720,8 @@ function api_update_phase(int $id): void {
 
 function api_delete_phase(int $id): void {
     require_auth();
+    $pid = project_id_for_phase($id);
+    if ($pid) assert_project_write($pid);
     $del = pdo()->prepare('DELETE FROM phases WHERE id = ?');
     $del->execute([$id]);
     json_out(['ok' => true]);
@@ -449,6 +731,7 @@ function api_delete_phase(int $id): void {
 
 function api_create_project_milestone(int $project_id): void {
     require_auth();
+    assert_project_write($project_id);
     $b    = body();
     $stmt = pdo()->prepare('INSERT INTO milestones (project_id, phase_id, name, target_date) VALUES (?,NULL,?,?)');
     $stmt->execute([$project_id, $b['name'] ?? '', $b['target_date'] ?? '']);
@@ -458,6 +741,8 @@ function api_create_project_milestone(int $project_id): void {
 
 function api_create_milestone(int $phase_id): void {
     require_auth();
+    $pid = project_id_for_phase($phase_id);
+    if ($pid) assert_project_write($pid);
     $b    = body();
     $stmt = pdo()->prepare('INSERT INTO milestones (phase_id, name, target_date) VALUES (?,?,?)');
     $stmt->execute([$phase_id, $b['name'] ?? '', $b['target_date'] ?? '']);
@@ -474,21 +759,23 @@ function api_update_milestone(int $id): void {
     $existing = $sel->fetch();
     if (!$existing) not_found();
 
+    $pid = project_id_for_milestone($id);
+    if ($pid) assert_project_write($pid);
+
     $old_date  = $existing['target_date'];
     $new_date  = $b['target_date'] ?? $old_date;
 
     $upd = pdo()->prepare('UPDATE milestones SET target_date = ? WHERE id = ?');
     $upd->execute([$new_date, $id]);
 
-    // Cascade: shift all phases that depend on this milestone
     $delta_days = (int)round((strtotime($new_date) - strtotime($old_date)) / 86400);
     if ($delta_days !== 0) {
         $deps = pdo()->prepare('SELECT id, start_date, end_date FROM phases WHERE depends_on_milestone_id = ?');
         $deps->execute([$id]);
         foreach ($deps->fetchAll() as $dep) {
-            $sign       = $delta_days >= 0 ? "+$delta_days" : "$delta_days";
-            $new_start  = date('Y-m-d', strtotime($dep['start_date'] . " $sign days"));
-            $new_end    = date('Y-m-d', strtotime($dep['end_date']   . " $sign days"));
+            $sign      = $delta_days >= 0 ? "+$delta_days" : "$delta_days";
+            $new_start = date('Y-m-d', strtotime($dep['start_date'] . " $sign days"));
+            $new_end   = date('Y-m-d', strtotime($dep['end_date']   . " $sign days"));
             $upd2 = pdo()->prepare('UPDATE phases SET start_date = ?, end_date = ? WHERE id = ?');
             $upd2->execute([$new_start, $new_end, (int)$dep['id']]);
             shift_dependents((int)$dep['id'], $delta_days);
@@ -505,6 +792,8 @@ function api_update_milestone(int $id): void {
 
 function api_delete_milestone(int $id): void {
     require_auth();
+    $pid = project_id_for_milestone($id);
+    if ($pid) assert_project_write($pid);
     $del = pdo()->prepare('DELETE FROM milestones WHERE id = ?');
     $del->execute([$id]);
     json_out(['ok' => true]);
@@ -514,6 +803,7 @@ function api_delete_milestone(int $id): void {
 
 function api_create_project_event(int $project_id): void {
     require_auth();
+    assert_project_write($project_id);
     $b    = body();
     $stmt = pdo()->prepare('INSERT INTO events (project_id, phase_id, name, start_date, end_date) VALUES (?,NULL,?,?,?)');
     $stmt->execute([$project_id, $b['name'] ?? '', $b['start_date'] ?? '', $b['end_date'] ?? '']);
@@ -523,6 +813,8 @@ function api_create_project_event(int $project_id): void {
 
 function api_create_event(int $phase_id): void {
     require_auth();
+    $pid = project_id_for_phase($phase_id);
+    if ($pid) assert_project_write($pid);
     $b    = body();
     $stmt = pdo()->prepare('INSERT INTO events (phase_id, name, start_date, end_date) VALUES (?,?,?,?)');
     $stmt->execute([$phase_id, $b['name'] ?? '', $b['start_date'] ?? '', $b['end_date'] ?? '']);
@@ -537,6 +829,10 @@ function api_update_event(int $id): void {
     $sel->execute([$id]);
     $existing = $sel->fetch();
     if (!$existing) not_found();
+
+    $pid = project_id_for_event($id);
+    if ($pid) assert_project_write($pid);
+
     $upd = pdo()->prepare('UPDATE events SET name=?, start_date=?, end_date=? WHERE id=?');
     $upd->execute([
         $b['name']       ?? $existing['name'],
@@ -552,16 +848,87 @@ function api_update_event(int $id): void {
 
 function api_delete_event(int $id): void {
     require_auth();
+    $pid = project_id_for_event($id);
+    if ($pid) assert_project_write($pid);
     $del = pdo()->prepare('DELETE FROM events WHERE id = ?');
     $del->execute([$id]);
     json_out(['ok' => true]);
 }
 
-// ── Settings API ──────────────────────────────────────────────────────────────
+// ── Collaborators API ─────────────────────────────────────────────────────────
+
+function api_get_collaborators(int $project_id): void {
+    require_auth();
+    assert_project_read($project_id);
+    $stmt = pdo()->prepare(
+        'SELECT u.id, u.name, u.email, pc.role
+         FROM project_collaborators pc
+         JOIN users u ON u.id = pc.user_id
+         WHERE pc.project_id = ?
+         ORDER BY pc.added_at'
+    );
+    $stmt->execute([$project_id]);
+    $rows = array_map(fn($r) => array_merge($r, ['id' => (int)$r['id']]), $stmt->fetchAll());
+    json_out($rows);
+}
+
+function api_add_collaborator(int $project_id): void {
+    require_auth();
+    if (!is_project_owner($project_id)) json_out(['detail' => 'Forbidden'], 403);
+    $b     = body();
+    $email = strtolower(trim($b['email'] ?? ''));
+    $role  = in_array($b['role'] ?? '', ['viewer', 'editor']) ? $b['role'] : 'viewer';
+
+    $uq = pdo()->prepare('SELECT id FROM users WHERE email = ? AND is_active = 1 LIMIT 1');
+    $uq->execute([$email]);
+    $target = $uq->fetch();
+    if (!$target) json_out(['detail' => t('collaborator_not_found')], 404);
+
+    $target_id = (int)$target['id'];
+    // Don't add the project owner as a collaborator
+    $proj = pdo()->prepare('SELECT user_id FROM projects WHERE id = ?');
+    $proj->execute([$project_id]);
+    $p = $proj->fetch();
+    if ($p && (int)$p['user_id'] === $target_id) {
+        json_out(['detail' => 'User is already the project owner'], 422);
+    }
+
+    $ins = pdo()->prepare(
+        'INSERT INTO project_collaborators (project_id, user_id, role) VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE role = VALUES(role)'
+    );
+    $ins->execute([$project_id, $target_id, $role]);
+
+    $stmt = pdo()->prepare('SELECT u.id, u.name, u.email, pc.role FROM project_collaborators pc JOIN users u ON u.id = pc.user_id WHERE pc.project_id = ? AND pc.user_id = ?');
+    $stmt->execute([$project_id, $target_id]);
+    $row = $stmt->fetch();
+    $row['id'] = (int)$row['id'];
+    json_out($row, 201);
+}
+
+function api_update_collaborator(int $project_id, int $user_id): void {
+    require_auth();
+    if (!is_project_owner($project_id)) json_out(['detail' => 'Forbidden'], 403);
+    $b    = body();
+    $role = in_array($b['role'] ?? '', ['viewer', 'editor']) ? $b['role'] : 'viewer';
+    $upd  = pdo()->prepare('UPDATE project_collaborators SET role = ? WHERE project_id = ? AND user_id = ?');
+    $upd->execute([$role, $project_id, $user_id]);
+    json_out(['ok' => true]);
+}
+
+function api_remove_collaborator(int $project_id, int $user_id): void {
+    require_auth();
+    if (!is_project_owner($project_id)) json_out(['detail' => 'Forbidden'], 403);
+    $del = pdo()->prepare('DELETE FROM project_collaborators WHERE project_id = ? AND user_id = ?');
+    $del->execute([$project_id, $user_id]);
+    json_out(['ok' => true]);
+}
+
+// ── ICS / Settings API ────────────────────────────────────────────────────────
 
 function api_get_ics_token(): void {
     require_auth();
-    $token = get_ics_token();
+    $token = current_user_ics_token();
     $base  = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
            . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
     json_out(['token' => $token, 'url' => $base . '/calendar.ics?token=' . urlencode($token)]);
@@ -570,23 +937,153 @@ function api_get_ics_token(): void {
 function api_rotate_ics_token(): void {
     require_auth();
     $token = bin2hex(random_bytes(32));
-    $stmt  = pdo()->prepare(
-        "INSERT INTO settings (`key`, `value`) VALUES ('ics_token', ?)
-         ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)"
-    );
-    $stmt->execute([$token]);
+    $stmt  = pdo()->prepare('UPDATE users SET ics_token = ? WHERE id = ?');
+    $stmt->execute([$token, current_user()['id']]);
     $base = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
           . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
     json_out(['token' => $token, 'url' => $base . '/calendar.ics?token=' . urlencode($token)]);
 }
 
+// ── Profile API ───────────────────────────────────────────────────────────────
+
+function api_get_profile(): void {
+    require_auth();
+    $u = current_user();
+    json_out(['id' => $u['id'], 'name' => $u['name'], 'email' => $u['email'], 'role' => $u['role']]);
+}
+
+function api_change_password(): void {
+    require_auth();
+    $b    = body();
+    $curr = $b['current_password'] ?? '';
+    $new  = $b['new_password']     ?? '';
+    if (strlen($new) < 8) json_out(['detail' => t('password_too_short')], 422);
+
+    $u    = current_user();
+    $stmt = pdo()->prepare('SELECT password_hash FROM users WHERE id = ?');
+    $stmt->execute([$u['id']]);
+    $row  = $stmt->fetch();
+    if (!$row || !password_verify($curr, $row['password_hash'])) {
+        json_out(['detail' => t('wrong_current_password')], 422);
+    }
+
+    $hash = password_hash($new, PASSWORD_BCRYPT, ['cost' => 12]);
+    pdo()->prepare('UPDATE users SET password_hash = ? WHERE id = ?')->execute([$hash, $u['id']]);
+    json_out(['ok' => true]);
+}
+
+// ── Admin API ─────────────────────────────────────────────────────────────────
+
+function api_get_users(): void {
+    require_admin();
+    $rows = pdo()->query(
+        'SELECT id, email, name, role, is_active, created_at FROM users ORDER BY id'
+    )->fetchAll();
+    json_out(array_map(fn($r) => array_merge($r, ['id' => (int)$r['id']]), $rows));
+}
+
+function api_create_invite(): void {
+    require_admin();
+    $b       = body();
+    $label   = trim($b['label']   ?? '');
+    $days    = max(1, min(365, (int)($b['expires_days'] ?? 7)));
+    $token   = bin2hex(random_bytes(32));
+    $expires = date('Y-m-d H:i:s', strtotime("+{$days} days"));
+    $uid     = current_user()['id'];
+
+    $stmt = pdo()->prepare(
+        'INSERT INTO invites (token, label, created_by, expires_at) VALUES (?, ?, ?, ?)'
+    );
+    $stmt->execute([$token, $label ?: null, $uid, $expires]);
+    $id = (int)pdo()->lastInsertId();
+
+    $base = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+          . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    json_out([
+        'id'         => $id,
+        'token'      => $token,
+        'label'      => $label,
+        'expires_at' => $expires,
+        'url'        => $base . '/register/' . $token,
+    ], 201);
+}
+
+function api_get_invites(): void {
+    require_admin();
+    $rows = pdo()->query(
+        'SELECT i.id, i.token, i.label, i.expires_at, i.created_at,
+                u.email AS used_by_email
+         FROM invites i
+         LEFT JOIN users u ON u.id = i.used_by
+         ORDER BY i.created_at DESC'
+    )->fetchAll();
+    json_out(array_map(fn($r) => array_merge($r, ['id' => (int)$r['id']]), $rows));
+}
+
+function api_revoke_invite(int $id): void {
+    require_admin();
+    // Mark as expired immediately by setting expires_at to now
+    pdo()->prepare('UPDATE invites SET expires_at = NOW() WHERE id = ? AND used_by IS NULL')
+         ->execute([$id]);
+    json_out(['ok' => true]);
+}
+
+function api_create_password_reset(int $user_id): void {
+    require_admin();
+    $stmt = pdo()->prepare('SELECT id FROM users WHERE id = ? LIMIT 1');
+    $stmt->execute([$user_id]);
+    if (!$stmt->fetch()) not_found();
+
+    $token   = bin2hex(random_bytes(32));
+    $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+    pdo()->prepare('INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)')
+         ->execute([$user_id, $token, $expires]);
+
+    $base = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+          . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    json_out(['url' => $base . '/reset-password/' . $token, 'expires_at' => $expires], 201);
+}
+
+function api_update_user(int $user_id): void {
+    require_admin();
+    $b         = body();
+    $is_active = isset($b['is_active']) ? ($b['is_active'] ? 1 : 0) : null;
+    $role      = isset($b['role']) && in_array($b['role'], ['admin', 'user']) ? $b['role'] : null;
+
+    // Don't let an admin deactivate or demote themselves
+    if ($user_id === current_user()['id']) {
+        json_out(['detail' => 'Cannot modify your own account'], 422);
+    }
+
+    if ($is_active !== null) {
+        pdo()->prepare('UPDATE users SET is_active = ? WHERE id = ?')->execute([$is_active, $user_id]);
+    }
+    if ($role !== null) {
+        pdo()->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$role, $user_id]);
+    }
+    json_out(['ok' => true]);
+}
+
 // ── ICS feed handlers ─────────────────────────────────────────────────────────
 
 function ics_all(): void {
-    require_ics_token();
-    $projects = get_projects();
+    $ics_user = require_ics_token();
+    if ($ics_user['role'] === 'admin') {
+        // Admin token: all projects
+        $rows = pdo()->query('SELECT id FROM projects ORDER BY id')->fetchAll();
+    } else {
+        $uid  = $ics_user['id'];
+        $stmt = pdo()->prepare(
+            'SELECT DISTINCT p.id FROM projects p
+             LEFT JOIN project_collaborators pc ON pc.project_id = p.id AND pc.user_id = ?
+             WHERE p.user_id = ? OR pc.user_id = ?
+             ORDER BY p.id'
+        );
+        $stmt->execute([$uid, $uid, $uid]);
+        $rows = $stmt->fetchAll();
+    }
     $items = [];
-    foreach ($projects as $p) {
+    foreach ($rows as $p) {
         $full = get_full_project((int)$p['id']);
         if ($full) $items = array_merge($items, collect_project_ics_items($full));
     }
@@ -597,7 +1094,23 @@ function ics_all(): void {
 }
 
 function ics_project(int $id): void {
-    require_ics_token();
+    $ics_user = require_ics_token();
+    // Check access
+    if ($ics_user['role'] !== 'admin') {
+        $uid  = $ics_user['id'];
+        $stmt = pdo()->prepare(
+            'SELECT 1 FROM projects p
+             LEFT JOIN project_collaborators pc ON pc.project_id = p.id AND pc.user_id = :uid
+             WHERE p.id = :pid AND (p.user_id = :uid2 OR pc.user_id = :uid3) LIMIT 1'
+        );
+        $stmt->execute([':uid' => $uid, ':pid' => $id, ':uid2' => $uid, ':uid3' => $uid]);
+        if (!$stmt->fetch()) {
+            http_response_code(403);
+            header('Content-Type: text/plain');
+            echo 'Forbidden.';
+            exit;
+        }
+    }
     $project = get_full_project($id);
     if (!$project) {
         http_response_code(404);
@@ -617,19 +1130,27 @@ function ics_project(int $id): void {
 $method = $_SERVER['REQUEST_METHOD'];
 $path   = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/') ?: '/';
 
-// Login / logout (no auth required)
+// Login / logout / register / reset (no auth required)
 if ($method === 'GET'  && $path === '/login')  { page_login();  }
 if ($method === 'POST' && $path === '/login')  { page_login();  }
 if ($method === 'GET'  && $path === '/logout') { page_logout(); }
+if ($method === 'GET'  && preg_match('#^/register/([a-f0-9]{64})$#', $path, $m))      { page_register($m[1]); }
+if ($method === 'POST' && preg_match('#^/register/([a-f0-9]{64})$#', $path, $m))      { page_register($m[1]); }
+if ($method === 'GET'  && preg_match('#^/reset-password/([a-f0-9]{64})$#', $path, $m)) { page_reset_password($m[1]); }
+if ($method === 'POST' && preg_match('#^/reset-password/([a-f0-9]{64})$#', $path, $m)) { page_reset_password($m[1]); }
 
 // Language switcher (no auth required)
 if ($method === 'POST' && $path === '/set-lang') {
     $lang = $_POST['lang'] ?? '';
     if (in_array($lang, ['en', 'cs'], true)) {
         $_SESSION['lang'] = $lang;
+        // Persist for authenticated users
+        if (!empty($_SESSION['user_id'])) {
+            pdo()->prepare('UPDATE users SET lang = ? WHERE id = ?')
+                 ->execute([$lang, (int)$_SESSION['user_id']]);
+        }
     }
-    $back = $_SERVER['HTTP_REFERER'] ?? '/';
-    // Only redirect to same-origin paths
+    $back   = $_SERVER['HTTP_REFERER'] ?? '/';
     $parsed = parse_url($back);
     $redirect = isset($parsed['path']) ? $parsed['path'] : '/';
     if (!empty($parsed['query'])) $redirect .= '?' . $parsed['query'];
@@ -643,6 +1164,7 @@ if ($method === 'GET' && preg_match('#^/project/(\d+)/calendar\.ics$#', $path, $
 
 // Pages
 if ($method === 'GET' && $path === '/')                                           { page_index(); }
+if ($method === 'GET' && $path === '/admin/users')                                { page_admin_users(); }
 if ($method === 'GET' && preg_match('#^/project/(\d+)$#', $path, $m))            { page_project((int)$m[1]); }
 
 // Projects API
@@ -651,6 +1173,12 @@ if ($method === 'POST'   && $path === '/api/projects')                          
 if ($method === 'GET'    && preg_match('#^/api/projects/(\d+)$#', $path, $m))    { api_get_project((int)$m[1]); }
 if ($method === 'PUT'    && preg_match('#^/api/projects/(\d+)$#', $path, $m))    { api_update_project((int)$m[1]); }
 if ($method === 'DELETE' && preg_match('#^/api/projects/(\d+)$#', $path, $m))    { api_delete_project((int)$m[1]); }
+
+// Collaborators API
+if ($method === 'GET'    && preg_match('#^/api/projects/(\d+)/collaborators$#', $path, $m))                  { api_get_collaborators((int)$m[1]); }
+if ($method === 'POST'   && preg_match('#^/api/projects/(\d+)/collaborators$#', $path, $m))                  { api_add_collaborator((int)$m[1]); }
+if ($method === 'PATCH'  && preg_match('#^/api/projects/(\d+)/collaborators/(\d+)$#', $path, $m))            { api_update_collaborator((int)$m[1], (int)$m[2]); }
+if ($method === 'DELETE' && preg_match('#^/api/projects/(\d+)/collaborators/(\d+)$#', $path, $m))            { api_remove_collaborator((int)$m[1], (int)$m[2]); }
 
 // Phases API
 if ($method === 'POST'   && $path === '/api/phases')                              { api_create_phase(); }
@@ -669,9 +1197,21 @@ if ($method === 'POST'   && preg_match('#^/api/phases/(\d+)/events$#', $path, $m
 if ($method === 'PATCH'  && preg_match('#^/api/events/(\d+)$#', $path, $m))          { api_update_event((int)$m[1]); }
 if ($method === 'DELETE' && preg_match('#^/api/events/(\d+)$#', $path, $m))          { api_delete_event((int)$m[1]); }
 
-// Settings API
-if ($method === 'GET'  && $path === '/api/settings/ics-token') { api_get_ics_token(); }
-if ($method === 'POST' && $path === '/api/settings/ics-token/rotate') { api_rotate_ics_token(); }
+// ICS / Settings API
+if ($method === 'GET'  && $path === '/api/settings/ics-token')          { api_get_ics_token(); }
+if ($method === 'POST' && $path === '/api/settings/ics-token/rotate')   { api_rotate_ics_token(); }
+
+// Profile API
+if ($method === 'GET'  && $path === '/api/profile')          { api_get_profile(); }
+if ($method === 'POST' && $path === '/api/profile/password') { api_change_password(); }
+
+// Admin API
+if ($method === 'GET'    && $path === '/api/admin/users')                             { api_get_users(); }
+if ($method === 'POST'   && $path === '/api/admin/invites')                           { api_create_invite(); }
+if ($method === 'GET'    && $path === '/api/admin/invites')                           { api_get_invites(); }
+if ($method === 'DELETE' && preg_match('#^/api/admin/invites/(\d+)$#', $path, $m))   { api_revoke_invite((int)$m[1]); }
+if ($method === 'POST'   && preg_match('#^/api/admin/users/(\d+)/reset-password$#', $path, $m)) { api_create_password_reset((int)$m[1]); }
+if ($method === 'PATCH'  && preg_match('#^/api/admin/users/(\d+)$#', $path, $m))     { api_update_user((int)$m[1]); }
 
 // Nothing matched
 not_found();

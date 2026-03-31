@@ -15,10 +15,17 @@ COPY . /var/www/html/
 # Remove files that should not be served from this image
 RUN rm -f /var/www/html/schema.sql \
            /var/www/html/setup.php \
+           /var/www/html/docker-entrypoint.sh \
            /var/www/html/.gitignore \
            /var/www/html/Dockerfile \
            /var/www/html/docker-compose.yml
 
 RUN chown -R www-data:www-data /var/www/html
 
+# Custom entrypoint: waits for DB and seeds the first admin user if missing
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 EXPOSE 80
+
+ENTRYPOINT ["docker-entrypoint.sh"]

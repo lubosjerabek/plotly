@@ -1,6 +1,6 @@
 """
 Playwright UI tests for Plotly — full CRUD + UX feature coverage.
-Run:  pytest tests/test_ui.py -v
+Run:  TEST_AUTH_EMAIL=admin@example.com TEST_AUTH_PASS=plotly pytest tests/test_ui.py -v
       (server auto-starts via conftest.py if not already running)
 """
 import re

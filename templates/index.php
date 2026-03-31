@@ -454,6 +454,9 @@ $lang = current_lang();
     <button class="btn btn-ghost btn-icon" title="<?= htmlspecialchars(t('cal_sync_button_title')) ?>" onclick="openCalSyncModal()">
       <svg><use href="#icon-calendar"/></svg>
     </button>
+    <?php if (current_user()['role'] === 'admin'): ?>
+      <a class="btn btn-ghost" href="/admin/users" style="font-size:12px"><?= htmlspecialchars(t('admin')) ?></a>
+    <?php endif; ?>
     <a class="btn btn-ghost" href="/logout" style="font-size:12px"><?= htmlspecialchars(t('sign_out')) ?></a>
   </div>
 </nav>

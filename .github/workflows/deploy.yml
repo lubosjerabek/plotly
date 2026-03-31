@@ -36,3 +36,6 @@ jobs:
             **/.git*/**
             **/node_modules/**
             config.php
+            docker-entrypoint.sh
+            Dockerfile
+            docker-compose.yml
