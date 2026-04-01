@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= htmlspecialchars(t('page_title_project')) ?></title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" href="/favicon.php">
+  <link rel="apple-touch-icon" href="/favicon.php">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.css" />
@@ -1327,7 +1329,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
         }
       },
     });
-    addGanttDateLabels(tasks);
+    requestAnimationFrame(() => addGanttDateLabels(tasks));
   }
 
   function addGanttDateLabels(tasks) {
@@ -1355,14 +1357,15 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
       const barY      = parseFloat(bar.getAttribute('y')      || 0);
       const barHeight = parseFloat(bar.getAttribute('height') || 22);
 
-      // Default: right of bar. If the bar-label overflowed outside the bar,
-      // push the date label past the bar-label's rendered bounding box instead.
+      // Default: right of bar edge. If frappe-gantt pushed the bar-label outside
+      // the bar (label doesn't fit), position the date after the label text using
+      // getComputedTextLength() — more reliable than getBBox() for text metrics.
       let x = barX + barWidth + 6;
       const barLabel = wrapper.querySelector('.bar-label');
       if (barLabel) {
         const labelX = parseFloat(barLabel.getAttribute('x') || 0);
         if (labelX > barX + barWidth) {
-          try { const bb = barLabel.getBBox(); x = bb.x + bb.width + 6; } catch(e) {}
+          x = labelX + (barLabel.getComputedTextLength() || 0) + 6;
         }
       }
       const y = barY + barHeight / 2;
@@ -1400,7 +1403,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
     document.querySelectorAll('#ganttViewBtns button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
     if (state.ganttInstance) {
       state.ganttInstance.change_view_mode(view);
-      addGanttDateLabels(state.ganttTasks || []);
+      requestAnimationFrame(() => addGanttDateLabels(state.ganttTasks || []));
     }
   }
 
