@@ -1214,6 +1214,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
 
     container.innerHTML = '<svg id="gantt"></svg>';
 
+    state.ganttTasks = tasks;
     state.ganttInstance = new Gantt('#gantt', tasks, {
       header_height: 50,
       column_width: 30,
@@ -1326,6 +1327,43 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
         }
       },
     });
+    addGanttDateLabels(tasks);
+  }
+
+  function addGanttDateLabels(tasks) {
+    const svg = document.querySelector('#gantt');
+    if (!svg) return;
+    svg.querySelectorAll('.gantt-date-label').forEach(el => el.remove());
+
+    const taskMap = {};
+    tasks.forEach(t => {
+      if (t.id.startsWith('ms-')) {
+        taskMap[t.id] = fmtDate(t.start);
+      } else {
+        const s = fmtDate(t.start), e = fmtDate(t.end);
+        taskMap[t.id] = s === e ? s : `${s} → ${e}`;
+      }
+    });
+
+    svg.querySelectorAll('.bar-wrapper').forEach(wrapper => {
+      const id = wrapper.getAttribute('data-id');
+      if (!id || !taskMap[id]) return;
+      const bar = wrapper.querySelector('.bar');
+      if (!bar) return;
+      const x = parseFloat(bar.getAttribute('x') || 0) + parseFloat(bar.getAttribute('width') || 0) + 6;
+      const y = parseFloat(bar.getAttribute('y') || 0) + parseFloat(bar.getAttribute('height') || 22) / 2;
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', x);
+      text.setAttribute('y', y);
+      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('class', 'gantt-date-label');
+      text.style.fill = '#94a3b8';
+      text.style.fontSize = '10px';
+      text.style.fontFamily = 'inherit';
+      text.style.pointerEvents = 'none';
+      text.textContent = taskMap[id];
+      wrapper.appendChild(text);
+    });
   }
 
   // ── Tabs ─────────────────────────────────────────────────────
@@ -1348,6 +1386,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
     document.querySelectorAll('#ganttViewBtns button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
     if (state.ganttInstance) {
       state.ganttInstance.change_view_mode(view);
+      addGanttDateLabels(state.ganttTasks || []);
     }
   }
 
