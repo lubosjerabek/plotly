@@ -1350,8 +1350,22 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
       if (!id || !taskMap[id]) return;
       const bar = wrapper.querySelector('.bar');
       if (!bar) return;
-      const x = parseFloat(bar.getAttribute('x') || 0) + parseFloat(bar.getAttribute('width') || 0) + 6;
-      const y = parseFloat(bar.getAttribute('y') || 0) + parseFloat(bar.getAttribute('height') || 22) / 2;
+      const barX      = parseFloat(bar.getAttribute('x')      || 0);
+      const barWidth  = parseFloat(bar.getAttribute('width')  || 0);
+      const barY      = parseFloat(bar.getAttribute('y')      || 0);
+      const barHeight = parseFloat(bar.getAttribute('height') || 22);
+
+      // Default: right of bar. If the bar-label overflowed outside the bar,
+      // push the date label past the bar-label's rendered bounding box instead.
+      let x = barX + barWidth + 6;
+      const barLabel = wrapper.querySelector('.bar-label');
+      if (barLabel) {
+        const labelX = parseFloat(barLabel.getAttribute('x') || 0);
+        if (labelX > barX + barWidth) {
+          try { const bb = barLabel.getBBox(); x = bb.x + bb.width + 6; } catch(e) {}
+        }
+      }
+      const y = barY + barHeight / 2;
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       text.setAttribute('x', x);
       text.setAttribute('y', y);
