@@ -117,6 +117,13 @@ CREATE TABLE IF NOT EXISTS project_collaborators (
   FOREIGN KEY (user_id)    REFERENCES users(id)    ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── Login rate limiting ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS login_attempts (
+  ip           VARCHAR(45) NOT NULL,
+  attempted_at DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_ip_time (ip, attempted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ── Live-server migration (run once if upgrading from an earlier schema) ──────
 -- If you are starting fresh, these ALTER statements are harmless no-ops because
 -- the tables above already have the correct structure.

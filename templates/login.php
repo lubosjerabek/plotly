@@ -146,6 +146,7 @@ $lang = current_lang();
     <?php endif; ?>
 
     <form method="post" action="/login">
+      <?= csrf_field() ?>
       <label for="email"><?= htmlspecialchars(t('email')) ?></label>
       <input type="email" id="email" name="email" autocomplete="email" required autofocus>
 
@@ -158,10 +159,12 @@ $lang = current_lang();
     <!-- Language switcher -->
     <div class="lang-switcher">
       <form method="post" action="/set-lang">
+        <?= csrf_field() ?>
         <input type="hidden" name="lang" value="en">
         <button type="submit" class="lang-btn<?= $lang === 'en' ? ' active' : '' ?>"><?= t('lang_en') ?></button>
       </form>
       <form method="post" action="/set-lang">
+        <?= csrf_field() ?>
         <input type="hidden" name="lang" value="cs">
         <button type="submit" class="lang-btn<?= $lang === 'cs' ? ' active' : '' ?>"><?= t('lang_cs') ?></button>
       </form>

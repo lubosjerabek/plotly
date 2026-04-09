@@ -15,6 +15,7 @@ return [
     'email'                 => 'E-mail',
     'password'              => 'Heslo',
     'invalid_credentials'   => 'Neplatný e-mail nebo heslo.',
+    'too_many_attempts'     => 'Příliš mnoho pokusů o přihlášení. Zkuste to prosím později.',
 
     // ── Registrace ─────────────────────────────────────────────
     'page_title_register'       => 'Plotly — Vytvoření účtu',

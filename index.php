@@ -1,6 +1,23 @@
 <?php
 declare(strict_types=1);
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path'     => '/',
+    'secure'   => ($_SERVER['HTTPS'] ?? '') === 'on',
+    'httponly'  => true,
+    'samesite' => 'Lax',
+]);
 session_start();
+
+// ── Security headers ─────────────────────────────────────────────────────────
+header('X-Frame-Options: DENY');
+header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'");
+if (($_SERVER['HTTPS'] ?? '') === 'on') {
+    header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+}
 
 require __DIR__ . '/config.php';
 
@@ -66,6 +83,34 @@ function body(): array {
     return $parsed;
 }
 
+// ── CSRF protection ──────────────────────────────────────────────────────────
+
+function csrf_token(): string {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function csrf_field(): string {
+    return '<input type="hidden" name="_csrf" value="' . htmlspecialchars(csrf_token()) . '">';
+}
+
+function verify_csrf(): void {
+    // XHR requests: a custom header is sufficient (browsers block
+    // cross-origin custom headers without a CORS preflight)
+    if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest') {
+        return;
+    }
+    // Form POSTs: check the synchronizer token
+    $token = $_POST['_csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!hash_equals(csrf_token(), $token)) {
+        http_response_code(403);
+        echo 'CSRF validation failed.';
+        exit;
+    }
+}
+
 function not_found(): void {
     json_out(['detail' => 'Not found'], 404);
 }
@@ -107,7 +152,7 @@ function current_user(): array {
 }
 
 function serve_template(string $name, array $vars = []): void {
-    extract($vars);
+    extract($vars, EXTR_SKIP);
     require __DIR__ . '/templates/' . $name;
     exit;
 }
@@ -439,13 +484,29 @@ function collect_project_ics_items(array $project): array {
 
 function page_login(): void {
     $error = '';
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Rate limiting: max 10 attempts per IP in 15 minutes
+        pdo()->prepare('DELETE FROM login_attempts WHERE attempted_at < DATE_SUB(NOW(), INTERVAL 15 MINUTE)')->execute();
+        $stmt = pdo()->prepare('SELECT COUNT(*) FROM login_attempts WHERE ip = ? AND attempted_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE)');
+        $stmt->execute([$ip]);
+        if ((int)$stmt->fetchColumn() >= 10) {
+            $error = t('too_many_attempts');
+            serve_template('login.php', ['error' => $error]);
+        }
+
+        pdo()->prepare('INSERT INTO login_attempts (ip) VALUES (?)')->execute([$ip]);
+
         $email = trim($_POST['email'] ?? '');
         $pass  = $_POST['password'] ?? '';
         $stmt  = pdo()->prepare('SELECT id, password_hash, role, lang, is_active FROM users WHERE email = ? LIMIT 1');
         $stmt->execute([$email]);
         $user = $stmt->fetch();
         if ($user && $user['is_active'] && password_verify($pass, $user['password_hash'])) {
+            // Clear attempts on successful login
+            pdo()->prepare('DELETE FROM login_attempts WHERE ip = ?')->execute([$ip]);
+            session_regenerate_id(true);
             $_SESSION['authed']    = true;
             $_SESSION['user_id']   = (int)$user['id'];
             $_SESSION['user_role'] = $user['role'];
@@ -1067,6 +1128,8 @@ function api_update_user(int $user_id): void {
 // ── ICS feed handlers ─────────────────────────────────────────────────────────
 
 function ics_all(): void {
+    header('Referrer-Policy: no-referrer');
+    header('Cache-Control: private, no-store');
     $ics_user = require_ics_token();
     if ($ics_user['role'] === 'admin') {
         // Admin token: all projects
@@ -1094,6 +1157,8 @@ function ics_all(): void {
 }
 
 function ics_project(int $id): void {
+    header('Referrer-Policy: no-referrer');
+    header('Cache-Control: private, no-store');
     $ics_user = require_ics_token();
     // Check access
     if ($ics_user['role'] !== 'admin') {
@@ -1129,6 +1194,11 @@ function ics_project(int $id): void {
 
 $method = $_SERVER['REQUEST_METHOD'];
 $path   = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/') ?: '/';
+
+// CSRF protection for all state-changing requests
+if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+    verify_csrf();
+}
 
 // Login / logout / register / reset (no auth required)
 if ($method === 'GET'  && $path === '/login')  { page_login();  }

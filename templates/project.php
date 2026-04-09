@@ -590,10 +590,12 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
   <div class="topbar__center" id="topbarTitle"></div>
   <div class="topbar__right">
     <form method="post" action="/set-lang" style="display:inline">
+      <?= csrf_field() ?>
       <input type="hidden" name="lang" value="en">
       <button type="submit" style="<?= $_lbStyle . ($lang === 'en' ? $_lbActive : '') ?>"><?= t('lang_en') ?></button>
     </form>
     <form method="post" action="/set-lang" style="display:inline">
+      <?= csrf_field() ?>
       <input type="hidden" name="lang" value="cs">
       <button type="submit" style="<?= $_lbStyle . ($lang === 'cs' ? $_lbActive : '') ?>"><?= t('lang_cs') ?></button>
     </form>
@@ -766,18 +768,18 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
   const state = { project: null, activeTab: 'phases', ganttView: 'Month', ganttInstance: null };
 
   // ── API ──────────────────────────────────────────────────────
-  const H = { 'Content-Type': 'application/json' };
+  const H = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
   const api = {
     getProject:      (id)       => fetch(`/api/projects/${id}`).then(r => r.json()),
     updateProject:   (id, data) => fetch(`/api/projects/${id}`, { method: 'PUT', headers: H, body: JSON.stringify(data) }),
-    deleteProject:   (id)       => fetch(`/api/projects/${id}`, { method: 'DELETE' }),
+    deleteProject:   (id)       => fetch(`/api/projects/${id}`, { method: 'DELETE', headers: H }),
     createPhase:     (pid, data)=> fetch(`/api/phases?project_id=${pid}`, { method: 'POST', headers: H, body: JSON.stringify(data) }),
     updatePhase:     (id, data) => fetch(`/api/phases/${id}`, { method: 'PUT', headers: H, body: JSON.stringify(data) }),
-    deletePhase:     (id)       => fetch(`/api/phases/${id}`, { method: 'DELETE' }),
+    deletePhase:     (id)       => fetch(`/api/phases/${id}`, { method: 'DELETE', headers: H }),
     createMilestone:        (phid, d)  => fetch(`/api/phases/${phid}/milestones`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
-    deleteMilestone:        (id)       => fetch(`/api/milestones/${id}`, { method: 'DELETE' }),
+    deleteMilestone:        (id)       => fetch(`/api/milestones/${id}`, { method: 'DELETE', headers: H }),
     createEvent:            (phid, d)  => fetch(`/api/phases/${phid}/events`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
-    deleteEvent:            (id)       => fetch(`/api/events/${id}`, { method: 'DELETE' }),
+    deleteEvent:            (id)       => fetch(`/api/events/${id}`, { method: 'DELETE', headers: H }),
     createProjectMilestone: (pid, d)   => fetch(`/api/projects/${pid}/milestones`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
     createProjectEvent:     (pid, d)   => fetch(`/api/projects/${pid}/events`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
     updateMilestone:        (id, d)    => fetch(`/api/milestones/${id}`, { method: 'PATCH', headers: H, body: JSON.stringify(d) }),
@@ -785,7 +787,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
     getCollaborators:       (pid)      => fetch(`/api/projects/${pid}/collaborators`).then(r => r.json()),
     addCollaborator:        (pid, d)   => fetch(`/api/projects/${pid}/collaborators`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
     updateCollaborator:     (pid, uid, d) => fetch(`/api/projects/${pid}/collaborators/${uid}`, { method: 'PATCH', headers: H, body: JSON.stringify(d) }),
-    removeCollaborator:     (pid, uid) => fetch(`/api/projects/${pid}/collaborators/${uid}`, { method: 'DELETE' }),
+    removeCollaborator:     (pid, uid) => fetch(`/api/projects/${pid}/collaborators/${uid}`, { method: 'DELETE', headers: H }),
   };
 
   // ── Utilities ────────────────────────────────────────────────

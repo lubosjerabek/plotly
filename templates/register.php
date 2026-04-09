@@ -93,6 +93,7 @@
         <div class="error"><?= htmlspecialchars($error) ?></div>
       <?php endif; ?>
       <form method="post" action="/register/<?= htmlspecialchars($token) ?>">
+        <?= csrf_field() ?>
         <label for="name"><?= htmlspecialchars(t('full_name')) ?></label>
         <input type="text" id="name" name="name"
                value="<?= htmlspecialchars($_POST['name'] ?? '') ?>" required autofocus>
@@ -113,10 +114,12 @@
 
     <div class="lang-switcher">
       <form method="post" action="/set-lang">
+        <?= csrf_field() ?>
         <input type="hidden" name="lang" value="en">
         <button type="submit" class="lang-btn<?= $lang === 'en' ? ' active' : '' ?>"><?= t('lang_en') ?></button>
       </form>
       <form method="post" action="/set-lang">
+        <?= csrf_field() ?>
         <input type="hidden" name="lang" value="cs">
         <button type="submit" class="lang-btn<?= $lang === 'cs' ? ' active' : '' ?>"><?= t('lang_cs') ?></button>
       </form>

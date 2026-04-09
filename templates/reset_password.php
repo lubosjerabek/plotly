@@ -89,6 +89,7 @@
         <div class="error"><?= htmlspecialchars($error) ?></div>
       <?php endif; ?>
       <form method="post" action="/reset-password/<?= htmlspecialchars($token) ?>">
+        <?= csrf_field() ?>
         <label for="password"><?= htmlspecialchars(t('new_password')) ?></label>
         <input type="password" id="password" name="password" autocomplete="new-password" required autofocus>
 

@@ -94,10 +94,12 @@
   <div class="topbar__right">
     <div class="lang-switcher">
       <form method="post" action="/set-lang" style="display:inline">
+        <?= csrf_field() ?>
         <input type="hidden" name="lang" value="en">
         <button type="submit" class="lang-btn<?= $lang === 'en' ? ' active' : '' ?>"><?= t('lang_en') ?></button>
       </form>
       <form method="post" action="/set-lang" style="display:inline">
+        <?= csrf_field() ?>
         <input type="hidden" name="lang" value="cs">
         <button type="submit" class="lang-btn<?= $lang === 'cs' ? ' active' : '' ?>"><?= t('lang_cs') ?></button>
       </form>
@@ -226,7 +228,7 @@ async function loadUsers() {
 async function toggleActive(userId, currentlyActive) {
   await fetch('/api/admin/users/' + userId, {
     method: 'PATCH',
-    headers: {'Content-Type':'application/json'},
+    headers: {'Content-Type':'application/json', 'X-Requested-With':'XMLHttpRequest'},
     body: JSON.stringify({is_active: !currentlyActive})
   });
   toast(currentlyActive ? T.user_deactivated : T.user_activated);
@@ -236,7 +238,7 @@ async function toggleActive(userId, currentlyActive) {
 async function promoteUser(userId) {
   await fetch('/api/admin/users/' + userId, {
     method: 'PATCH',
-    headers: {'Content-Type':'application/json'},
+    headers: {'Content-Type':'application/json', 'X-Requested-With':'XMLHttpRequest'},
     body: JSON.stringify({role: 'admin'})
   });
   toast(T.toast_user_updated);
@@ -246,7 +248,7 @@ async function promoteUser(userId) {
 async function demoteUser(userId) {
   await fetch('/api/admin/users/' + userId, {
     method: 'PATCH',
-    headers: {'Content-Type':'application/json'},
+    headers: {'Content-Type':'application/json', 'X-Requested-With':'XMLHttpRequest'},
     body: JSON.stringify({role: 'user'})
   });
   toast(T.toast_user_updated);
@@ -254,7 +256,7 @@ async function demoteUser(userId) {
 }
 
 async function generateResetLink(userId) {
-  const res = await fetch('/api/admin/users/' + userId + '/reset-password', {method:'POST'});
+  const res = await fetch('/api/admin/users/' + userId + '/reset-password', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}});
   const data = await res.json();
   document.getElementById('resetUrl').textContent = data.url;
   document.getElementById('resetModal').classList.add('is-open');
@@ -302,7 +304,7 @@ async function loadInvites() {
 }
 
 async function revokeInvite(id) {
-  await fetch('/api/admin/invites/' + id, {method:'DELETE'});
+  await fetch('/api/admin/invites/' + id, {method:'DELETE', headers:{'X-Requested-With':'XMLHttpRequest'}});
   toast(T.toast_invite_revoked);
   loadInvites();
 }
@@ -326,7 +328,7 @@ async function generateInvite() {
   document.getElementById('generateInviteBtn').disabled = true;
   const res  = await fetch('/api/admin/invites', {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
+    headers: {'Content-Type':'application/json', 'X-Requested-With':'XMLHttpRequest'},
     body: JSON.stringify({label, expires_days: days})
   });
   const data = await res.json();

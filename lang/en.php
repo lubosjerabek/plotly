@@ -15,6 +15,7 @@ return [
     'email'                 => 'Email',
     'password'              => 'Password',
     'invalid_credentials'   => 'Invalid email or password.',
+    'too_many_attempts'     => 'Too many login attempts. Please try again later.',
 
     // ── Registration ───────────────────────────────────────────
     'page_title_register'       => 'Plotly — Create Account',

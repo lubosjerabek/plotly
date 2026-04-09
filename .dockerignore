@@ -17,5 +17,12 @@ Dockerfile
 docker-compose.yml
 .dockerignore
 
+# CI/CD and editor config
+.github/
+.claude/
+.vscode/
+.pytest_cache/
+.ftp-deploy-ignore
+
 # Docs
-README.md
+*.md

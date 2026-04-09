@@ -445,10 +445,12 @@ $lang = current_lang();
     <!-- Language switcher -->
     <div class="lang-switcher">
       <form method="post" action="/set-lang">
+        <?= csrf_field() ?>
         <input type="hidden" name="lang" value="en">
         <button type="submit" class="lang-btn<?= $lang === 'en' ? ' active' : '' ?>"><?= t('lang_en') ?></button>
       </form>
       <form method="post" action="/set-lang">
+        <?= csrf_field() ?>
         <input type="hidden" name="lang" value="cs">
         <button type="submit" class="lang-btn<?= $lang === 'cs' ? ' active' : '' ?>"><?= t('lang_cs') ?></button>
       </form>
@@ -560,12 +562,12 @@ $lang = current_lang();
   let _editingProjectId = null;
 
   // ── API ──────────────────────────────────────────────────────
-  const h = { 'Content-Type': 'application/json' };
+  const h = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
   const api = {
     getProjects:   ()         => fetch('/api/projects').then(r => r.json()),
     createProject: (data)     => fetch('/api/projects', { method: 'POST', headers: h, body: JSON.stringify(data) }),
     updateProject: (id, data) => fetch(`/api/projects/${id}`, { method: 'PUT', headers: h, body: JSON.stringify(data) }),
-    deleteProject: (id)       => fetch(`/api/projects/${id}`, { method: 'DELETE' }),
+    deleteProject: (id)       => fetch(`/api/projects/${id}`, { method: 'DELETE', headers: h }),
   };
 
   // ── Render ───────────────────────────────────────────────────
@@ -791,7 +793,7 @@ $lang = current_lang();
     const btn = document.getElementById('calRotateBtn');
     btn.disabled = true;
     try {
-      const resp = await fetch('/api/settings/ics-token/rotate', { method: 'POST' });
+      const resp = await fetch('/api/settings/ics-token/rotate', { method: 'POST', headers: {'X-Requested-With': 'XMLHttpRequest'} });
       if (resp.ok) {
         const data = await resp.json();
         document.getElementById('calSyncUrl').value = data.url;
