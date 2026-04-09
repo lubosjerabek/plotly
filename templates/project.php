@@ -1573,19 +1573,22 @@
     });
     _modalCallback = callback;
     document.getElementById('genericModal').classList.add('is-open');
+    // Wire up date sync immediately — elements are already in the DOM at this
+    // point, so there is no need to defer. Keeping this outside setTimeout
+    // ensures the listener is attached before any external actor (tests, fast
+    // keyboard users) can interact with the start field.
+    const _startEl = document.getElementById('modal_input_start');
+    const _endEl   = document.getElementById('modal_input_end');
+    if (_startEl && _endEl) {
+      _startEl.addEventListener('change', () => {
+        if (_endEl.value && _endEl.value < _startEl.value) {
+          _endEl.value = _startEl.value;
+        }
+      });
+    }
     setTimeout(() => {
       clearFieldErrors();
       container.querySelector('input, select')?.focus();
-      // Auto-advance end date when start date changes and end would be before start
-      const startEl = document.getElementById('modal_input_start');
-      const endEl   = document.getElementById('modal_input_end');
-      if (startEl && endEl) {
-        startEl.addEventListener('change', () => {
-          if (endEl.value && endEl.value < startEl.value) {
-            endEl.value = startEl.value;
-          }
-        });
-      }
     }, 50);
   }
 
