@@ -20,7 +20,6 @@ Authentication:
 """
 import json
 import os
-import re
 import socket
 import subprocess
 import time
@@ -28,16 +27,18 @@ from typing import Generator
 
 import pytest
 from faker import Faker
-from playwright.sync_api import Browser, Page, expect
+from playwright.sync_api import Browser, Page
 
-BASE_URL = "http://localhost:8000"
+from pages import BASE_URL, DashboardPage, ProjectPage
+from pages.login_page import LoginPage
+
 TEST_AUTH_EMAIL = os.getenv("TEST_AUTH_EMAIL", os.getenv("TEST_AUTH_USER", "admin@example.com"))
 TEST_AUTH_PASS  = os.getenv("TEST_AUTH_PASS", "plotly_admin_pass")
 
 _started_stack = False
 
 
-# ── Faker instance (shared across helpers) ────────────────────────────────────
+# ── Faker instance ────────────────────────────────────────────────────────────
 
 fake = Faker()
 
@@ -118,12 +119,10 @@ def auth_state(browser: Browser):
     """Log in once per session as admin; return Playwright storage state."""
     context = browser.new_context()
     pg = context.new_page()
-    pg.goto(BASE_URL + "/login")
-    pg.fill("input[name='email']",    TEST_AUTH_EMAIL)
-    pg.fill("input[name='password']", TEST_AUTH_PASS)
-    pg.click("button[type='submit']")
-    pg.wait_for_load_state("networkidle")
-    if "/login" in pg.url:
+    login = LoginPage(pg)
+    login.goto()
+    login.login(TEST_AUTH_EMAIL, TEST_AUTH_PASS)
+    if login.is_on_login_page():
         raise RuntimeError(
             f"Login failed for '{TEST_AUTH_EMAIL}'. "
             "Check TEST_AUTH_PASS matches the DB user's password_hash."
@@ -202,14 +201,7 @@ def session_project(browser: Browser, auth_state) -> Generator[str, None, None]:
     name = rand_project_name()
     ctx = browser.new_context(storage_state=auth_state)
     pg = ctx.new_page()
-    pg.goto(BASE_URL + "/")
-    pg.wait_for_load_state("networkidle")
-    pg.locator("#btnNewProject").click()
-    expect(pg.locator("#projectModal")).to_have_class(re.compile(r"is-open"))
-    pg.locator("#pm_name").fill(name)
-    pg.locator("#projectModalSubmit").click()
-    expect(pg.locator(".toast--success")).to_be_visible()
-    pg.wait_for_load_state("networkidle")
+    DashboardPage(pg).create_project(name)
     ctx.close()
 
     yield name
@@ -217,14 +209,7 @@ def session_project(browser: Browser, auth_state) -> Generator[str, None, None]:
     ctx2 = browser.new_context(storage_state=auth_state)
     pg2 = ctx2.new_page()
     try:
-        pg2.goto(BASE_URL + "/")
-        pg2.wait_for_load_state("networkidle")
-        card = pg2.locator(".project-card", has_text=name)
-        if card.count() > 0:
-            card.hover()
-            card.locator("button[title='Delete project']").click()
-            pg2.locator("#confirmOkBtn").click()
-            pg2.wait_for_load_state("networkidle")
+        DashboardPage(pg2).delete_project(name)
     except Exception:
         pass
     finally:
@@ -241,36 +226,20 @@ def make_project(page: Page):
     Names default to ``rand_project_name()`` so each run exercises different
     input data (pesticide paradox countermeasure).
     """
+    dashboard = DashboardPage(page)
     created: list[str] = []
 
     def _make(name: str | None = None, desc: str = "") -> str:
-        name = name or rand_project_name()
-        page.goto(BASE_URL + "/")
-        page.wait_for_load_state("networkidle")
-        page.locator("#btnNewProject").click()
-        expect(page.locator("#projectModal")).to_have_class(re.compile(r"is-open"))
-        page.locator("#pm_name").fill(name)
-        if desc:
-            page.locator("#pm_desc").fill(desc)
-        page.locator("#projectModalSubmit").click()
-        expect(page.locator(".toast--success")).to_be_visible()
-        page.wait_for_load_state("networkidle")
-        created.append(name)
-        return name
+        n = name or rand_project_name()
+        dashboard.create_project(n, desc)
+        created.append(n)
+        return n
 
     yield _make
 
-    for name in created:
+    for n in created:
         try:
-            page.goto(BASE_URL + "/")
-            page.wait_for_load_state("networkidle")
-            card = page.locator(".project-card", has_text=name)
-            if card.count() == 0:
-                continue
-            card.hover()
-            card.locator("button[title='Delete project']").click()
-            page.locator("#confirmOkBtn").click()
-            page.wait_for_load_state("networkidle")
+            dashboard.delete_project(n)
         except Exception:
             pass  # best-effort cleanup
 
@@ -284,6 +253,8 @@ def make_phase(page: Page):
 
     Names default to ``rand_phase_name()``.
     """
+    project = ProjectPage(page)
+
     def _make(
         project_name: str,
         name:  str | None = None,
@@ -291,20 +262,8 @@ def make_phase(page: Page):
         end:   str        = "2027-06-30",
         desc:  str        = "",
     ) -> str:
-        from helpers import navigate_to_project
-        navigate_to_project(page, project_name)
-        name = name or rand_phase_name()
-        page.locator("button", has_text="Add Phase").click()
-        expect(page.locator("#genericModal")).to_have_class(re.compile(r"is-open"))
-        page.locator("#modal_input_name").fill(name)
-        if desc:
-            page.locator("#modal_input_desc").fill(desc)
-        page.locator("#modal_input_start").fill(start)
-        page.locator("#modal_input_end").fill(end)
-        page.locator("#modalSubmitBtn").click()
-        expect(page.locator(".toast--success")).to_be_visible()
-        page.wait_for_load_state("networkidle")
-        return name
+        project.navigate_to(project_name)
+        return project.add_phase(name or rand_phase_name(), start, end, desc)
 
     return _make
 
@@ -319,24 +278,15 @@ def make_milestone(page: Page):
     Expands the target phase card automatically.
     Names default to ``rand_milestone_name()``.
     """
+    project = ProjectPage(page)
+
     def _make(
         project_name: str,
         phase_name:   str,
         name:         str | None = None,
         target:       str        = "2027-03-01",
     ) -> str:
-        from helpers import navigate_to_project, expand_phase
-        navigate_to_project(page, project_name)
-        name = name or rand_milestone_name()
-        expand_phase(page, phase_name)
-        phase_card = page.locator(".phase-card", has_text=phase_name)
-        phase_card.locator(".phase-section").first.locator("button", has_text="Add").click()
-        expect(page.locator("#genericModal")).to_have_class(re.compile(r"is-open"))
-        page.locator("#modal_input_name").fill(name)
-        page.locator("#modal_input_target").fill(target)
-        page.locator("#modalSubmitBtn").click()
-        expect(page.locator(".toast--success")).to_be_visible()
-        page.wait_for_load_state("networkidle")
-        return name
+        project.navigate_to(project_name)
+        return project.add_milestone(phase_name, name or rand_milestone_name(), target)
 
     return _make
