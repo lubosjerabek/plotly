@@ -99,6 +99,41 @@
     }
     .back-link:hover { color: var(--text); background: var(--surface-2); }
 
+    /* ── Language dropdown ── */
+    .lang-dropdown { position: relative; }
+    .lang-dropdown__btn {
+      display: inline-flex; align-items: center; gap: 0.3em;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-family: inherit; font-size: 11px; font-weight: 600;
+      letter-spacing: 0.05em; padding: 0.25rem 0.5rem;
+      cursor: pointer; transition: all var(--t-fast);
+    }
+    .lang-dropdown__btn:hover { border-color: var(--border-hover); color: var(--text); }
+    .lang-dropdown__chevron { width: 10px; height: 10px; fill: currentColor; transition: transform var(--t-fast); }
+    .lang-dropdown.is-open .lang-dropdown__chevron { transform: rotate(180deg); }
+    .lang-dropdown.is-open .lang-dropdown__btn { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,0.1); }
+    .lang-dropdown__menu {
+      display: none; position: absolute; top: calc(100% + 6px); right: 0;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-md);
+      overflow: hidden; min-width: 130px; z-index: 200;
+    }
+    .lang-dropdown.is-open .lang-dropdown__menu { display: block; }
+    .lang-dropdown__item-form { margin: 0; }
+    .lang-dropdown__item {
+      display: flex; align-items: center; gap: 0.5rem; width: 100%;
+      padding: 0.55rem 0.85rem; background: none; border: none;
+      color: var(--text-muted); font-family: inherit; font-size: 13px;
+      cursor: pointer; transition: background var(--t-fast), color var(--t-fast);
+      text-align: left;
+    }
+    .lang-dropdown__item:hover { background: var(--surface-3); color: var(--text); }
+    .lang-dropdown__item.is-active { color: var(--accent); }
+    .lang-dropdown__code { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; min-width: 1.8em; }
+
     /* ── Buttons ── */
     .btn {
       display: inline-flex;
@@ -440,6 +475,14 @@
     .modal__footer { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0 1.5rem 1.25rem; }
     .modal-field { margin-bottom: 1rem; }
     .modal-field:last-child { margin-bottom: 0; }
+    .modal-checkbox-label {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-size: 13px; color: var(--text-muted); cursor: pointer;
+      padding: 0.4rem 0;
+    }
+    .modal-checkbox-label input[type="checkbox"] {
+      width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0;
+    }
     .field-label {
       display: block; margin-bottom: 0.4rem;
       font-size: 11px; font-weight: 600; color: var(--text-muted);
@@ -543,10 +586,14 @@
     }
 
     @media (max-width: 640px) {
-      .topbar { padding: 0 1rem; }
+      .topbar { padding: 0 0.75rem; gap: 0.4rem; }
       .topbar__center { display: none; }
+      .topbar__left, .topbar__right { gap: 0.3rem; }
       .page { padding: 1.5rem 1rem 3rem; }
       .project-header { flex-direction: column; }
+      /* Shrink text buttons to icon-only on small screens */
+      #subscribeBtn .btn-label,
+      #deleteProjectBtn .btn-label { display: none; }
     }
   </style>
 </head>
@@ -577,11 +624,6 @@
   </symbol>
 </svg>
 
-<?php
-// inline lang-btn style (reuse project.php's existing CSS vars)
-$_lbStyle = 'background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);font-family:inherit;font-size:11px;font-weight:600;letter-spacing:0.05em;padding:0.2rem 0.5rem;cursor:pointer;transition:all .15s;';
-$_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,102,241,0.1);';
-?>
 <!-- Topbar -->
 <nav class="topbar">
   <div class="topbar__left">
@@ -589,24 +631,32 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
   </div>
   <div class="topbar__center" id="topbarTitle"></div>
   <div class="topbar__right">
-    <form method="post" action="/set-lang" style="display:inline">
-      <?= csrf_field() ?>
-      <input type="hidden" name="lang" value="en">
-      <button type="submit" style="<?= $_lbStyle . ($lang === 'en' ? $_lbActive : '') ?>"><?= t('lang_en') ?></button>
-    </form>
-    <form method="post" action="/set-lang" style="display:inline">
-      <?= csrf_field() ?>
-      <input type="hidden" name="lang" value="cs">
-      <button type="submit" style="<?= $_lbStyle . ($lang === 'cs' ? $_lbActive : '') ?>"><?= t('lang_cs') ?></button>
-    </form>
+    <!-- Language dropdown -->
+    <div class="lang-dropdown" id="langDropdown">
+      <button type="button" class="lang-dropdown__btn" onclick="toggleLangDropdown(event)" aria-haspopup="true" aria-expanded="false">
+        <?= htmlspecialchars(t('lang_' . $lang)) ?>
+        <svg class="lang-dropdown__chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.427 7.427l3.396 3.396a.25.25 0 0 0 .354 0l3.396-3.396A.25.25 0 0 0 11.396 7H4.604a.25.25 0 0 0-.177.427z"/></svg>
+      </button>
+      <div class="lang-dropdown__menu" role="menu">
+        <?php foreach (['en' => 'English', 'cs' => 'Čeština'] as $code => $label): ?>
+        <form method="post" action="/set-lang" class="lang-dropdown__item-form">
+          <?= csrf_field() ?>
+          <input type="hidden" name="lang" value="<?= $code ?>">
+          <button type="submit" class="lang-dropdown__item<?= $lang === $code ? ' is-active' : '' ?>" role="menuitem">
+            <span class="lang-dropdown__code"><?= strtoupper($code) ?></span><?= htmlspecialchars($label) ?>
+          </button>
+        </form>
+        <?php endforeach; ?>
+      </div>
+    </div>
     <button class="btn btn-ghost" id="subscribeBtn" onclick="openSubscribeModal()">
       <svg><use href="#icon-calendar"/></svg>
-      <?= htmlspecialchars(t('subscribe')) ?>
+      <span class="btn-label"><?= htmlspecialchars(t('subscribe')) ?></span>
     </button>
     <?php if (is_project_owner($project_id)): ?>
     <button class="btn btn-danger-outline" id="deleteProjectBtn" onclick="confirmDeleteProject()">
       <svg><use href="#icon-trash"/></svg>
-      <?= htmlspecialchars(t('delete')) ?>
+      <span class="btn-label"><?= htmlspecialchars(t('delete')) ?></span>
     </button>
     <?php endif; ?>
   </div>
@@ -790,6 +840,21 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
     removeCollaborator:     (pid, uid) => fetch(`/api/projects/${pid}/collaborators/${uid}`, { method: 'DELETE', headers: H }),
   };
 
+  // ── Language dropdown ────────────────────────────────────────
+  function toggleLangDropdown(e) {
+    e.stopPropagation();
+    const dd = document.getElementById('langDropdown');
+    const open = dd.classList.toggle('is-open');
+    dd.querySelector('.lang-dropdown__btn').setAttribute('aria-expanded', open);
+  }
+  document.addEventListener('click', () => {
+    const dd = document.getElementById('langDropdown');
+    if (dd && dd.classList.contains('is-open')) {
+      dd.classList.remove('is-open');
+      dd.querySelector('.lang-dropdown__btn').setAttribute('aria-expanded', 'false');
+    }
+  });
+
   // ── Utilities ────────────────────────────────────────────────
   const todayStr = () => new Date().toISOString().split('T')[0];
 
@@ -806,6 +871,23 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
     const [y, m, day] = d.split('-');
     const months = T.months;
     return `${months[parseInt(m,10)-1]} ${parseInt(day,10)}, ${y}`;
+  }
+
+  function fmtTime(t) {
+    // "HH:MM:SS" → "HH:MM"; handle null/undefined
+    if (!t) return '';
+    return t.slice(0, 5);
+  }
+
+  function fmtEventMeta(e) {
+    const s = fmtDate(e.start_date), en = fmtDate(e.end_date);
+    const st = fmtTime(e.start_time), et = fmtTime(e.end_time);
+    if (st) {
+      // timed event
+      if (s === en) return `${s} ${st}${et && et !== st ? ' – ' + et : ''}`;
+      return `${s} ${st} → ${en}${et ? ' ' + et : ''}`;
+    }
+    return s === en ? s : `${s} → ${en}`;
   }
 
   function dateToYMD(d) {
@@ -881,7 +963,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
     document.getElementById('phaseCount').textContent = phasesLabel;
     renderProjectItems(p.milestones || [], p.events || []);
     renderPhases(p.phases);
-    if (state.activeTab === 'timeline') renderGantt(p);
+    if (state.activeTab === 'timeline') requestAnimationFrame(() => renderGantt(p));
   }
 
   function renderProjectItems(milestones, events) {
@@ -910,9 +992,13 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
       ? events.map(e => `
           <li>
             <span class="item-list__name">${escHtml(e.name)}</span>
-            <span class="item-list__meta">${fmtDate(e.start_date)} → ${fmtDate(e.end_date)}</span>
+            <span class="item-list__meta">${fmtEventMeta(e)}</span>
             ${canEdit ? `
-            <button class="btn btn-icon btn-danger-outline" title="Delete event" style="width:22px;height:22px;padding:2px;"
+            <button class="btn btn-icon btn-ghost" title="${T.tooltip_edit_event}" style="width:22px;height:22px;padding:2px;"
+              onclick="editEvent(${e.id})">
+              <svg><use href="#icon-pencil"/></svg>
+            </button>
+            <button class="btn btn-icon btn-danger-outline" title="${T.tooltip_delete_event}" style="width:22px;height:22px;padding:2px;"
               onclick="confirmDeleteEvent(${e.id}, '${escHtml(e.name).replace(/'/g,"\\'")}')">
               <svg><use href="#icon-trash"/></svg>
             </button>` : ''}
@@ -999,9 +1085,13 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
         ? phase.events.map(e => `
             <li>
               <span class="item-list__name">${escHtml(e.name)}</span>
-              <span class="item-list__meta">${fmtDate(e.start_date)} → ${fmtDate(e.end_date)}</span>
+              <span class="item-list__meta">${fmtEventMeta(e)}</span>
               ${canEdit ? `
-              <button class="btn btn-icon btn-danger-outline" title="Delete event" style="width:22px;height:22px;padding:2px;"
+              <button class="btn btn-icon btn-ghost" title="${T.tooltip_edit_event}" style="width:22px;height:22px;padding:2px;"
+                onclick="editEvent(${e.id})">
+                <svg><use href="#icon-pencil"/></svg>
+              </button>
+              <button class="btn btn-icon btn-danger-outline" title="${T.tooltip_delete_event}" style="width:22px;height:22px;padding:2px;"
                 onclick="confirmDeleteEvent(${e.id}, '${escHtml(e.name).replace(/'/g,"\\'")}')">
                 <svg><use href="#icon-trash"/></svg>
               </button>` : ''}
@@ -1219,6 +1309,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
     container.innerHTML = '<svg id="gantt"></svg>';
 
     state.ganttTasks = tasks;
+    try {
     state.ganttInstance = new Gantt('#gantt', tasks, {
       header_height: 50,
       column_width: 30,
@@ -1332,6 +1423,10 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
       },
     });
     requestAnimationFrame(() => addGanttDateLabels(tasks));
+    } catch (err) {
+      console.error('Gantt render failed:', err);
+      container.innerHTML = `<div class="item-empty" style="text-align:center;padding:2rem;">${T.gantt_render_error || 'Failed to render timeline. Check the browser console for details.'}</div>`;
+    }
   }
 
   function addGanttDateLabels(tasks) {
@@ -1396,7 +1491,7 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
     document.getElementById('tab-phases').style.display        = tab === 'phases'        ? '' : 'none';
     document.getElementById('tab-timeline').style.display      = tab === 'timeline'      ? '' : 'none';
     document.getElementById('tab-collaborators').style.display = tab === 'collaborators' ? '' : 'none';
-    if (tab === 'timeline'      && state.project) renderGantt(state.project);
+    if (tab === 'timeline'      && state.project) requestAnimationFrame(() => renderGantt(state.project));
     if (tab === 'collaborators') renderCollaborators();
   }
 
@@ -1441,8 +1536,13 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
     container.innerHTML = '';
     fields.forEach(f => {
       const wrap = document.createElement('div');
-      wrap.className = 'modal-field';
-      wrap.innerHTML = buildFieldHTML(f);
+      wrap.className = 'modal-field' + (f.wrapClass ? ' ' + f.wrapClass : '');
+      if (f.type !== 'checkbox') {
+        wrap.innerHTML = buildFieldHTML(f);
+      } else {
+        // checkbox: no outer label, the field itself has the label
+        wrap.innerHTML = buildFieldHTML(f);
+      }
       container.appendChild(wrap);
     });
     // colour swatches: click to select
@@ -1484,6 +1584,12 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
     }
     if (f.type === 'textarea') {
       return `${label}<textarea id="modal_input_${f.id}" rows="3" autocomplete="off">${escHtml(f.defaultValue || '')}</textarea>`;
+    }
+    if (f.type === 'checkbox') {
+      return `<label class="modal-checkbox-label" for="modal_input_${f.id}">
+        <input type="checkbox" id="modal_input_${f.id}" ${f.defaultValue ? 'checked' : ''}>
+        <span>${escHtml(f.label)}</span>
+      </label>`;
     }
     return `${label}<input type="${f.type || 'text'}" id="modal_input_${f.id}" value="${escHtml(f.defaultValue || '')}" autocomplete="off">`;
   }
@@ -1696,22 +1802,10 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
   }
 
   function addProjectEvent() {
-    showModal(T.modal_add_project_event, [
-      { id: 'name',  label: T.event_name,  type: 'text' },
-      { id: 'start', label: T.start_date,  type: 'date', defaultValue: todayStr() },
-      { id: 'end',   label: T.end_date,    type: 'date', defaultValue: todayStr() },
-    ], async () => {
-      const name  = document.getElementById('modal_input_name').value.trim();
-      const start = document.getElementById('modal_input_start').value;
-      const end   = document.getElementById('modal_input_end').value;
-      if (!name || !start || !end) return;
-      const btn = document.getElementById('modalSubmitBtn');
-      btn.disabled = true;
-      try {
-        const resp = await api.createProjectEvent(projectId, { name, start_date: start, end_date: end });
-        if (resp.ok) { toast.success(T.toast_event_added); closeModal(); await refresh(); }
-        else toast.error(T.toast_event_add_failed);
-      } finally { btn.disabled = false; }
+    _openEventModal(T.modal_add_project_event, {}, async (data) => {
+      const resp = await api.createProjectEvent(projectId, data);
+      if (resp.ok) { toast.success(T.toast_event_added); closeModal(); await refresh(); }
+      else toast.error(T.toast_event_add_failed);
     }, T.modal_add_event);
   }
 
@@ -1762,23 +1856,48 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
   }
 
   // ── Event Actions ────────────────────────────────────────────
-  function addEvent(phaseId) {
-    showModal(T.modal_add_event, [
-      { id: 'name',  label: T.event_name,  type: 'text' },
-      { id: 'start', label: T.start_date,  type: 'date', defaultValue: todayStr() },
-      { id: 'end',   label: T.end_date,    type: 'date', defaultValue: todayStr() },
+
+  /** Shared event modal builder with all-day / time toggle. */
+  function _openEventModal(title, defaults, onSave, submitLabel) {
+    const isAllDay = !defaults.start_time;
+    showModal(title, [
+      { id: 'name',       label: T.event_name,       type: 'text',     defaultValue: defaults.name       || '' },
+      { id: 'start',      label: T.start_date,        type: 'date',     defaultValue: defaults.start_date || todayStr() },
+      { id: 'end',        label: T.end_date,          type: 'date',     defaultValue: defaults.end_date   || todayStr() },
+      { id: 'all_day',    label: T.event_all_day,     type: 'checkbox', defaultValue: isAllDay },
+      { id: 'start_time', label: T.event_start_time,  type: 'time',     defaultValue: fmtTime(defaults.start_time) || '09:00', wrapClass: 'event-time-field' },
+      { id: 'end_time',   label: T.event_end_time,    type: 'time',     defaultValue: fmtTime(defaults.end_time)   || '17:00', wrapClass: 'event-time-field' },
     ], async () => {
-      const name  = document.getElementById('modal_input_name').value.trim();
-      const start = document.getElementById('modal_input_start').value;
-      const end   = document.getElementById('modal_input_end').value;
+      const name   = document.getElementById('modal_input_name').value.trim();
+      const start  = document.getElementById('modal_input_start').value;
+      const end    = document.getElementById('modal_input_end').value;
       if (!name || !start || !end) return;
+      const allDay = document.getElementById('modal_input_all_day').checked;
       const btn = document.getElementById('modalSubmitBtn');
       btn.disabled = true;
       try {
-        const resp = await api.createEvent(phaseId, { name, start_date: start, end_date: end });
-        if (resp.ok) { toast.success(T.toast_event_added); closeModal(); await refresh(); }
-        else toast.error(T.toast_event_add_failed);
+        await onSave({
+          name, start_date: start, end_date: end, all_day: allDay,
+          start_time: allDay ? null : (document.getElementById('modal_input_start_time').value || null),
+          end_time:   allDay ? null : (document.getElementById('modal_input_end_time').value   || null),
+        });
       } finally { btn.disabled = false; }
+    }, submitLabel);
+
+    // Wire up the all-day toggle after the modal DOM is built
+    setTimeout(() => {
+      const cb     = document.getElementById('modal_input_all_day');
+      const fields = document.querySelectorAll('#genericModal .event-time-field');
+      function sync() { fields.forEach(f => { f.style.display = cb.checked ? 'none' : ''; }); }
+      if (cb) { cb.addEventListener('change', sync); sync(); }
+    }, 0);
+  }
+
+  function addEvent(phaseId) {
+    _openEventModal(T.modal_add_event, {}, async (data) => {
+      const resp = await api.createEvent(phaseId, data);
+      if (resp.ok) { toast.success(T.toast_event_added); closeModal(); await refresh(); }
+      else toast.error(T.toast_event_add_failed);
     }, T.modal_add_event);
   }
 
@@ -1789,22 +1908,10 @@ $_lbActive = 'border-color:var(--accent);color:var(--accent);background:rgba(99,
     ];
     const ev = allEvents.find(e => e.id === evId);
     if (!ev) return;
-    showModal(T.modal_edit_event, [
-      { id: 'name',  label: T.event_name,  type: 'text', defaultValue: ev.name },
-      { id: 'start', label: T.start_date,  type: 'date', defaultValue: ev.start_date },
-      { id: 'end',   label: T.end_date,    type: 'date', defaultValue: ev.end_date },
-    ], async () => {
-      const name  = document.getElementById('modal_input_name').value.trim();
-      const start = document.getElementById('modal_input_start').value;
-      const end   = document.getElementById('modal_input_end').value;
-      if (!name || !start || !end) return;
-      const btn = document.getElementById('modalSubmitBtn');
-      btn.disabled = true;
-      try {
-        const resp = await api.updateEvent(evId, { name, start_date: start, end_date: end });
-        if (resp.ok) { toast.success(T.toast_event_updated); closeModal(); await refresh(); }
-        else toast.error(T.toast_event_update_failed);
-      } finally { btn.disabled = false; }
+    _openEventModal(T.modal_edit_event, ev, async (data) => {
+      const resp = await api.updateEvent(evId, data);
+      if (resp.ok) { toast.success(T.toast_event_updated); closeModal(); await refresh(); }
+      else toast.error(T.toast_event_update_failed);
     }, T.save_changes);
   }
 

@@ -172,6 +172,9 @@ return [
     'target_date'           => 'Cílové datum',
     'start_date'            => 'Datum zahájení',
     'end_date'              => 'Datum ukončení',
+    'event_start_time'      => 'Čas zahájení',
+    'event_end_time'        => 'Čas ukončení',
+    'event_all_day'         => 'Celodenní událost',
     'color'                 => 'Barva',
     'dependency_label'      => 'Tato fáze začíná po…',
     'select_milestone'      => 'Vyberte milník',
@@ -271,6 +274,7 @@ return [
     'tooltip_delete_phase'        => 'Smazat fázi',
     'tooltip_edit_milestone'      => 'Upravit datum milníku',
     'tooltip_delete_milestone'    => 'Smazat milník',
+    'tooltip_edit_event'          => 'Upravit událost',
     'tooltip_delete_event'        => 'Smazat událost',
     'tooltip_copy_url'            => 'Kopírovat URL',
 

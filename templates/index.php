@@ -155,27 +155,40 @@ $lang = current_lang();
     }
     .btn svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
 
-    /* ── Language switcher ── */
-    .lang-switcher {
-      display: flex;
-      gap: 0.25rem;
-    }
-    .lang-switcher form { display: inline; }
-    .lang-btn {
+    /* ── Language dropdown ── */
+    .lang-dropdown { position: relative; }
+    .lang-dropdown__btn {
+      display: inline-flex; align-items: center; gap: 0.3em;
       background: none;
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       color: var(--text-muted);
-      font-family: inherit;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      padding: 0.25rem 0.5rem;
-      cursor: pointer;
-      transition: all var(--t-fast);
+      font-family: inherit; font-size: 11px; font-weight: 600;
+      letter-spacing: 0.05em; padding: 0.25rem 0.5rem;
+      cursor: pointer; transition: all var(--t-fast);
     }
-    .lang-btn:hover,
-    .lang-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,0.1); }
+    .lang-dropdown__btn:hover { border-color: var(--border-hover); color: var(--text); }
+    .lang-dropdown__chevron { width: 10px; height: 10px; fill: currentColor; transition: transform var(--t-fast); }
+    .lang-dropdown.is-open .lang-dropdown__chevron { transform: rotate(180deg); }
+    .lang-dropdown.is-open .lang-dropdown__btn { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,0.1); }
+    .lang-dropdown__menu {
+      display: none; position: absolute; top: calc(100% + 6px); right: 0;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-md);
+      overflow: hidden; min-width: 130px; z-index: 200;
+    }
+    .lang-dropdown.is-open .lang-dropdown__menu { display: block; }
+    .lang-dropdown__item-form { margin: 0; }
+    .lang-dropdown__item {
+      display: flex; align-items: center; gap: 0.5rem; width: 100%;
+      padding: 0.55rem 0.85rem; background: none; border: none;
+      color: var(--text-muted); font-family: inherit; font-size: 13px;
+      cursor: pointer; transition: background var(--t-fast), color var(--t-fast);
+      text-align: left;
+    }
+    .lang-dropdown__item:hover { background: var(--surface-3); color: var(--text); }
+    .lang-dropdown__item.is-active { color: var(--accent); }
+    .lang-dropdown__code { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; min-width: 1.8em; }
 
     /* ── Project Grid ── */
     .projects-grid {
@@ -407,7 +420,10 @@ $lang = current_lang();
 
     @media (max-width: 600px) {
       .page { padding: 1.5rem 1rem; }
-      .topbar { padding: 0 1rem; }
+      .topbar { padding: 0 0.75rem; gap: 0.5rem; }
+      .topbar__brand { font-size: 14px; }
+      .topbar__right { gap: 0.35rem; }
+      .topbar__right .btn-ghost:not(.btn-icon) { font-size: 11px; padding: 0.35rem 0.6rem; }
       .page__header { flex-direction: column; align-items: flex-start; }
     }
   </style>
@@ -442,18 +458,23 @@ $lang = current_lang();
     <?= htmlspecialchars(t('app_name')) ?>
   </div>
   <div class="topbar__right">
-    <!-- Language switcher -->
-    <div class="lang-switcher">
-      <form method="post" action="/set-lang">
-        <?= csrf_field() ?>
-        <input type="hidden" name="lang" value="en">
-        <button type="submit" class="lang-btn<?= $lang === 'en' ? ' active' : '' ?>"><?= t('lang_en') ?></button>
-      </form>
-      <form method="post" action="/set-lang">
-        <?= csrf_field() ?>
-        <input type="hidden" name="lang" value="cs">
-        <button type="submit" class="lang-btn<?= $lang === 'cs' ? ' active' : '' ?>"><?= t('lang_cs') ?></button>
-      </form>
+    <!-- Language dropdown -->
+    <div class="lang-dropdown" id="langDropdown">
+      <button type="button" class="lang-dropdown__btn" onclick="toggleLangDropdown(event)" aria-haspopup="true" aria-expanded="false">
+        <?= htmlspecialchars(t('lang_' . $lang)) ?>
+        <svg class="lang-dropdown__chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.427 7.427l3.396 3.396a.25.25 0 0 0 .354 0l3.396-3.396A.25.25 0 0 0 11.396 7H4.604a.25.25 0 0 0-.177.427z"/></svg>
+      </button>
+      <div class="lang-dropdown__menu" role="menu">
+        <?php foreach (['en' => 'English', 'cs' => 'Čeština'] as $code => $label): ?>
+        <form method="post" action="/set-lang" class="lang-dropdown__item-form">
+          <?= csrf_field() ?>
+          <input type="hidden" name="lang" value="<?= $code ?>">
+          <button type="submit" class="lang-dropdown__item<?= $lang === $code ? ' is-active' : '' ?>" role="menuitem">
+            <span class="lang-dropdown__code"><?= strtoupper($code) ?></span><?= htmlspecialchars($label) ?>
+          </button>
+        </form>
+        <?php endforeach; ?>
+      </div>
     </div>
     <button class="btn btn-ghost btn-icon" title="<?= htmlspecialchars(t('cal_sync_button_title')) ?>" onclick="openCalSyncModal()">
       <svg><use href="#icon-calendar"/></svg>
@@ -556,6 +577,21 @@ $lang = current_lang();
 <script>
   // ── Translations (PHP-injected) ──────────────────────────────
   const T = <?= t_js() ?>;
+
+  // ── Language dropdown ────────────────────────────────────────
+  function toggleLangDropdown(e) {
+    e.stopPropagation();
+    const dd = document.getElementById('langDropdown');
+    const open = dd.classList.toggle('is-open');
+    dd.querySelector('.lang-dropdown__btn').setAttribute('aria-expanded', open);
+  }
+  document.addEventListener('click', () => {
+    const dd = document.getElementById('langDropdown');
+    if (dd && dd.classList.contains('is-open')) {
+      dd.classList.remove('is-open');
+      dd.querySelector('.lang-dropdown__btn').setAttribute('aria-expanded', 'false');
+    }
+  });
 
   // ── State ────────────────────────────────────────────────────
   const state = { projects: [] };

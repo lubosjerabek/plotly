@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS milestones (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Same dual-ownership pattern for events.
+-- start_time / end_time are NULL for all-day events.
 CREATE TABLE IF NOT EXISTS events (
   id              INT AUTO_INCREMENT PRIMARY KEY,
   phase_id        INT NULL,
@@ -67,6 +68,8 @@ CREATE TABLE IF NOT EXISTS events (
   name            VARCHAR(255) NOT NULL,
   start_date      DATE NOT NULL,
   end_date        DATE NOT NULL,
+  start_time      TIME NULL,
+  end_time        TIME NULL,
   google_event_id VARCHAR(255),
   FOREIGN KEY (phase_id)   REFERENCES phases(id)   ON DELETE CASCADE,
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
@@ -145,3 +148,8 @@ CREATE TABLE IF NOT EXISTS login_attempts (
 -- Multi-user upgrade (run migrate.php instead of these):
 -- ALTER TABLE projects ADD COLUMN user_id INT AFTER id,
 --   ADD FOREIGN KEY (user_id) REFERENCES users(id);
+--
+-- Event time upgrade (safe to run on any existing install):
+-- ALTER TABLE events
+--   ADD COLUMN start_time TIME NULL AFTER end_date,
+--   ADD COLUMN end_time   TIME NULL AFTER start_time;

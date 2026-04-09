@@ -195,3 +195,62 @@ class TestProjectDetail:
         expect(page.locator("#modal_input_name")).to_have_value("Playwright Test Project")
         page.locator("#modalSubmitBtn").click()
         expect(page.locator(".toast--success")).to_be_visible()
+
+    def test_add_project_event_all_day(self, page: Page, make_project):
+        name = make_project()
+        navigate_to_project(page, name)
+        page.locator("button", has_text="+ Events").click()
+        expect(page.locator("#genericModal")).to_have_class(re.compile(r"is-open"))
+        page.locator("#modal_input_name").fill("Launch Day")
+        page.locator("#modal_input_start").fill("2027-06-01")
+        page.locator("#modal_input_end").fill("2027-06-01")
+        # all-day checkbox should be checked by default; time fields hidden
+        expect(page.locator("#modal_input_all_day")).to_be_checked()
+        expect(page.locator(".event-time-field").first).not_to_be_visible()
+        page.locator("#modalSubmitBtn").click()
+        expect(page.locator(".toast--success")).to_be_visible()
+        page.wait_for_load_state("networkidle")
+        expect(page.locator("#projectItemsBody")).to_contain_text("Launch Day")
+
+    def test_add_project_event_with_time(self, page: Page, make_project):
+        name = make_project()
+        navigate_to_project(page, name)
+        page.locator("button", has_text="+ Events").click()
+        expect(page.locator("#genericModal")).to_have_class(re.compile(r"is-open"))
+        page.locator("#modal_input_name").fill("Team Meeting")
+        page.locator("#modal_input_start").fill("2027-07-15")
+        page.locator("#modal_input_end").fill("2027-07-15")
+        # Uncheck all-day to reveal time fields
+        page.locator("#modal_input_all_day").uncheck()
+        expect(page.locator(".event-time-field").first).to_be_visible()
+        page.locator("#modal_input_start_time").fill("10:00")
+        page.locator("#modal_input_end_time").fill("11:30")
+        page.locator("#modalSubmitBtn").click()
+        expect(page.locator(".toast--success")).to_be_visible()
+        page.wait_for_load_state("networkidle")
+        # Time should appear in the meta
+        expect(page.locator("#projectItemsBody")).to_contain_text("Team Meeting")
+        expect(page.locator("#projectItemsBody")).to_contain_text("10:00")
+
+    def test_edit_project_event(self, page: Page, make_project):
+        """Project-level events now have an Edit button."""
+        name = make_project()
+        navigate_to_project(page, name)
+        # Add a project event first
+        page.locator("button", has_text="+ Events").click()
+        page.locator("#modal_input_name").fill("Editable Event")
+        page.locator("#modal_input_start").fill("2027-08-01")
+        page.locator("#modal_input_end").fill("2027-08-02")
+        page.locator("#modalSubmitBtn").click()
+        expect(page.locator(".toast--success")).to_be_visible()
+        page.wait_for_load_state("networkidle")
+        # Click the edit (pencil) button on that event
+        ev_row = page.locator("#projectItemsBody li", has_text="Editable Event")
+        ev_row.locator("button[title]").first.click()
+        expect(page.locator("#genericModal")).to_have_class(re.compile(r"is-open"))
+        expect(page.locator("#modal_input_name")).to_have_value("Editable Event")
+        page.locator("#modal_input_name").fill("Renamed Event")
+        page.locator("#modalSubmitBtn").click()
+        expect(page.locator(".toast--success")).to_be_visible()
+        page.wait_for_load_state("networkidle")
+        expect(page.locator("#projectItemsBody")).to_contain_text("Renamed Event")

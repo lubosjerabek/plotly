@@ -172,6 +172,9 @@ return [
     'target_date'           => 'Target Date',
     'start_date'            => 'Start Date',
     'end_date'              => 'End Date',
+    'event_start_time'      => 'Start Time',
+    'event_end_time'        => 'End Time',
+    'event_all_day'         => 'All-day event',
     'color'                 => 'Color',
     'dependency_label'      => 'This phase starts after…',
     'select_milestone'      => 'Select milestone',
@@ -269,6 +272,7 @@ return [
     'tooltip_delete_phase'        => 'Delete phase',
     'tooltip_edit_milestone'      => 'Edit milestone date',
     'tooltip_delete_milestone'    => 'Delete milestone',
+    'tooltip_edit_event'          => 'Edit event',
     'tooltip_delete_event'        => 'Delete event',
     'tooltip_copy_url'            => 'Copy URL',
 

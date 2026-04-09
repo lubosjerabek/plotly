@@ -333,7 +333,7 @@ function get_full_project(int $id): ?array {
         }, $ms->fetchAll());
 
         // Events
-        $ev = pdo()->prepare('SELECT id, phase_id, name, start_date, end_date, google_event_id FROM events WHERE phase_id = ? ORDER BY start_date');
+        $ev = pdo()->prepare('SELECT id, phase_id, name, start_date, end_date, start_time, end_time, google_event_id FROM events WHERE phase_id = ? ORDER BY start_date');
         $ev->execute([$phase['id']]);
         $phase['events'] = array_map(function($e) {
             $e['id']       = (int)$e['id'];
@@ -356,7 +356,7 @@ function get_full_project(int $id): ?array {
     }, $ms->fetchAll());
 
     // Project-level events (not tied to any phase)
-    $ev = pdo()->prepare('SELECT id, project_id, name, start_date, end_date, google_event_id FROM events WHERE project_id = ? AND phase_id IS NULL ORDER BY start_date');
+    $ev = pdo()->prepare('SELECT id, project_id, name, start_date, end_date, start_time, end_time, google_event_id FROM events WHERE project_id = ? AND phase_id IS NULL ORDER BY start_date');
     $ev->execute([$id]);
     $project['events'] = array_map(function($e) {
         $e['id']         = (int)$e['id'];
@@ -865,22 +865,30 @@ function api_delete_milestone(int $id): void {
 function api_create_project_event(int $project_id): void {
     require_auth();
     assert_project_write($project_id);
-    $b    = body();
-    $stmt = pdo()->prepare('INSERT INTO events (project_id, phase_id, name, start_date, end_date) VALUES (?,NULL,?,?,?)');
-    $stmt->execute([$project_id, $b['name'] ?? '', $b['start_date'] ?? '', $b['end_date'] ?? '']);
+    $b          = body();
+    $start_time = (!empty($b['all_day']) ? null : ($b['start_time'] ?? null)) ?: null;
+    $end_time   = (!empty($b['all_day']) ? null : ($b['end_time']   ?? null)) ?: null;
+    $stmt = pdo()->prepare('INSERT INTO events (project_id, phase_id, name, start_date, end_date, start_time, end_time) VALUES (?,NULL,?,?,?,?,?)');
+    $stmt->execute([$project_id, $b['name'] ?? '', $b['start_date'] ?? '', $b['end_date'] ?? '', $start_time, $end_time]);
     $new_id = (int)pdo()->lastInsertId();
-    json_out(['id' => $new_id, 'project_id' => $project_id, 'phase_id' => null, 'name' => $b['name'] ?? '', 'start_date' => $b['start_date'] ?? '', 'end_date' => $b['end_date'] ?? '', 'google_event_id' => null], 201);
+    json_out(['id' => $new_id, 'project_id' => $project_id, 'phase_id' => null,
+              'name' => $b['name'] ?? '', 'start_date' => $b['start_date'] ?? '', 'end_date' => $b['end_date'] ?? '',
+              'start_time' => $start_time, 'end_time' => $end_time, 'google_event_id' => null], 201);
 }
 
 function api_create_event(int $phase_id): void {
     require_auth();
     $pid = project_id_for_phase($phase_id);
     if ($pid) assert_project_write($pid);
-    $b    = body();
-    $stmt = pdo()->prepare('INSERT INTO events (phase_id, name, start_date, end_date) VALUES (?,?,?,?)');
-    $stmt->execute([$phase_id, $b['name'] ?? '', $b['start_date'] ?? '', $b['end_date'] ?? '']);
+    $b          = body();
+    $start_time = (!empty($b['all_day']) ? null : ($b['start_time'] ?? null)) ?: null;
+    $end_time   = (!empty($b['all_day']) ? null : ($b['end_time']   ?? null)) ?: null;
+    $stmt = pdo()->prepare('INSERT INTO events (phase_id, name, start_date, end_date, start_time, end_time) VALUES (?,?,?,?,?,?)');
+    $stmt->execute([$phase_id, $b['name'] ?? '', $b['start_date'] ?? '', $b['end_date'] ?? '', $start_time, $end_time]);
     $new_id = (int)pdo()->lastInsertId();
-    json_out(['id' => $new_id, 'phase_id' => $phase_id, 'name' => $b['name'] ?? '', 'start_date' => $b['start_date'] ?? '', 'end_date' => $b['end_date'] ?? '', 'google_event_id' => null], 201);
+    json_out(['id' => $new_id, 'phase_id' => $phase_id, 'name' => $b['name'] ?? '',
+              'start_date' => $b['start_date'] ?? '', 'end_date' => $b['end_date'] ?? '',
+              'start_time' => $start_time, 'end_time' => $end_time, 'google_event_id' => null], 201);
 }
 
 function api_update_event(int $id): void {
@@ -894,11 +902,22 @@ function api_update_event(int $id): void {
     $pid = project_id_for_event($id);
     if ($pid) assert_project_write($pid);
 
-    $upd = pdo()->prepare('UPDATE events SET name=?, start_date=?, end_date=? WHERE id=?');
+    // If all_day is explicitly passed, clear times; otherwise use provided/existing values
+    if (array_key_exists('all_day', $b)) {
+        $start_time = $b['all_day'] ? null : (($b['start_time'] ?? null) ?: null);
+        $end_time   = $b['all_day'] ? null : (($b['end_time']   ?? null) ?: null);
+    } else {
+        $start_time = array_key_exists('start_time', $b) ? ($b['start_time'] ?: null) : $existing['start_time'];
+        $end_time   = array_key_exists('end_time',   $b) ? ($b['end_time']   ?: null) : $existing['end_time'];
+    }
+
+    $upd = pdo()->prepare('UPDATE events SET name=?, start_date=?, end_date=?, start_time=?, end_time=? WHERE id=?');
     $upd->execute([
         $b['name']       ?? $existing['name'],
         $b['start_date'] ?? $existing['start_date'],
         $b['end_date']   ?? $existing['end_date'],
+        $start_time,
+        $end_time,
         $id,
     ]);
     $sel->execute([$id]);

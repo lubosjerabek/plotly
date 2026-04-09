@@ -116,3 +116,32 @@ class TestGantt:
             return issues;
         }""")
         assert overlaps == [], f"Date labels overlap bar labels on: {overlaps}"
+
+    def test_gantt_no_error_fallback(self, page: Page, make_project, make_phase):
+        """Verify the Gantt error-fallback div is NOT shown when data is valid.
+
+        This is the regression guard for the 'empty timeline' bug: if new Gantt()
+        throws, the JS catch block renders a .item-empty fallback. This test ensures
+        that fallback is absent when there is valid phase data.
+        """
+        name = make_project()
+        make_phase(name)
+        _open_timeline(page)
+        _wait_for_bars(page)
+        # The error fallback div must NOT be present
+        assert page.locator(".gantt-container .item-empty").count() == 0, \
+            "Gantt rendered an error fallback — check browser console for the exception"
+
+    def test_timeline_renders_after_direct_navigation(self, page: Page, make_project, make_phase):
+        """Timeline must render on a fresh direct page load, not only after SPA navigation."""
+        name = make_project()
+        make_phase(name)
+        # Navigate away, then go directly to the project URL with #timeline anchor
+        # (simulates hard reload on the project page then clicking the tab)
+        from helpers import navigate_to_project
+        navigate_to_project(page, name)
+        # Simulate switching to timeline after fresh load
+        page.locator(".tab-btn", has_text="Timeline").click()
+        _wait_for_bars(page)
+        assert page.locator(".gantt .bar").count() >= 1, \
+            "Timeline bars missing after fresh navigation to project page"
