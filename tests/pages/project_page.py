@@ -104,6 +104,10 @@ class ProjectPage(BasePage):
     SUBSCRIBE_MODAL = "#subscribeModal"
     ICS_URL         = "#icsUrl"
 
+    # Delete buttons (used inside item rows)
+    DELETE_MILESTONE_BTN = "button[title='Delete milestone']"
+    DELETE_EVENT_BTN     = "button[title='Delete event']"
+
     # Project-level events
     ADD_EVENTS_BTN  = "+ Events"      # has_text
     ALL_DAY         = "#modal_input_all_day"
@@ -164,6 +168,13 @@ class ProjectPage(BasePage):
     def get_phase_card(self, name: str) -> PhaseCard:
         return PhaseCard(self.page.locator(self.PHASE_CARD, has_text=name))
 
+    def delete_phase(self, phase_name: str) -> None:
+        self.get_phase_card(phase_name).delete_btn.click()
+        expect(self.page.locator(self.CONFIRM_MODAL)).to_have_class(re.compile(r"is-open"))
+        self.page.locator(self.CONFIRM_OK).click()
+        expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
+        self.page.wait_for_load_state("networkidle")
+
     # ── Milestone operations ───────────────────────────────────────────────────
 
     def add_milestone(
@@ -182,6 +193,49 @@ class ProjectPage(BasePage):
         expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
         self.page.wait_for_load_state("networkidle")
         return name
+
+    def delete_milestone(self, phase_name: str, name: str) -> None:
+        phase = self.get_phase_card(phase_name)
+        phase.expand(self.page)
+        phase.milestones_section() \
+             .locator(".item-list li", has_text=name) \
+             .locator(self.DELETE_MILESTONE_BTN).click()
+        expect(self.page.locator(self.CONFIRM_MODAL)).to_have_class(re.compile(r"is-open"))
+        self.page.locator(self.CONFIRM_OK).click()
+        expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
+        self.page.wait_for_load_state("networkidle")
+
+    # ── Phase-level event operations ───────────────────────────────────────────
+
+    def add_phase_event(
+        self,
+        phase_name: str,
+        name:       str,
+        start:      str,
+        end:        str,
+    ) -> str:
+        phase = self.get_phase_card(phase_name)
+        phase.expand(self.page)
+        phase.events_section().locator("button", has_text="Add").click()
+        expect(self.page.locator(self.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
+        self.page.locator(self.MODAL_NAME).fill(name)
+        self.page.locator(self.MODAL_START).fill(start)
+        self.page.locator(self.MODAL_END).fill(end)
+        self.page.locator(self.MODAL_SUBMIT).click()
+        expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
+        self.page.wait_for_load_state("networkidle")
+        return name
+
+    def delete_phase_event(self, phase_name: str, name: str) -> None:
+        phase = self.get_phase_card(phase_name)
+        phase.expand(self.page)
+        phase.events_section() \
+             .locator(".item-list li", has_text=name) \
+             .locator(self.DELETE_EVENT_BTN).click()
+        expect(self.page.locator(self.CONFIRM_MODAL)).to_have_class(re.compile(r"is-open"))
+        self.page.locator(self.CONFIRM_OK).click()
+        expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
+        self.page.wait_for_load_state("networkidle")
 
     # ── Project-level event operations ─────────────────────────────────────────
 
@@ -210,6 +264,14 @@ class ProjectPage(BasePage):
         self.page.wait_for_load_state("networkidle")
         return name
 
+    def delete_project_event(self, name: str) -> None:
+        self.page.locator(self.ITEMS_BODY + " li", has_text=name) \
+                 .locator(self.DELETE_EVENT_BTN).click()
+        expect(self.page.locator(self.CONFIRM_MODAL)).to_have_class(re.compile(r"is-open"))
+        self.page.locator(self.CONFIRM_OK).click()
+        expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
+        self.page.wait_for_load_state("networkidle")
+
     # ── ICS / subscription ─────────────────────────────────────────────────────
 
     def open_subscribe_modal(self):
@@ -218,6 +280,15 @@ class ProjectPage(BasePage):
 
     def get_ics_url(self) -> str:
         return self.page.locator(self.ICS_URL).input_value()
+
+    def fetch_ics(self) -> str:
+        """Open the subscribe modal, grab the ICS URL, close the modal, return feed body."""
+        self.open_subscribe_modal()
+        url = self.get_ics_url()
+        self.page.keyboard.press("Escape")
+        resp = self.page.request.get(url)
+        assert resp.status == 200, f"ICS feed returned {resp.status}"
+        return resp.text()
 
     # ── Timeline / Gantt ───────────────────────────────────────────────────────
 
