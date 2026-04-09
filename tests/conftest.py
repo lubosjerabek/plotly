@@ -16,7 +16,7 @@ Authentication:
   TEST_AUTH_PASS must match that user's password_hash.
 
   Example:
-      TEST_AUTH_EMAIL=admin@example.com TEST_AUTH_PASS=plotly pytest tests/ -v
+      TEST_AUTH_EMAIL=admin@example.com TEST_AUTH_PASS=plotly_admin_pass pytest tests/ -v
 """
 import json
 import os
@@ -31,7 +31,7 @@ from playwright.sync_api import Browser, Page, expect
 
 BASE_URL = "http://localhost:8000"
 TEST_AUTH_EMAIL = os.getenv("TEST_AUTH_EMAIL", os.getenv("TEST_AUTH_USER", "admin@example.com"))
-TEST_AUTH_PASS  = os.getenv("TEST_AUTH_PASS", "plotly")
+TEST_AUTH_PASS  = os.getenv("TEST_AUTH_PASS", "plotly_admin_pass")
 
 _started_stack = False
 

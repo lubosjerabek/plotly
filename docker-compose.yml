@@ -15,7 +15,7 @@ services:
       # Change these before first start, or run migrate.php on an existing install.
       ADMIN_EMAIL: "admin@example.com"
       ADMIN_NAME:  "Admin"
-      ADMIN_PASS:  "plotly"
+      ADMIN_PASS:  "plotly_admin_pass"
       # Legacy — used only by migrate.php when upgrading from a single-user install.
       AUTH_USER:      admin
       AUTH_PASS_HASH: "$$2y$$12$$CHANGE_ME_generate_via_setup.php"
