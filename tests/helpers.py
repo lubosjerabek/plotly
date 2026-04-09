@@ -28,7 +28,7 @@ def create_project(page: Page, name: str, desc: str = "") -> None:
 
 def navigate_to_project(page: Page, name: str):
     goto(page)
-    card = page.locator(".project-card", has_text=name)
+    card = page.locator(".project-card", has_text=name).last
     expect(card).to_be_visible()
     card.locator("a.btn").click()
     page.wait_for_load_state("networkidle")

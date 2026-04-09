@@ -156,7 +156,7 @@ def second_user_auth_state(browser: Browser, auth_state):
     resp = pg.request.post(
         BASE_URL + "/api/admin/invites",
         data=json.dumps({"label": "Playwright CI", "expires_days": 1}),
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest"},
     )
     assert resp.status == 201, f"Invite creation failed: {resp.text()}"
     token = resp.json()["token"]

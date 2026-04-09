@@ -127,7 +127,7 @@ class TestCollaborators:
             page.url.split("/project/")[0] + "/api/projects/" +
             re.search(r"/project/(\d+)", page.url).group(1) + "/collaborators",
             data=json.dumps({"email": email, "role": "viewer"}),
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest"},
         )
         assert resp.status in (200, 201), f"Add collaborator failed: {resp.text()}"
 
@@ -160,6 +160,7 @@ class TestCollaborators:
         assert collab is not None, f"{email} not found in collaborators"
 
         del_resp = page.request.delete(
-            BASE_URL + f"/api/projects/{project_id}/collaborators/{collab['id']}"
+            BASE_URL + f"/api/projects/{project_id}/collaborators/{collab['id']}",
+            headers={"X-Requested-With": "XMLHttpRequest"}
         )
         assert del_resp.status == 200

@@ -45,7 +45,7 @@ class TestAdminInvites:
         resp = page.request.post(
             BASE_URL + "/api/admin/invites",
             data='{"label": "Test Invite", "expires_days": 7}',
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest"},
         )
         assert resp.status == 201
         data = resp.json()
@@ -59,10 +59,13 @@ class TestAdminInvites:
         resp = page.request.post(
             BASE_URL + "/api/admin/invites",
             data='{"label": "To Revoke", "expires_days": 1}',
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest"},
         )
         invite_id = resp.json()["id"]
-        revoke = page.request.delete(BASE_URL + f"/api/admin/invites/{invite_id}")
+        revoke = page.request.delete(
+            BASE_URL + f"/api/admin/invites/{invite_id}",
+            headers={"X-Requested-With": "XMLHttpRequest"}
+        )
         assert revoke.status == 200
 
 
@@ -80,7 +83,7 @@ class TestAdminPasswordReset:
         reset = page.request.post(
             BASE_URL + f"/api/admin/users/{user['id']}/reset-password",
             data="{}",
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest"},
         )
         assert reset.status == 201
         data = reset.json()

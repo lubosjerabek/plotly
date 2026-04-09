@@ -32,16 +32,17 @@ class TestDashboard:
 
     def test_create_project_shows_toast_and_card(self, page: Page):
         create_project(page, "Playwright Test Project", "Automated test")
-        expect(page.locator(".project-card", has_text="Playwright Test Project")).to_be_visible()
+        expect(page.locator(".project-card", has_text="Playwright Test Project").last).to_be_visible()
 
     def test_project_card_shows_description(self, page: Page):
         goto(page)
-        card = page.locator(".project-card", has_text="Playwright Test Project")
+        card = page.locator(".project-card", has_text="Playwright Test Project").last
         expect(card.locator(".project-card__desc")).to_contain_text("Automated test")
 
     def test_project_card_has_open_link(self, page: Page):
         goto(page)
-        card = page.locator(".project-card", has_text="Playwright Test Project")
+        card = page.locator(".project-card", has_text="Playwright Test Project").last
+        card.hover()
         link = card.locator("a.btn")
         expect(link).to_contain_text("Open")
         href = link.get_attribute("href")
@@ -49,7 +50,7 @@ class TestDashboard:
 
     def test_edit_project_updates_name(self, page: Page):
         goto(page)
-        card = page.locator(".project-card", has_text="Playwright Test Project")
+        card = page.locator(".project-card", has_text="Playwright Test Project").last
         card.hover()
         card.locator("button[title='Edit project']").click()
         expect(page.locator("#projectModal")).to_have_class(re.compile(r"is-open"))

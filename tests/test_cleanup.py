@@ -12,9 +12,7 @@ class TestCleanup:
 
     def test_delete_playwright_test_project(self, page: Page):
         goto(page)
-        card = page.locator(".project-card", has_text="Playwright Test Project")
-        if card.count() == 0:
-            pytest.skip("Playwright Test Project not found — already cleaned up")
+        card = page.locator(".project-card", has_text="Playwright Test Project").first
         card.hover()
         card.locator("button[title='Delete project']").click()
         expect(page.locator("#confirmModal")).to_have_class(
