@@ -111,29 +111,9 @@ $lang = current_lang();
       font-size: 13px;
       margin-bottom: 1.25rem;
     }
-    /* ── Language switcher ── */
-    .lang-switcher {
-      display: flex;
-      justify-content: center;
-      gap: 0.5rem;
-      margin-top: 1.5rem;
-    }
-    .lang-switcher form { display: inline; }
-    .lang-btn {
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text-muted);
-      font-family: inherit;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      padding: 0.2rem 0.55rem;
-      cursor: pointer;
-      transition: all .15s;
-    }
-    .lang-btn:hover,
-    .lang-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,0.1); }
+    /* ── Language dropdown ── */
+    .lang-dropdown-wrap { display: flex; justify-content: center; margin-top: 1.5rem; }
+    <?php require __DIR__ . '/partials/lang_dropdown.css.php' ?>
   </style>
 </head>
 <body>
@@ -156,19 +136,11 @@ $lang = current_lang();
       <button type="submit" class="btn"><?= htmlspecialchars(t('sign_in')) ?></button>
     </form>
 
-    <!-- Language switcher -->
-    <div class="lang-switcher">
-      <form method="post" action="/set-lang">
-        <?= csrf_field() ?>
-        <input type="hidden" name="lang" value="en">
-        <button type="submit" class="lang-btn<?= $lang === 'en' ? ' active' : '' ?>"><?= t('lang_en') ?></button>
-      </form>
-      <form method="post" action="/set-lang">
-        <?= csrf_field() ?>
-        <input type="hidden" name="lang" value="cs">
-        <button type="submit" class="lang-btn<?= $lang === 'cs' ? ' active' : '' ?>"><?= t('lang_cs') ?></button>
-      </form>
+    <!-- Language dropdown -->
+    <div class="lang-dropdown-wrap">
+      <?php require __DIR__ . '/partials/lang_dropdown.html.php' ?>
     </div>
   </div>
+<script><?php require __DIR__ . '/partials/lang_dropdown.js.php' ?></script>
 </body>
 </html>

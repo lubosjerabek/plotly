@@ -74,10 +74,8 @@
     .result-box{display:none;margin-top:1rem;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-md);padding:.75rem;font-size:13px}
     .result-box.visible{display:block}
     .result-url{word-break:break-all;color:var(--text-muted);margin-bottom:.6rem}
-    /* Lang switcher */
-    .lang-switcher{display:flex;gap:.5rem}
-    .lang-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);font-family:inherit;font-size:11px;font-weight:600;letter-spacing:.05em;padding:.2rem .55rem;cursor:pointer;transition:all var(--t-fast)}
-    .lang-btn:hover,.lang-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(99,102,241,0.1)}
+    /* Lang dropdown */
+    <?php require __DIR__ . '/partials/lang_dropdown.css.php' ?>
     /* Toast */
     .toast-area{position:fixed;bottom:1.5rem;right:1.5rem;z-index:999;display:flex;flex-direction:column;gap:.5rem}
     .toast{background:var(--surface-3);border:1px solid var(--border);border-radius:var(--radius-md);padding:.6rem 1rem;font-size:13px;box-shadow:var(--shadow-md);animation:toastIn .2s ease}
@@ -92,18 +90,7 @@
     <?= htmlspecialchars(t('app_name')) ?>
   </a>
   <div class="topbar__right">
-    <div class="lang-switcher">
-      <form method="post" action="/set-lang" style="display:inline">
-        <?= csrf_field() ?>
-        <input type="hidden" name="lang" value="en">
-        <button type="submit" class="lang-btn<?= $lang === 'en' ? ' active' : '' ?>"><?= t('lang_en') ?></button>
-      </form>
-      <form method="post" action="/set-lang" style="display:inline">
-        <?= csrf_field() ?>
-        <input type="hidden" name="lang" value="cs">
-        <button type="submit" class="lang-btn<?= $lang === 'cs' ? ' active' : '' ?>"><?= t('lang_cs') ?></button>
-      </form>
-    </div>
+    <?php require __DIR__ . '/partials/lang_dropdown.html.php' ?>
     <a class="btn btn-ghost" href="/" style="font-size:12px"><?= htmlspecialchars(t('projects')) ?></a>
     <a class="btn btn-ghost" href="/logout" style="font-size:12px"><?= htmlspecialchars(t('sign_out')) ?></a>
   </div>
@@ -178,6 +165,7 @@
 
 <script>
 window.T = <?= t_js() ?>;
+<?php require __DIR__ . '/partials/lang_dropdown.js.php' ?>
 
 function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
