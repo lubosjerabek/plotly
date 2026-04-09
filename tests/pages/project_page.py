@@ -213,6 +213,9 @@ class ProjectPage(BasePage):
         name:       str,
         start:      str,
         end:        str,
+        all_day:    bool        = True,
+        start_time: str | None  = None,
+        end_time:   str | None  = None,
     ) -> str:
         phase = self.get_phase_card(phase_name)
         phase.expand(self.page)
@@ -221,6 +224,12 @@ class ProjectPage(BasePage):
         self.page.locator(self.MODAL_NAME).fill(name)
         self.page.locator(self.MODAL_START).fill(start)
         self.page.locator(self.MODAL_END).fill(end)
+        if not all_day:
+            self.page.locator(self.ALL_DAY).uncheck()
+            if start_time:
+                self.page.locator(self.START_TIME).fill(start_time)
+            if end_time:
+                self.page.locator(self.END_TIME).fill(end_time)
         self.page.locator(self.MODAL_SUBMIT).click()
         expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
         self.page.wait_for_load_state("networkidle")

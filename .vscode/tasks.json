@@ -1,0 +1,92 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build & Start",
+      "detail": "Rebuild Docker image and start the stack",
+      "type": "shell",
+      "command": "make build",
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Start (no rebuild)",
+      "detail": "Start the stack without rebuilding the image",
+      "type": "shell",
+      "command": "make up",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Deploy (fast)",
+      "detail": "Copy PHP source into the running container — no rebuild needed",
+      "type": "shell",
+      "command": "make deploy",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Stop",
+      "detail": "Stop the stack",
+      "type": "shell",
+      "command": "make down",
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Reset (wipe data)",
+      "detail": "Stop the stack and delete all data volumes",
+      "type": "shell",
+      "command": "make reset",
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Run all",
+      "detail": "Run the full Playwright test suite",
+      "type": "shell",
+      "command": "make test",
+      "group": { "kind": "test", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Run current file",
+      "detail": "Run the test file currently open in the editor",
+      "type": "shell",
+      "command": "make test-file FILE=${relativeFile}",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Check (deploy + test)",
+      "detail": "Deploy current source then run the full test suite",
+      "type": "shell",
+      "command": "make check",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Logs",
+      "detail": "Tail the app container logs",
+      "type": "shell",
+      "command": "make logs",
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Shell",
+      "detail": "Open a shell inside the app container",
+      "type": "shell",
+      "command": "make shell",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    }
+  ]
+}

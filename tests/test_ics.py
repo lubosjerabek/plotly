@@ -9,6 +9,14 @@ from pages import BASE_URL, ProjectPage
 from conftest import rand_milestone_name, rand_event_name
 
 
+def _vevent_block(body: str, summary_fragment: str) -> str:
+    """Return the VEVENT block whose SUMMARY line contains summary_fragment."""
+    for block in re.split(r'BEGIN:VEVENT', body)[1:]:
+        if summary_fragment in block:
+            return 'BEGIN:VEVENT' + block.split('END:VEVENT')[0] + 'END:VEVENT'
+    return ''
+
+
 class TestICSSubscription:
     """Modal, URL structure, and auth-gate tests."""
 
@@ -161,3 +169,95 @@ class TestICSContent:
 
         assert event_name not in project.fetch_ics(), \
             f"Project event '{event_name}' still present in ICS after deletion"
+
+
+class TestICSEventTiming:
+    """Timed vs all-day event export: DTSTART datetime vs VALUE=DATE."""
+
+    # ── Project-level events ──────────────────────────────────────────────────
+
+    def test_timed_project_event_uses_datetime_dtstart(self, page: Page, make_project):
+        project_name = make_project()
+        project = ProjectPage(page)
+        project.navigate_to(project_name)
+        event_name = rand_event_name()
+        project.add_project_event(
+            event_name, "2027-07-15", "2027-07-15",
+            all_day=False, start_time="09:15", end_time="10:45",
+        )
+
+        body = project.fetch_ics()
+        block = _vevent_block(body, event_name)
+        assert block, f"VEVENT block for '{event_name}' not found in ICS feed"
+
+        assert "DTSTART;TZID=" in block, \
+            "Timed event should use DTSTART;TZID=… not DTSTART;VALUE=DATE"
+        assert "DTSTART;VALUE=DATE" not in block, \
+            "Timed event must not use all-day VALUE=DATE format"
+        assert "T091500" in block, \
+            f"Start time 09:15 should appear as T091500 in VEVENT, got:\n{block}"
+        assert "T104500" in block, \
+            f"End time 10:45 should appear as T104500 in VEVENT, got:\n{block}"
+
+    def test_all_day_project_event_uses_date_dtstart(self, page: Page, make_project):
+        project_name = make_project()
+        project = ProjectPage(page)
+        project.navigate_to(project_name)
+        event_name = rand_event_name()
+        project.add_project_event(event_name, "2027-08-01", "2027-08-02", all_day=True)
+
+        body = project.fetch_ics()
+        block = _vevent_block(body, event_name)
+        assert block, f"VEVENT block for '{event_name}' not found in ICS feed"
+
+        assert "DTSTART;VALUE=DATE:" in block, \
+            "All-day event should use DTSTART;VALUE=DATE: format"
+        assert "DTSTART;TZID=" not in block, \
+            "All-day event must not use a TZID datetime DTSTART"
+
+    # ── Phase-level events ────────────────────────────────────────────────────
+
+    def test_timed_phase_event_uses_datetime_dtstart(
+        self, page: Page, make_project, make_phase
+    ):
+        project_name = make_project()
+        phase_name = make_phase(project_name)
+        project = ProjectPage(page)
+        event_name = rand_event_name()
+        project.add_phase_event(
+            phase_name, event_name, "2027-09-10", "2027-09-10",
+            all_day=False, start_time="14:00", end_time="15:30",
+        )
+
+        body = project.fetch_ics()
+        block = _vevent_block(body, event_name)
+        assert block, f"VEVENT block for '{event_name}' not found in ICS feed"
+
+        assert "DTSTART;TZID=" in block, \
+            "Timed phase event should use DTSTART;TZID=… not DTSTART;VALUE=DATE"
+        assert "DTSTART;VALUE=DATE" not in block, \
+            "Timed phase event must not use all-day VALUE=DATE format"
+        assert "T140000" in block, \
+            f"Start time 14:00 should appear as T140000 in VEVENT, got:\n{block}"
+        assert "T153000" in block, \
+            f"End time 15:30 should appear as T153000 in VEVENT, got:\n{block}"
+
+    def test_all_day_phase_event_uses_date_dtstart(
+        self, page: Page, make_project, make_phase
+    ):
+        project_name = make_project()
+        phase_name = make_phase(project_name)
+        project = ProjectPage(page)
+        event_name = rand_event_name()
+        project.add_phase_event(
+            phase_name, event_name, "2027-10-01", "2027-10-03", all_day=True,
+        )
+
+        body = project.fetch_ics()
+        block = _vevent_block(body, event_name)
+        assert block, f"VEVENT block for '{event_name}' not found in ICS feed"
+
+        assert "DTSTART;VALUE=DATE:" in block, \
+            "All-day phase event should use DTSTART;VALUE=DATE: format"
+        assert "DTSTART;TZID=" not in block, \
+            "All-day phase event must not use a TZID datetime DTSTART"

@@ -414,12 +414,28 @@ function build_ics(array $items): string {
         'METHOD:PUBLISH',
     ];
     foreach ($items as $ev) {
-        $dtend = date('Ymd', strtotime($ev['end'] . ' +1 day'));
         $lines[] = 'BEGIN:VEVENT';
         $lines[] = 'UID:' . $ev['uid'];
         $lines[] = 'DTSTAMP:' . $now;
-        $lines[] = 'DTSTART;VALUE=DATE:' . str_replace('-', '', $ev['start']);
-        $lines[] = 'DTEND;VALUE=DATE:' . $dtend;
+
+        $startTime = $ev['start_time'] ?? null;
+        $endTime   = $ev['end_time']   ?? null;
+
+        if ($startTime) {
+            // Timed event: emit local datetime with TZID so calendar apps honour
+            // the wall-clock time rather than converting from UTC.
+            $tz = date_default_timezone_get() ?: 'UTC';
+            $dtstart = str_replace('-', '', $ev['start']) . 'T' . str_replace(':', '', substr($startTime, 0, 5)) . '00';
+            $dtend   = str_replace('-', '', $ev['end'])   . 'T' . str_replace(':', '', substr($endTime,   0, 5)) . '00';
+            $lines[] = 'DTSTART;TZID=' . $tz . ':' . $dtstart;
+            $lines[] = 'DTEND;TZID='   . $tz . ':' . $dtend;
+        } else {
+            // All-day event: DATE value, DTEND is the exclusive day after end.
+            $dtend = date('Ymd', strtotime($ev['end'] . ' +1 day'));
+            $lines[] = 'DTSTART;VALUE=DATE:' . str_replace('-', '', $ev['start']);
+            $lines[] = 'DTEND;VALUE=DATE:' . $dtend;
+        }
+
         $lines[] = 'SUMMARY:' . ics_escape($ev['summary']);
         if (!empty($ev['description'])) {
             $lines[] = 'DESCRIPTION:' . ics_escape($ev['description']);
@@ -454,6 +470,8 @@ function collect_project_ics_items(array $project): array {
                 'uid'         => 'ev-' . $ev['id'] . '@plotly',
                 'start'       => $ev['start_date'],
                 'end'         => $ev['end_date'],
+                'start_time'  => $ev['start_time'] ?? null,
+                'end_time'    => $ev['end_time']   ?? null,
                 'summary'     => $ev['name'],
                 'description' => '',
             ];
@@ -473,6 +491,8 @@ function collect_project_ics_items(array $project): array {
             'uid'         => 'proj-ev-' . $ev['id'] . '@plotly',
             'start'       => $ev['start_date'],
             'end'         => $ev['end_date'],
+            'start_time'  => $ev['start_time'] ?? null,
+            'end_time'    => $ev['end_time']   ?? null,
             'summary'     => $ev['name'],
             'description' => '',
         ];
