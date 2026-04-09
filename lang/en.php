@@ -281,4 +281,9 @@ return [
     'lang_en'               => 'EN',
     'lang_cs'               => 'CS',
     'lang_label'            => 'Language',
+
+    // ── Validation ─────────────────────────────────────────────
+    'error_name_required'   => 'Name is required',
+    'error_date_required'   => 'Date is required',
+    'error_end_before_start' => 'End date cannot be before start date',
 ];

@@ -283,4 +283,9 @@ return [
     'lang_en'               => 'EN',
     'lang_cs'               => 'CS',
     'lang_label'            => 'Jazyk',
+
+    // ── Validation ─────────────────────────────────────────────
+    'error_name_required'   => 'Název je povinný',
+    'error_date_required'   => 'Datum je povinné',
+    'error_end_before_start' => 'Datum konce nemůže být před datem začátku',
 ];

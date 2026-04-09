@@ -306,6 +306,8 @@ $lang = current_lang();
       outline: none; border-color: var(--accent);
       box-shadow: 0 0 0 3px var(--accent-muted);
     }
+    .modal-field input.is-invalid { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }
+    .field-error { margin: 0.3rem 0 0; font-size: 11px; color: #ef4444; font-weight: 500; }
     .confirm-message { color: var(--text-muted); margin: 0; line-height: 1.6; }
 
     /* ── Toasts ── */
@@ -641,13 +643,25 @@ $lang = current_lang();
   function closeProjectModal() {
     document.getElementById('projectModal').classList.remove('is-open');
     _editingProjectId = null;
+    const nameEl = document.getElementById('pm_name');
+    nameEl.classList.remove('is-invalid');
+    nameEl.parentElement.querySelector('.field-error')?.remove();
   }
 
   async function submitProjectModal() {
     const name = document.getElementById('pm_name').value.trim();
     const description = document.getElementById('pm_desc').value.trim();
+    // Clear previous error
+    const nameEl = document.getElementById('pm_name');
+    nameEl.classList.remove('is-invalid');
+    nameEl.parentElement.querySelector('.field-error')?.remove();
     if (!name) {
-      document.getElementById('pm_name').focus();
+      nameEl.classList.add('is-invalid');
+      const p = document.createElement('p');
+      p.className = 'field-error';
+      p.textContent = T.error_name_required || 'Name is required';
+      nameEl.parentElement.appendChild(p);
+      nameEl.focus();
       return;
     }
     const btn = document.getElementById('projectModalSubmit');

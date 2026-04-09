@@ -493,6 +493,10 @@
       box-shadow: 0 0 0 2px rgba(255,255,255,0.4);
       transform: scale(1.15);
     }
+    .modal-field input.is-invalid,
+    .modal-field select.is-invalid { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }
+    .field-error { margin: 0.3rem 0 0; font-size: 11px; color: #ef4444; font-weight: 500; }
+    .gantt-today-label-bg { fill: var(--surface-3); }
     .confirm-message { color: var(--text-muted); margin: 0; line-height: 1.6; }
 
     /* ── Subscribe modal ── */
@@ -1427,13 +1431,24 @@
     if (!svg) return;
     svg.querySelectorAll('.gantt-today-line, .gantt-today-label').forEach(el => el.remove());
 
+    // Prefer frappe-gantt's .today-highlight when it exists (today is in range).
+    // Otherwise calculate the x-position directly from the gantt instance so
+    // the line appears even when today lies outside the task date range.
+    let x;
     const highlight = svg.querySelector('.today-highlight');
-    if (!highlight) return;
-
-    // Center the line within the highlighted column
-    const hx = parseFloat(highlight.getAttribute('x') || 0);
-    const hw = parseFloat(highlight.getAttribute('width') || 0);
-    const x  = hx + hw / 2;
+    if (highlight) {
+      const hx = parseFloat(highlight.getAttribute('x') || 0);
+      const hw = parseFloat(highlight.getAttribute('width') || 0);
+      x = hx + hw / 2;
+    } else {
+      const gantt = state.ganttInstance;
+      if (!gantt || !gantt.gantt_start) return;
+      const msPerHour = 3600000;
+      const hours = (Date.now() - gantt.gantt_start.getTime()) / msPerHour;
+      x = (hours / gantt.options.step) * gantt.options.column_width;
+      const svgW = parseFloat(svg.getAttribute('width')) || svg.getBoundingClientRect().width;
+      if (x < 0 || x > svgW) return;
+    }
 
     const svgH   = parseFloat(svg.getAttribute('height') || svg.getBoundingClientRect().height || 500);
     const headerH = 50; // matches header_height option passed to Gantt
@@ -1451,6 +1466,19 @@
 
     svg.appendChild(line);
     svg.appendChild(label);
+    // Place a background rect behind the label so it doesn't visually merge with
+    // month / week text underneath it in the gantt header.
+    try {
+      const bb = label.getBBox();
+      const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      bg.setAttribute('x', bb.x - 2);
+      bg.setAttribute('y', bb.y - 1);
+      bg.setAttribute('width',  bb.width  + 4);
+      bg.setAttribute('height', bb.height + 2);
+      bg.setAttribute('rx', 2);
+      bg.setAttribute('class', 'gantt-today-label-bg');
+      svg.insertBefore(bg, label);
+    } catch (_) { /* getBBox unavailable (hidden SVG) — skip background */ }
   }
 
   // ── Tabs ─────────────────────────────────────────────────────
@@ -1502,6 +1530,23 @@
   // ── Generic Modal ────────────────────────────────────────────
   let _modalCallback = null;
 
+  function clearFieldErrors() {
+    document.querySelectorAll('#genericModal .is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    document.querySelectorAll('#genericModal .field-error').forEach(el => el.remove());
+  }
+
+  function setFieldError(id, msg) {
+    const el = document.getElementById('modal_input_' + id);
+    if (!el) return;
+    el.classList.add('is-invalid');
+    if (!el.parentElement.querySelector('.field-error')) {
+      const p = document.createElement('p');
+      p.className = 'field-error';
+      p.textContent = msg;
+      el.parentElement.appendChild(p);
+    }
+  }
+
   function showModal(title, fields, callback, submitLabel = 'Save') {
     document.getElementById('modalTitle').textContent = title;
     document.getElementById('modalSubmitBtn').textContent = submitLabel;
@@ -1528,7 +1573,20 @@
     });
     _modalCallback = callback;
     document.getElementById('genericModal').classList.add('is-open');
-    setTimeout(() => container.querySelector('input, select')?.focus(), 50);
+    setTimeout(() => {
+      clearFieldErrors();
+      container.querySelector('input, select')?.focus();
+      // Auto-advance end date when start date changes and end would be before start
+      const startEl = document.getElementById('modal_input_start');
+      const endEl   = document.getElementById('modal_input_end');
+      if (startEl && endEl) {
+        startEl.addEventListener('change', () => {
+          if (endEl.value && endEl.value < startEl.value) {
+            endEl.value = startEl.value;
+          }
+        });
+      }
+    }, 50);
   }
 
   function buildFieldHTML(f) {
@@ -1669,7 +1727,13 @@
       const start = document.getElementById('modal_input_start').value;
       const end   = document.getElementById('modal_input_end').value;
       const color = document.getElementById('modal_input_color').value;
-      if (!name || !start || !end) return;
+      clearFieldErrors();
+      { let ok = true;
+        if (!name)  { setFieldError('name',  T.error_name_required);    ok = false; }
+        if (!start) { setFieldError('start', T.error_date_required);     ok = false; }
+        if (!end)   { setFieldError('end',   T.error_date_required);     ok = false; }
+        if (start && end && end < start) { setFieldError('end', T.error_end_before_start); ok = false; }
+        if (!ok) return; }
       const btn = document.getElementById('modalSubmitBtn');
       btn.disabled = true;
       try {
@@ -1695,7 +1759,13 @@
       const start = document.getElementById('modal_input_start').value;
       const end   = document.getElementById('modal_input_end').value;
       const color = document.getElementById('modal_input_color').value;
-      if (!name || !start || !end) return;
+      clearFieldErrors();
+      { let ok = true;
+        if (!name)  { setFieldError('name',  T.error_name_required);    ok = false; }
+        if (!start) { setFieldError('start', T.error_date_required);     ok = false; }
+        if (!end)   { setFieldError('end',   T.error_date_required);     ok = false; }
+        if (start && end && end < start) { setFieldError('end', T.error_end_before_start); ok = false; }
+        if (!ok) return; }
       const btn = document.getElementById('modalSubmitBtn');
       btn.disabled = true;
       try {
@@ -1763,7 +1833,11 @@
     ], async () => {
       const name = document.getElementById('modal_input_name').value.trim();
       const date = document.getElementById('modal_input_target').value;
-      if (!name || !date) return;
+      clearFieldErrors();
+      { let ok = true;
+        if (!name) { setFieldError('name',   T.error_name_required); ok = false; }
+        if (!date) { setFieldError('target', T.error_date_required); ok = false; }
+        if (!ok) return; }
       const btn = document.getElementById('modalSubmitBtn');
       btn.disabled = true;
       try {
@@ -1790,7 +1864,11 @@
     ], async () => {
       const name = document.getElementById('modal_input_name').value.trim();
       const date = document.getElementById('modal_input_target').value;
-      if (!name || !date) return;
+      clearFieldErrors();
+      { let ok = true;
+        if (!name) { setFieldError('name',   T.error_name_required); ok = false; }
+        if (!date) { setFieldError('target', T.error_date_required); ok = false; }
+        if (!ok) return; }
       const btn = document.getElementById('modalSubmitBtn');
       btn.disabled = true;
       try {
@@ -1844,7 +1922,13 @@
       const name   = document.getElementById('modal_input_name').value.trim();
       const start  = document.getElementById('modal_input_start').value;
       const end    = document.getElementById('modal_input_end').value;
-      if (!name || !start || !end) return;
+      clearFieldErrors();
+      { let ok = true;
+        if (!name)  { setFieldError('name',  T.error_name_required);    ok = false; }
+        if (!start) { setFieldError('start', T.error_date_required);     ok = false; }
+        if (!end)   { setFieldError('end',   T.error_date_required);     ok = false; }
+        if (start && end && end < start) { setFieldError('end', T.error_end_before_start); ok = false; }
+        if (!ok) return; }
       const allDay = document.getElementById('modal_input_all_day').checked;
       const btn = document.getElementById('modalSubmitBtn');
       btn.disabled = true;
@@ -1908,7 +1992,8 @@
     ], async () => {
       const name = document.getElementById('modal_input_name').value.trim();
       const description = document.getElementById('modal_input_desc').value.trim();
-      if (!name) return;
+      clearFieldErrors();
+      if (!name) { setFieldError('name', T.error_name_required); return; }
       const resp = await api.updateProject(projectId, { name, description });
       if (resp.ok) { toast.success(T.toast_project_updated); closeModal(); await refresh(); }
       else toast.error(T.toast_something_wrong);
