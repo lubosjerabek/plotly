@@ -110,15 +110,19 @@ class TestProjectIsolation:
 
 class TestCollaborators:
 
+    @pytest.fixture(autouse=True)
+    def _setup(self, session_project):
+        self.project_name = session_project
+
     def test_collaborators_tab_switches_panel(self, page: Page):
-        navigate_to_project(page, "Playwright Test Project")
+        navigate_to_project(page, self.project_name)
         page.locator(".tab-btn[data-tab='collaborators']").click()
         expect(page.locator("#tab-collaborators")).to_be_visible()
         expect(page.locator("#tab-phases")).not_to_be_visible()
 
     def test_add_collaborator_by_email(self, page: Page, second_user_auth_state):
         _state, email, _pass = second_user_auth_state
-        navigate_to_project(page, "Playwright Test Project")
+        navigate_to_project(page, self.project_name)
         page.locator(".tab-btn[data-tab='collaborators']").click()
         expect(page.locator("#tab-collaborators")).to_be_visible()
 
@@ -139,17 +143,17 @@ class TestCollaborators:
         expect(page.locator("#tab-collaborators")).to_contain_text(email)
 
     def test_collaborator_can_see_shared_project(self, page: Page, second_user_page: Page):
-        navigate_to_project(page, "Playwright Test Project")
+        navigate_to_project(page, self.project_name)
         project_url = page.url
 
         second_user_page.goto(project_url)
         second_user_page.wait_for_load_state("networkidle")
         # Should be able to see the project (added as viewer in previous test)
-        expect(second_user_page.locator("#pName")).to_contain_text("Playwright Test Project")
+        expect(second_user_page.locator("#pName")).to_contain_text(self.project_name)
 
     def test_remove_collaborator(self, page: Page, second_user_auth_state):
         _state, email, _pass = second_user_auth_state
-        navigate_to_project(page, "Playwright Test Project")
+        navigate_to_project(page, self.project_name)
         project_id = re.search(r"/project/(\d+)", page.url).group(1)
 
         # Get current collaborators to find the user id

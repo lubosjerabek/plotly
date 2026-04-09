@@ -24,6 +24,7 @@ import re
 import socket
 import subprocess
 import time
+from typing import Generator
 
 import pytest
 from faker import Faker
@@ -190,6 +191,45 @@ def second_user_page(browser: Browser, second_user_auth_state):
 
 
 # ── Resource factory fixtures ─────────────────────────────────────────────────
+
+@pytest.fixture(scope="session")
+def session_project(browser: Browser, auth_state) -> Generator[str, None, None]:
+    """
+    Creates a randomly-named project once per session for tests that need a
+    pre-existing project (pesticide paradox: name changes every run).
+    Deleted automatically at session teardown — no separate cleanup test needed.
+    """
+    name = rand_project_name()
+    ctx = browser.new_context(storage_state=auth_state)
+    pg = ctx.new_page()
+    pg.goto(BASE_URL + "/")
+    pg.wait_for_load_state("networkidle")
+    pg.locator("#btnNewProject").click()
+    expect(pg.locator("#projectModal")).to_have_class(re.compile(r"is-open"))
+    pg.locator("#pm_name").fill(name)
+    pg.locator("#projectModalSubmit").click()
+    expect(pg.locator(".toast--success")).to_be_visible()
+    pg.wait_for_load_state("networkidle")
+    ctx.close()
+
+    yield name
+
+    ctx2 = browser.new_context(storage_state=auth_state)
+    pg2 = ctx2.new_page()
+    try:
+        pg2.goto(BASE_URL + "/")
+        pg2.wait_for_load_state("networkidle")
+        card = pg2.locator(".project-card", has_text=name)
+        if card.count() > 0:
+            card.hover()
+            card.locator("button[title='Delete project']").click()
+            pg2.locator("#confirmOkBtn").click()
+            pg2.wait_for_load_state("networkidle")
+    except Exception:
+        pass
+    finally:
+        ctx2.close()
+
 
 @pytest.fixture
 def make_project(page: Page):

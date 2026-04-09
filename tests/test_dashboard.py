@@ -30,44 +30,36 @@ class TestDashboard:
         page.keyboard.press("Escape")
         expect(page.locator("#projectModal")).not_to_have_class(re.compile(r"is-open"))
 
-    def test_create_project_shows_toast_and_card(self, page: Page):
-        create_project(page, "Playwright Test Project", "Automated test")
-        expect(page.locator(".project-card", has_text="Playwright Test Project").last).to_be_visible()
+    def test_create_project_shows_toast_and_card(self, page: Page, make_project):
+        name = make_project()
+        expect(page.locator(".project-card", has_text=name)).to_be_visible()
 
-    def test_project_card_shows_description(self, page: Page):
-        goto(page)
-        card = page.locator(".project-card", has_text="Playwright Test Project").last
+    def test_project_card_shows_description(self, page: Page, make_project):
+        name = make_project(desc="Automated test")
+        card = page.locator(".project-card", has_text=name).last
         expect(card.locator(".project-card__desc")).to_contain_text("Automated test")
 
-    def test_project_card_has_open_link(self, page: Page):
-        goto(page)
-        card = page.locator(".project-card", has_text="Playwright Test Project").last
+    def test_project_card_has_open_link(self, page: Page, make_project):
+        name = make_project()
+        card = page.locator(".project-card", has_text=name).last
         card.hover()
         link = card.locator("a.btn")
         expect(link).to_contain_text("Open")
         href = link.get_attribute("href")
         assert href and re.match(r"/project/\d+", href), f"Unexpected href: {href}"
 
-    def test_edit_project_updates_name(self, page: Page):
-        goto(page)
-        card = page.locator(".project-card", has_text="Playwright Test Project").last
+    def test_edit_project_updates_name(self, page: Page, make_project):
+        name = make_project()
+        card = page.locator(".project-card", has_text=name).last
         card.hover()
         card.locator("button[title='Edit project']").click()
         expect(page.locator("#projectModal")).to_have_class(re.compile(r"is-open"))
-        expect(page.locator("#pm_name")).to_have_value("Playwright Test Project")
+        expect(page.locator("#pm_name")).to_have_value(name)
 
-        page.locator("#pm_name").fill("Playwright Test Project (edited)")
+        page.locator("#pm_name").fill(name + " (edited)")
         page.locator("#projectModalSubmit").click()
         expect(page.locator(".toast--success")).to_be_visible()
-        expect(page.locator(".project-card", has_text="Playwright Test Project (edited)")).to_be_visible()
-
-        # Restore original name for later tests
-        goto(page)
-        page.locator(".project-card", has_text="Playwright Test Project (edited)").hover()
-        page.locator(".project-card", has_text="Playwright Test Project (edited)").locator("button[title='Edit project']").click()
-        page.locator("#pm_name").fill("Playwright Test Project")
-        page.locator("#projectModalSubmit").click()
-        expect(page.locator(".toast--success")).to_be_visible()
+        expect(page.locator(".project-card", has_text=name + " (edited)")).to_be_visible()
 
     def test_delete_project_via_confirmation_modal(self, page: Page):
         # Create a throwaway project then delete it
