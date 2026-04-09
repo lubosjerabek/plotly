@@ -144,6 +144,7 @@ return [
     'project_wide'          => 'Celý projekt',
     'no_description_provided' => 'Popis není k dispozici.',
     'gantt_view_label'      => 'Zobrazení:',
+    'today'                 => 'Dnes',
     'gantt_day'             => 'Den',
     'gantt_week'            => 'Týden',
     'gantt_month'           => 'Měsíc',

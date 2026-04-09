@@ -144,6 +144,7 @@ return [
     'project_wide'          => 'Project-wide',
     'no_description_provided' => 'No description provided.',
     'gantt_view_label'      => 'View:',
+    'today'                 => 'Today',
     'gantt_day'             => 'Day',
     'gantt_week'            => 'Week',
     'gantt_month'           => 'Month',

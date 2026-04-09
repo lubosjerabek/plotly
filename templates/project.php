@@ -399,7 +399,9 @@
     .gantt .bar-progress { fill: var(--accent-hover) !important; }
     .gantt .bar-label { fill: #fff !important; font-size: 11px !important; }
     .gantt .arrow { stroke: var(--text-subtle) !important; }
-    .gantt .today-highlight { fill: rgba(99,102,241,0.08) !important; }
+    .gantt .today-highlight { fill: rgba(99,102,241,0.06) !important; }
+    .gantt-today-line { stroke: var(--accent); stroke-width: 1.5px; stroke-dasharray: 4 3; opacity: 0.75; pointer-events: none; }
+    .gantt-today-label { fill: var(--accent); font-size: 10px; font-weight: 600; font-family: 'Inter', system-ui, sans-serif; opacity: 0.85; pointer-events: none; }
     .gantt .gantt-milestone .bar { fill: #f59e0b !important; }
     .gantt .gantt-milestone .bar-progress { fill: #d97706 !important; }
     .gantt .gantt-event .bar     { fill: #10b981 !important; }
@@ -1361,7 +1363,7 @@
         }
       },
     });
-    requestAnimationFrame(() => addGanttDateLabels(tasks));
+    requestAnimationFrame(() => { addGanttDateLabels(tasks); addTodayLine(); });
     } catch (err) {
       console.error('Gantt render failed:', err);
       container.innerHTML = `<div class="item-empty" style="text-align:center;padding:2rem;">${T.gantt_render_error || 'Failed to render timeline. Check the browser console for details.'}</div>`;
@@ -1419,6 +1421,38 @@
     });
   }
 
+  // ── Today line ───────────────────────────────────────────────
+  function addTodayLine() {
+    const svg = document.querySelector('#gantt');
+    if (!svg) return;
+    svg.querySelectorAll('.gantt-today-line, .gantt-today-label').forEach(el => el.remove());
+
+    const highlight = svg.querySelector('.today-highlight');
+    if (!highlight) return;
+
+    // Center the line within the highlighted column
+    const hx = parseFloat(highlight.getAttribute('x') || 0);
+    const hw = parseFloat(highlight.getAttribute('width') || 0);
+    const x  = hx + hw / 2;
+
+    const svgH   = parseFloat(svg.getAttribute('height') || svg.getBoundingClientRect().height || 500);
+    const headerH = 50; // matches header_height option passed to Gantt
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x); line.setAttribute('x2', x);
+    line.setAttribute('y1', headerH); line.setAttribute('y2', svgH);
+    line.setAttribute('class', 'gantt-today-line');
+
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('x', x + 4);
+    label.setAttribute('y', headerH - 4);
+    label.setAttribute('class', 'gantt-today-label');
+    label.textContent = T.today || 'Today';
+
+    svg.appendChild(line);
+    svg.appendChild(label);
+  }
+
   // ── Tabs ─────────────────────────────────────────────────────
   function switchTab(tab) {
     state.activeTab = tab;
@@ -1439,7 +1473,7 @@
     document.querySelectorAll('#ganttViewBtns button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
     if (state.ganttInstance) {
       state.ganttInstance.change_view_mode(view);
-      requestAnimationFrame(() => addGanttDateLabels(state.ganttTasks || []));
+      requestAnimationFrame(() => { addGanttDateLabels(state.ganttTasks || []); addTodayLine(); });
     }
   }
 
