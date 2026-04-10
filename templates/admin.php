@@ -10,34 +10,8 @@
   <link rel="apple-touch-icon" href="/favicon.php">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/base.css">
   <style>
-    :root {
-      --bg:#0f0f13;--surface:#16161d;--surface-2:#1e1e2a;--surface-3:#252535;
-      --border:rgba(255,255,255,0.08);--border-hover:rgba(255,255,255,0.16);
-      --accent:#6366f1;--accent-hover:#4f51d4;--accent-muted:rgba(99,102,241,0.15);
-      --danger:#ef4444;--danger-muted:rgba(239,68,68,0.12);
-      --success:#22c55e;--warning:#f59e0b;
-      --text:#f1f5f9;--text-muted:#94a3b8;--text-subtle:#64748b;
-      --radius-sm:6px;--radius-md:10px;--radius-lg:16px;
-      --shadow-md:0 4px 20px rgba(0,0,0,0.5);--shadow-lg:0 8px 32px rgba(0,0,0,0.6);
-      --t-fast:0.15s ease;
-    }
-    *,*::before,*::after{box-sizing:border-box}
-    body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);margin:0;min-height:100vh;font-size:14px;line-height:1.6}
-    /* Topbar */
-    .topbar{position:sticky;top:0;z-index:100;background:rgba(15,15,19,0.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:56px}
-    .topbar__brand{font-size:17px;font-weight:700;color:var(--text);letter-spacing:-0.02em;display:flex;align-items:center;gap:0.5rem;text-decoration:none}
-    .topbar__brand-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
-    .topbar__right{display:flex;align-items:center;gap:0.75rem}
-    /* Buttons */
-    .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .9rem;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:background var(--t-fast),color var(--t-fast);text-decoration:none}
-    .btn-ghost{background:transparent;color:var(--text-muted);border:1px solid var(--border)}
-    .btn-ghost:hover{background:var(--surface-2);color:var(--text);border-color:var(--border-hover)}
-    .btn-primary{background:var(--accent);color:#fff}
-    .btn-primary:hover{background:var(--accent-hover)}
-    .btn-danger{background:var(--danger-muted);color:#fca5a5;border:1px solid rgba(239,68,68,.25)}
-    .btn-danger:hover{background:rgba(239,68,68,.2)}
-    .btn-sm{padding:.3rem .65rem;font-size:12px}
     /* Layout */
     .page{max-width:900px;margin:0 auto;padding:2rem 1.5rem}
     h1{font-size:20px;font-weight:700;margin:0 0 1.5rem}
@@ -61,12 +35,9 @@
     .badge-used{background:var(--surface-3);color:var(--text-subtle)}
     /* Toolbar */
     .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;gap:1rem}
-    /* Modal */
-    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center}
-    .modal-overlay.is-open{display:flex}
-    .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:100%;max-width:440px;padding:1.75rem}
+    /* Admin modal (simple form layout) */
+    .modal{border-radius:var(--radius-lg);padding:1.75rem;overflow:visible}
     .modal h2{font-size:16px;font-weight:700;margin:0 0 1.25rem}
-    .field-label{display:block;font-size:12px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
     input[type=text],input[type=email],select{width:100%;padding:.6rem .85rem;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-md);color:var(--text);font-family:inherit;font-size:14px;outline:none;transition:border-color var(--t-fast);margin-bottom:1rem}
     input:focus,select:focus{border-color:var(--accent)}
     .modal-actions{display:flex;gap:.75rem;justify-content:flex-end;margin-top:.5rem}
@@ -76,9 +47,9 @@
     .result-url{word-break:break-all;color:var(--text-muted);margin-bottom:.6rem}
     /* Lang dropdown */
     <?php require __DIR__ . '/partials/lang_dropdown.css.php' ?>
-    /* Toast */
+    /* Toast (admin uses simpler inline toast) */
     .toast-area{position:fixed;bottom:1.5rem;right:1.5rem;z-index:999;display:flex;flex-direction:column;gap:.5rem}
-    .toast{background:var(--surface-3);border:1px solid var(--border);border-radius:var(--radius-md);padding:.6rem 1rem;font-size:13px;box-shadow:var(--shadow-md);animation:toastIn .2s ease}
+    .toast-area .toast{min-width:0;max-width:none;background:var(--surface-3);animation:toastIn .2s ease}
     @keyframes toastIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
     .empty-note{color:var(--text-subtle);font-size:13px;padding:1rem .75rem}
   </style>
