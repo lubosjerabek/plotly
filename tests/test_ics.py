@@ -171,6 +171,144 @@ class TestICSContent:
             f"Project event '{event_name}' still present in ICS after deletion"
 
 
+class TestICSFormat:
+    """SUMMARY prefix and DTSTART/DTEND formatting for every item type."""
+
+    # ── Phases ────────────────────────────────────────────────────────────────
+
+    def test_phase_summary_has_calendar_emoji(self, page: Page, make_project, make_phase):
+        project_name = make_project()
+        phase_name = make_phase(project_name)
+        project = ProjectPage(page)
+        body = project.fetch_ics()
+        block = _vevent_block(body, phase_name)
+        assert block, f"VEVENT for phase '{phase_name}' not found"
+        assert f"SUMMARY:📅 {phase_name}" in block, \
+            f"Phase summary should start with 📅, got block:\n{block}"
+
+    def test_phase_uses_date_dtstart(self, page: Page, make_project, make_phase):
+        project_name = make_project()
+        make_phase(project_name, start="2027-03-01", end="2027-05-31")
+        project = ProjectPage(page)
+        body = project.fetch_ics()
+        # All phase VEVENTs must use VALUE=DATE (phases are always all-day spans)
+        for block in re.split(r'BEGIN:VEVENT', body)[1:]:
+            if 'SUMMARY:📅' not in block:
+                continue
+            assert 'DTSTART;VALUE=DATE:' in block, \
+                f"Phase VEVENT should use VALUE=DATE:\n{block}"
+            assert 'DTSTART;TZID=' not in block, \
+                f"Phase VEVENT must not have a TZID datetime:\n{block}"
+
+    def test_phase_dtend_is_day_after_end_date(self, page: Page, make_project, make_phase):
+        project_name = make_project()
+        make_phase(project_name, start="2027-04-01", end="2027-04-30")
+        project = ProjectPage(page)
+        body = project.fetch_ics()
+        for block in re.split(r'BEGIN:VEVENT', body)[1:]:
+            if 'SUMMARY:📅' not in block:
+                continue
+            # Per RFC 5545 DTEND for a DATE value is exclusive — one day after
+            assert 'DTEND;VALUE=DATE:20270501' in block, \
+                f"Phase DTEND should be 20270501 (exclusive day after 2027-04-30):\n{block}"
+
+    # ── Phase milestones ──────────────────────────────────────────────────────
+
+    def test_phase_milestone_summary_has_flag_emoji(
+        self, page: Page, make_project, make_phase
+    ):
+        project_name = make_project()
+        phase_name = make_phase(project_name)
+        ms_name = rand_milestone_name()
+        project = ProjectPage(page)
+        project.add_milestone(phase_name, ms_name, "2027-06-15")
+        body = project.fetch_ics()
+        block = _vevent_block(body, ms_name)
+        assert block, f"VEVENT for milestone '{ms_name}' not found"
+        assert f"SUMMARY:🏁 {ms_name}" in block, \
+            f"Phase milestone summary should start with 🏁, got:\n{block}"
+
+    def test_phase_milestone_no_legacy_bracket_prefix(
+        self, page: Page, make_project, make_phase
+    ):
+        project_name = make_project()
+        phase_name = make_phase(project_name)
+        ms_name = rand_milestone_name()
+        project = ProjectPage(page)
+        project.add_milestone(phase_name, ms_name, "2027-06-15")
+        body = project.fetch_ics()
+        assert '[Milestone]' not in body, \
+            "Legacy '[Milestone]' text prefix must not appear anywhere in the ICS feed"
+
+    def test_milestone_dtend_is_next_day(self, page: Page, make_project, make_phase):
+        project_name = make_project()
+        phase_name = make_phase(project_name)
+        ms_name = rand_milestone_name()
+        project = ProjectPage(page)
+        project.add_milestone(phase_name, ms_name, "2027-07-10")
+        body = project.fetch_ics()
+        block = _vevent_block(body, ms_name)
+        assert 'DTSTART;VALUE=DATE:20270710' in block, \
+            f"Milestone DTSTART should be 20270710:\n{block}"
+        assert 'DTEND;VALUE=DATE:20270711' in block, \
+            f"Milestone DTEND should be 20270711 (exclusive next day):\n{block}"
+
+    # ── Project-level milestones ──────────────────────────────────────────────
+
+    def test_project_milestone_summary_has_flag_emoji(
+        self, page: Page, make_project
+    ):
+        project_name = make_project()
+        project = ProjectPage(page)
+        project.navigate_to(project_name)
+        ms_name = rand_milestone_name()
+        # Add via the project-wide milestone button
+        project.add_project_milestone(ms_name, "2027-08-01")
+        body = project.fetch_ics()
+        block = _vevent_block(body, ms_name)
+        assert block, f"VEVENT for project milestone '{ms_name}' not found"
+        assert f"SUMMARY:🏁 {ms_name}" in block, \
+            f"Project milestone summary should start with 🏁 (not '[Milestone]'), got:\n{block}"
+
+    def test_project_milestone_no_legacy_bracket_prefix(
+        self, page: Page, make_project
+    ):
+        project_name = make_project()
+        project = ProjectPage(page)
+        project.navigate_to(project_name)
+        ms_name = rand_milestone_name()
+        project.add_project_milestone(ms_name, "2027-08-01")
+        body = project.fetch_ics()
+        assert '[Milestone]' not in body, \
+            "Legacy '[Milestone]' text prefix must not appear in the ICS feed"
+
+    # ── Events (phase and project) — no prefix ────────────────────────────────
+
+    def test_phase_event_summary_is_bare_name(self, page: Page, make_project, make_phase):
+        project_name = make_project()
+        phase_name = make_phase(project_name)
+        event_name = rand_event_name()
+        project = ProjectPage(page)
+        project.add_phase_event(phase_name, event_name, "2027-09-01", "2027-09-02")
+        body = project.fetch_ics()
+        block = _vevent_block(body, event_name)
+        assert block, f"VEVENT for phase event '{event_name}' not found"
+        assert f"SUMMARY:{event_name}" in block, \
+            f"Phase event summary should be the bare name with no prefix, got:\n{block}"
+
+    def test_project_event_summary_is_bare_name(self, page: Page, make_project):
+        project_name = make_project()
+        project = ProjectPage(page)
+        project.navigate_to(project_name)
+        event_name = rand_event_name()
+        project.add_project_event(event_name, "2027-10-05", "2027-10-06")
+        body = project.fetch_ics()
+        block = _vevent_block(body, event_name)
+        assert block, f"VEVENT for project event '{event_name}' not found"
+        assert f"SUMMARY:{event_name}" in block, \
+            f"Project event summary should be the bare name with no prefix, got:\n{block}"
+
+
 class TestICSEventTiming:
     """Timed vs all-day event export: DTSTART datetime vs VALUE=DATE."""
 

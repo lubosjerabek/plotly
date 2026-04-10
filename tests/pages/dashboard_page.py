@@ -75,6 +75,10 @@ class DashboardPage(BasePage):
 
     def goto(self):
         super().goto("/")
+        # Wait for the new-project button to be interactive, not just networkidle.
+        # Under server load the JS-rendered button can still be absent when
+        # networkidle fires, causing click() timeouts in long test runs.
+        expect(self.page.locator(self.NEW_PROJECT_BTN)).to_be_visible()
         return self
 
     # ── Project modal ──────────────────────────────────────────────────────────

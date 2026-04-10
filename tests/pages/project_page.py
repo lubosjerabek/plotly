@@ -108,8 +108,9 @@ class ProjectPage(BasePage):
     DELETE_MILESTONE_BTN = "button[title='Delete milestone']"
     DELETE_EVENT_BTN     = "button[title='Delete event']"
 
-    # Project-level events
-    ADD_EVENTS_BTN  = "+ Events"      # has_text
+    # Project-level milestones and events
+    ADD_MILESTONES_BTN = "+ Milestones"  # has_text
+    ADD_EVENTS_BTN     = "+ Events"      # has_text
     ALL_DAY         = "#modal_input_all_day"
     TIME_FIELD      = ".event-time-field"
     START_TIME      = "#modal_input_start_time"
@@ -245,6 +246,18 @@ class ProjectPage(BasePage):
         self.page.locator(self.CONFIRM_OK).click()
         expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
         self.page.wait_for_load_state("networkidle")
+
+    # ── Project-level milestone operations ────────────────────────────────────
+
+    def add_project_milestone(self, name: str, target: str) -> str:
+        self.page.locator("button", has_text=self.ADD_MILESTONES_BTN).click()
+        expect(self.page.locator(self.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
+        self.page.locator(self.MODAL_NAME).fill(name)
+        self.page.locator(self.MODAL_TARGET).fill(target)
+        self.page.locator(self.MODAL_SUBMIT).click()
+        expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
+        self.page.wait_for_load_state("networkidle")
+        return name
 
     # ── Project-level event operations ─────────────────────────────────────────
 
