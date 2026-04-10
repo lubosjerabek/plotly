@@ -14,3 +14,8 @@ RewriteRule ^ index.php [QSA,L]
     Order deny,allow
     Deny from all
 </Files>
+
+# Block direct access to includes/
+<DirectoryMatch "includes">
+    Deny from all
+</DirectoryMatch>
