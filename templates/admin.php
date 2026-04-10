@@ -62,6 +62,7 @@
   <div class="tabs" role="tablist">
     <button class="tab-btn active" onclick="switchTab('users')"><?= htmlspecialchars(t('users_tab')) ?></button>
     <button class="tab-btn" onclick="switchTab('invites')"><?= htmlspecialchars(t('invites_tab')) ?></button>
+    <button class="tab-btn" onclick="switchTab('settings')"><?= htmlspecialchars(t('settings_tab')) ?></button>
   </div>
 
   <!-- Users tab -->
@@ -76,6 +77,25 @@
       <button class="btn btn-primary btn-sm" onclick="openInviteModal()"><?= htmlspecialchars(t('generate_invite')) ?></button>
     </div>
     <div id="invitesTable"><p class="empty-note">Loading…</p></div>
+  </div>
+
+  <!-- Settings tab -->
+  <div id="tab-settings" class="tab-panel">
+    <div style="max-width:480px;padding-top:.5rem">
+      <label class="field-label" for="sessionTimeout"><?= htmlspecialchars(t('session_timeout_label')) ?></label>
+      <p style="font-size:12px;color:var(--text-muted);margin:-.5rem 0 .75rem"><?= htmlspecialchars(t('session_timeout_desc')) ?></p>
+      <select id="sessionTimeout">
+        <option value="0"><?= htmlspecialchars(t('session_browser')) ?></option>
+        <option value="3600"><?= htmlspecialchars(t('session_1h')) ?></option>
+        <option value="14400"><?= htmlspecialchars(t('session_4h')) ?></option>
+        <option value="28800"><?= htmlspecialchars(t('session_8h')) ?></option>
+        <option value="86400"><?= htmlspecialchars(t('session_24h')) ?></option>
+        <option value="604800"><?= htmlspecialchars(t('session_7d')) ?></option>
+      </select>
+      <div style="display:flex;justify-content:flex-end">
+        <button class="btn btn-primary btn-sm" onclick="saveSettings()"><?= htmlspecialchars(t('save_settings')) ?></button>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -129,12 +149,13 @@ window.T = <?= t_js() ?>;
 
 function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    b.classList.toggle('active', ['users','invites'][i] === name);
+    b.classList.toggle('active', ['users','invites','settings'][i] === name);
   });
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
-  if (name === 'users')   loadUsers();
-  if (name === 'invites') loadInvites();
+  if (name === 'users')    loadUsers();
+  if (name === 'invites')  loadInvites();
+  if (name === 'settings') loadSettings();
 }
 
 // ── Users ────────────────────────────────────────────────────────────────────
@@ -292,6 +313,22 @@ function copyInviteUrl() {
 
 function copyLink(url) {
   navigator.clipboard.writeText(url).then(() => toast(T.toast_url_copied));
+}
+
+// ── Settings ─────────────────────────────────────────────────────────────────
+async function loadSettings() {
+  const data = await fetch('/api/admin/settings').then(r => r.json());
+  document.getElementById('sessionTimeout').value = String(data.session_timeout);
+}
+
+async function saveSettings() {
+  const timeout = parseInt(document.getElementById('sessionTimeout').value, 10);
+  const res = await fetch('/api/admin/settings', {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json', 'X-Requested-With':'XMLHttpRequest'},
+    body: JSON.stringify({session_timeout: timeout})
+  });
+  if (res.ok) toast(T.toast_settings_saved);
 }
 
 // ── Misc ─────────────────────────────────────────────────────────────────────

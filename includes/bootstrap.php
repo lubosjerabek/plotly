@@ -1,8 +1,13 @@
 <?php
 declare(strict_types=1);
 defined('APP_BOOT') or die;
+
+$_session_lifetime = (int)setting_get('session_timeout', '0');
+if ($_session_lifetime > 0) {
+    ini_set('session.gc_maxlifetime', (string)$_session_lifetime);
+}
 session_set_cookie_params([
-    'lifetime' => 0,
+    'lifetime' => $_session_lifetime,
     'path'     => '/',
     'secure'   => ($_SERVER['HTTPS'] ?? '') === 'on',
     'httponly'  => true,
@@ -20,4 +25,3 @@ if (($_SERVER['HTTPS'] ?? '') === 'on') {
     header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
 }
 
-require __DIR__ . '/../config.php';

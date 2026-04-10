@@ -81,6 +81,8 @@ if ($method === 'DELETE' && preg_match('#^/api/events/(\d+)$#', $path, $m))     
 // ICS / Settings API
 if ($method === 'GET'  && $path === '/api/settings/ics-token')          { api_get_ics_token(); }
 if ($method === 'POST' && $path === '/api/settings/ics-token/rotate')   { api_rotate_ics_token(); }
+if ($method === 'GET'  && $path === '/api/admin/settings')              { api_get_admin_settings(); }
+if ($method === 'PUT'  && $path === '/api/admin/settings')              { api_update_admin_settings(); }
 
 // Profile API
 if ($method === 'GET'  && $path === '/api/profile')          { api_get_profile(); }

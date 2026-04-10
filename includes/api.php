@@ -379,6 +379,21 @@ function api_rotate_ics_token(): void {
     json_out(['token' => $token, 'url' => $base . '/calendar.ics?token=' . urlencode($token)]);
 }
 
+function api_get_admin_settings(): void {
+    require_admin();
+    json_out(['session_timeout' => (int)setting_get('session_timeout', '0')]);
+}
+
+function api_update_admin_settings(): void {
+    require_admin();
+    $b       = body();
+    $timeout = (int)($b['session_timeout'] ?? 0);
+    $allowed = [0, 3600, 14400, 28800, 86400, 604800];
+    if (!in_array($timeout, $allowed, true)) json_out(['detail' => 'invalid value'], 422);
+    setting_set('session_timeout', (string)$timeout);
+    json_out(['session_timeout' => $timeout]);
+}
+
 // ── Profile API ───────────────────────────────────────────────────────────────
 
 function api_get_profile(): void {

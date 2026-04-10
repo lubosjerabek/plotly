@@ -67,6 +67,22 @@ function not_found(): void {
     json_out(['detail' => 'Not found'], 404);
 }
 
+function setting_get(string $key, string $default = ''): string {
+    try {
+        $stmt = pdo()->prepare("SELECT value FROM settings WHERE `key` = ?");
+        $stmt->execute([$key]);
+        $v = $stmt->fetchColumn();
+        return $v !== false ? (string)$v : $default;
+    } catch (\Throwable $e) {
+        return $default;
+    }
+}
+
+function setting_set(string $key, string $value): void {
+    pdo()->prepare("INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?")
+         ->execute([$key, $value, $value]);
+}
+
 function serve_template(string $name, array $vars = []): void {
     extract($vars, EXTR_SKIP);
     require __DIR__ . '/../templates/' . $name;
