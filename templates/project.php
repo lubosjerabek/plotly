@@ -10,65 +10,12 @@
   <link rel="apple-touch-icon" href="/favicon.php">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/base.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.min.js"></script>
   <style>
-    :root {
-      --bg:          #0f0f13;
-      --surface:     #16161d;
-      --surface-2:   #1e1e2a;
-      --surface-3:   #252535;
-      --border:      rgba(255,255,255,0.08);
-      --border-hover:rgba(255,255,255,0.16);
-      --accent:      #6366f1;
-      --accent-hover:#4f51d4;
-      --accent-muted:rgba(99,102,241,0.15);
-      --danger:      #ef4444;
-      --danger-muted:rgba(239,68,68,0.12);
-      --success:     #22c55e;
-      --warning:     #f59e0b;
-      --status-past: #64748b;
-      --text:        #f1f5f9;
-      --text-muted:  #94a3b8;
-      --text-subtle: #64748b;
-      --radius-sm:   6px;
-      --radius-md:   10px;
-      --radius-lg:   16px;
-      --radius-xl:   24px;
-      --shadow-md:   0 4px 20px rgba(0,0,0,0.5);
-      --shadow-lg:   0 8px 32px rgba(0,0,0,0.6);
-      --t-fast:      0.15s ease;
-      --t-base:      0.25s ease;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; }
-
-    body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      margin: 0;
-      min-height: 100vh;
-      font-size: 14px;
-      line-height: 1.6;
-    }
-
-    /* ── Topbar ── */
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(15,15,19,0.88);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 2rem;
-      height: 56px;
-      gap: 1rem;
-    }
+    /* ── Topbar extras (project-specific) ── */
+    .topbar { gap: 1rem; }
     .topbar__left, .topbar__right {
       display: flex;
       align-items: center;
@@ -101,45 +48,6 @@
 
     /* ── Language dropdown ── */
     <?php require __DIR__ . '/partials/lang_dropdown.css.php' ?>
-
-    /* ── Buttons ── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4em;
-      padding: 0.5rem 1rem;
-      border-radius: var(--radius-sm);
-      font-family: inherit;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all var(--t-fast);
-      border: none;
-      text-decoration: none;
-      white-space: nowrap;
-    }
-    .btn-primary  { background: var(--accent); color: #fff; }
-    .btn-primary:hover { background: var(--accent-hover); }
-    .btn-ghost {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-    }
-    .btn-ghost:hover { border-color: var(--border-hover); color: var(--text); background: var(--surface-2); }
-    .btn-danger-outline {
-      background: transparent;
-      border: 1px solid transparent;
-      color: var(--danger);
-    }
-    .btn-danger-outline:hover { background: var(--danger-muted); border-color: var(--danger); }
-    .btn-icon {
-      padding: 0.35rem;
-      width: 28px; height: 28px;
-      justify-content: center;
-    }
-    .btn-xs { padding: 0.25rem 0.6rem; font-size: 12px; }
-    .btn svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* ── Page layout ── */
     .page {
@@ -407,44 +315,7 @@
     .gantt .gantt-event .bar     { fill: #10b981 !important; }
     .gantt .gantt-event .bar-progress { fill: #059669 !important; }
 
-    /* ── Modal ── */
-    .modal-overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.7);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 500;
-      padding: 1rem;
-    }
-    .modal-overlay.is-open { display: flex; }
-    .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-xl);
-      width: 100%; max-width: 440px;
-      box-shadow: var(--shadow-lg);
-      animation: slideUp var(--t-base) forwards;
-      overflow: hidden;
-    }
-    .modal--sm { max-width: 360px; }
-    .modal__header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 1.25rem 1.5rem 0;
-    }
-    .modal__title { margin: 0; font-size: 1.05rem; font-weight: 600; }
-    .modal__close {
-      background: none; border: none; color: var(--text-muted); cursor: pointer;
-      font-size: 18px; line-height: 1; padding: 4px;
-      border-radius: var(--radius-sm); transition: color var(--t-fast);
-    }
-    .modal__close:hover { color: var(--text); }
-    .modal__body { padding: 1.25rem 1.5rem; }
-    .modal__footer { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0 1.5rem 1.25rem; }
-    .modal-field { margin-bottom: 1rem; }
-    .modal-field:last-child { margin-bottom: 0; }
+    /* ── Modal extras (project-specific) ── */
     .modal-checkbox-label {
       display: flex; align-items: center; gap: 0.6rem;
       font-size: 13px; color: var(--text-muted); cursor: pointer;
@@ -452,22 +323,6 @@
     }
     .modal-checkbox-label input[type="checkbox"] {
       width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0;
-    }
-    .field-label {
-      display: block; margin-bottom: 0.4rem;
-      font-size: 11px; font-weight: 600; color: var(--text-muted);
-      text-transform: uppercase; letter-spacing: 0.06em;
-    }
-    .modal-field input, .modal-field select, .modal-field textarea {
-      width: 100%; padding: 0.65rem 0.75rem;
-      background: var(--surface-3); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text);
-      font-family: inherit; font-size: 14px;
-      transition: border-color var(--t-fast), box-shadow var(--t-fast);
-    }
-    .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus {
-      outline: none; border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-muted);
     }
     .modal-field textarea {
       resize: vertical;
@@ -493,11 +348,7 @@
       box-shadow: 0 0 0 2px rgba(255,255,255,0.4);
       transform: scale(1.15);
     }
-    .modal-field input.is-invalid,
-    .modal-field select.is-invalid { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }
-    .field-error { margin: 0.3rem 0 0; font-size: 11px; color: #ef4444; font-weight: 500; }
     .gantt-today-label-bg { fill: var(--surface-3); }
-    .confirm-message { color: var(--text-muted); margin: 0; line-height: 1.6; }
 
     /* ── Subscribe modal ── */
     .subscribe-url-row {

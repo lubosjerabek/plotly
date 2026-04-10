@@ -29,6 +29,7 @@ deploy: ## Copy PHP source into the running container (fast, no rebuild)
 	docker cp config.php  $(APP):/var/www/html/
 	docker cp favicon.php $(APP):/var/www/html/
 	docker cp includes    $(APP):/var/www/html/
+	docker cp assets      $(APP):/var/www/html/
 	docker cp templates   $(APP):/var/www/html/
 	docker cp lang        $(APP):/var/www/html/
 	docker exec $(APP) chown -R www-data:www-data /var/www/html
