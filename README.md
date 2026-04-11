@@ -1,4 +1,4 @@
-# Plotly 📌
+# Plotly
 
 > Track **Projects → Phases → Milestones & Events**. Stay in sync with Google Calendar via a zero-config ICS feed. Self-hosted, no cloud lock-in.
 
@@ -6,22 +6,34 @@ Built with pure PHP + MySQL + vanilla JS. Runs on a Raspberry Pi, a VPS, a Proxm
 
 ---
 
-## ✨ Features
+## Why I built this
 
-- 📁 **Hierarchical structure** — Projects → Phases → Milestones & Events, plus project-wide milestones & events that don't belong to any phase
-- 🔗 **Phase dependencies** — shift one phase and all dependent phases cascade automatically
-- 📝 **Phase descriptions** — rich context notes on each phase
-- 🪗 **Expand / collapse phases** — active phases open by default; past & upcoming collapse to keep the screen tidy
-- 🏷️ **Status badges** — Past / Active / Upcoming, auto-calculated from today's date
-- 📅 **Google Calendar sync** — subscribe to the ICS feed; timed events export with full datetime, all-day events export as date-only; no API keys, no OAuth, no fuss
-- 📊 **Gantt chart** — visual timeline with Day / Week / Month view modes and a "today" marker
-- 👥 **Multi-user** — invite-based registration; collaborators can be added per project
-- 🔒 **Password-protected** — bcrypt session auth; per-user ICS tokens
-- 🚀 **Self-hosted** — pure PHP + MySQL, zero Composer dependencies, FTP-deployable
+I was managing a house renovation. Tradespeople, suppliers, an architect — a small army of people who all needed to know what was happening and when. Every time a phase shifted, I was texting updates, forwarding PDFs, and fielding calls from a confused builder who showed up on the wrong day.
+
+What I really wanted was simple: one place to define the plan, and a way for everyone involved to see it in the calendar app they already use — without accounts, without apps, without me having to push updates manually.
+
+Plotly is that tool. You define your project structure once, invite collaborators if you want them to edit, and share an ICS feed URL with anyone who needs read-only visibility. Their calendar updates automatically. When a phase slips, you move it, and everyone's calendar catches up on its own.
+
+It turned out to be useful for more than house renovations — but that's where it started.
 
 ---
 
-## 🚀 Quickstart
+## Features
+
+- **Hierarchical structure** — Projects → Phases → Milestones & Events, plus project-wide milestones & events that don't belong to any phase
+- **Phase dependencies** — shift one phase and all dependent phases cascade automatically
+- **Phase descriptions** — rich context notes on each phase
+- **Expand / collapse phases** — active phases open by default; past & upcoming collapse to keep the screen tidy
+- **Status badges** — Past / Active / Upcoming, auto-calculated from today's date
+- **Google Calendar sync** — subscribe to the ICS feed; timed events export with full datetime, all-day events export as date-only; no API keys, no OAuth, no fuss
+- **Gantt chart** — visual timeline with Day / Week / Month view modes and a "today" marker
+- **Multi-user** — invite-based registration; collaborators can be added per project with viewer or editor roles
+- **Password-protected** — bcrypt session auth; per-user ICS tokens
+- **Self-hosted** — pure PHP + MySQL, zero Composer dependencies, FTP-deployable
+
+---
+
+## Quickstart
 
 ### Docker (recommended)
 
@@ -31,22 +43,37 @@ cd plotly
 make build        # rebuild image and start (docker-compose up --build -d)
 ```
 
-Open `http://localhost:8000` and log in with the credentials set in `docker-compose.yml` (`ADMIN_EMAIL` / `ADMIN_PASS`).
+Open `http://localhost:8000` and log in with the credentials set in `docker-compose.yml`:
 
-The database schema is applied automatically on first start via `docker-entrypoint-initdb.d`.
+```yaml
+ADMIN_EMAIL: "admin@example.com"
+ADMIN_NAME:  "Admin"
+ADMIN_PASS:  "your-password-here"
+```
+
+The database schema is applied automatically on first start. The entrypoint seeds the admin user on first start if the `users` table is empty. Additional users are added via the invite flow (`/admin/users`).
 
 ---
 
 ### Wedos / shared PHP hosting
 
+**Fresh install:**
+
 1. FTP all files to your document root
 2. Run `schema.sql` once via phpMyAdmin / hosting panel SQL console
-3. Visit `https://yoursite.com/setup.php` → copy the generated hash → paste into `config.php` as `AUTH_PASS_HASH` → set a real `ICS_TOKEN` → fill in DB credentials → **delete `setup.php` via FTP**
-4. Done 🎉
+3. Open `setup.php` in your browser → enter a password → copy the generated hash
+4. Edit `config.php`: paste the hash as `LEGACY_AUTH_PASS_HASH`, fill in DB credentials
+5. Visit `https://yoursite.com/migrate.php` — this creates your first admin user from the legacy values and upgrades the schema
+6. **Delete `setup.php` and `migrate.php` via FTP**
+7. Done
+
+**Upgrading from a single-admin install:**
+
+Run `migrate.php` once. It will create the `users` table and convert the existing `LEGACY_AUTH_PASS_HASH` credentials into the first admin user entry. Then delete `migrate.php`.
 
 ---
 
-## 🗄️ Database
+## Database
 
 | Deployment | How the schema is applied |
 |------------|--------------------------|
@@ -57,29 +84,7 @@ The database schema is applied automatically on first start via `docker-entrypoi
 
 ---
 
-## 🔑 Authentication
-
-**Docker** — configure the first admin account via environment variables in `docker-compose.yml`:
-
-```yaml
-ADMIN_EMAIL: "admin@example.com"
-ADMIN_NAME:  "Admin"
-ADMIN_PASS:  "your-password-here"
-```
-
-The entrypoint seeds the admin user on first start if the `users` table is empty. Additional users are added via the invite flow (`/admin/users`).
-
-**Wedos / FTP** — edit `config.php` directly. Use `setup.php` to generate the bcrypt hash (then delete it), or run locally:
-
-```bash
-php -r "echo password_hash('yourpassword', PASSWORD_DEFAULT) . PHP_EOL;"
-```
-
-`config.php` is blocked from direct HTTP access via `.htaccess` and is excluded from every automated FTP deploy — it lives on the server and is never overwritten by CI.
-
----
-
-## 📅 Google Calendar Sync
+## Google Calendar Sync
 
 No OAuth. No API keys. No token refresh drama. Just an ICS feed.
 
@@ -87,13 +92,13 @@ No OAuth. No API keys. No token refresh drama. Just an ICS feed.
 2. Copy the URL shown (it includes a secret `?token=...` parameter)
 3. In Google Calendar → **Other calendars → From URL** → paste → **Add calendar**
 
-Google polls the feed on its own schedule (typically every few hours). Phases and milestones appear as all-day events. Events with a specific time (created with "All-day event" unchecked) export as timed calendar entries. To revoke access, regenerate the token via account settings.
+Google polls the feed on its own schedule (typically every few hours). Phases and milestones appear as all-day events. Events with a specific time export as timed calendar entries. To revoke access, regenerate the token via account settings.
 
 There's also a global feed at `/calendar.ics?token=...` that includes all projects.
 
 ---
 
-## 🛠️ Local Development
+## Local Development
 
 Run `make` with no arguments to see all available targets:
 
@@ -151,7 +156,7 @@ All of the above are also available via **Cmd+Shift+P → Tasks: Run Task**:
 
 ---
 
-## 🚢 Deploying Changes (Wedos / FTP)
+## Deploying Changes (Wedos / FTP)
 
 Push to `main` — GitHub Actions handles the rest.
 
@@ -173,7 +178,7 @@ git push origin main
 
 ---
 
-## 🧪 Tests
+## Tests
 
 The test suite uses Playwright (Python) and runs against the live Docker stack.
 
@@ -198,15 +203,15 @@ The session logs in once and reuses the cookie across all tests. Every test that
 
 ---
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
 | Blank page / 500 | PHP error | Add `<?php ini_set('display_errors',1);` temporarily to `index.php` |
 | All URLs → 404 | mod_rewrite not active or wrong doc root | Check `.htaccess` is in the document root |
 | DB connection error | Wrong `DB_HOST` | Wedos may use `mysql.wedos.net` instead of `localhost` |
-| Login loop | Wrong password | Check `ADMIN_PASS` in `docker-compose.yml` matches what you're typing |
-| ICS returns 401/403 | Missing or wrong token | Ensure `?token=` matches the user's ICS token in the DB |
+| Login loop | Wrong password | Re-run `setup.php` to regenerate hash and update `config.php` |
+| ICS returns 401/403 | Missing or wrong token | Token is per-user — regenerate via account settings |
 | Google Calendar not updating | GCal polls on its own schedule | Wait up to a few hours for first sync |
 | `make deploy` fails | Container not running | Run `make up` or `make build` first |
 
