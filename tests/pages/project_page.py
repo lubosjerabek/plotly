@@ -104,7 +104,8 @@ class ProjectPage(BasePage):
     SUBSCRIBE_MODAL = "#subscribeModal"
     ICS_URL         = "#icsUrl"
 
-    # Delete buttons (used inside item rows)
+    # Edit / Delete buttons (used inside item rows)
+    EDIT_EVENT_BTN       = "button[title='Edit event']"
     DELETE_MILESTONE_BTN = "button[title='Delete milestone']"
     DELETE_EVENT_BTN     = "button[title='Delete event']"
 

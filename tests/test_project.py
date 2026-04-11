@@ -217,6 +217,36 @@ class TestProjectDetail:
         expect(page.locator(ProjectPage.ITEMS_BODY)).to_contain_text("Team Meeting")
         expect(page.locator(ProjectPage.ITEMS_BODY)).to_contain_text("10:00")
 
+    def test_edit_phase_start_shifts_end_by_same_delta(self, page: Page, make_project, make_phase):
+        """Changing start date in the edit-phase modal auto-shifts the end date."""
+        name = make_project()
+        # 10-day phase: 2027-01-10 → 2027-01-20
+        phase_name = make_phase(name, start="2027-01-10", end="2027-01-20")
+        project = ProjectPage(page)
+        project.get_phase_card(phase_name).edit_btn.click()
+        expect(page.locator(ProjectPage.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
+        # Shift start +10 days; end should follow: 2027-01-20 → 2027-01-30
+        page.locator(ProjectPage.MODAL_START).fill("2027-01-20")
+        expect(page.locator(ProjectPage.MODAL_END)).to_have_value("2027-01-30")
+        page.keyboard.press("Escape")
+
+    def test_edit_event_start_shifts_end_by_same_delta(self, page: Page, make_project, make_phase):
+        """Changing start date in the edit-event modal auto-shifts the end date."""
+        name = make_project()
+        phase_name = make_phase(name, start="2027-01-01", end="2027-06-30")
+        project = ProjectPage(page)
+        # 6-day event: 2027-02-01 → 2027-02-07
+        project.add_phase_event(phase_name, "Shift Me Event", "2027-02-01", "2027-02-07")
+        phase = project.get_phase_card(phase_name)
+        phase.expand(page)
+        phase.events_section().locator(".item-list li", has_text="Shift Me Event") \
+             .locator(ProjectPage.EDIT_EVENT_BTN).click()
+        expect(page.locator(ProjectPage.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
+        # Shift start +7 days; end should follow: 2027-02-07 → 2027-02-14
+        page.locator(ProjectPage.MODAL_START).fill("2027-02-08")
+        expect(page.locator(ProjectPage.MODAL_END)).to_have_value("2027-02-14")
+        page.keyboard.press("Escape")
+
     def test_edit_project_event(self, page: Page, make_project):
         """Project-level events have an Edit button."""
         name = make_project()

@@ -1001,6 +1001,18 @@ function editPhase(phaseId) {
       else toast.error(T.toast_phase_update_failed);
     } finally { btn.disabled = false; }
   }, T.save_changes);
+
+  // showModal builds the DOM synchronously, so we can attach immediately.
+  const startEl = document.getElementById('modal_input_start');
+  const endEl   = document.getElementById('modal_input_end');
+  if (startEl && endEl) {
+    const origStart = phase.start_date, origEnd = phase.end_date;
+    startEl.addEventListener('input', () => {
+      if (!startEl.value) return;
+      const delta = Math.round((parseDateLocal(startEl.value) - parseDateLocal(origStart)) / 86400000);
+      endEl.value = shiftDateStr(origEnd, delta);
+    });
+  }
 }
 
 function setDependency(phaseId) {
@@ -1165,6 +1177,19 @@ function _openEventModal(title, defaults, onSave, submitLabel) {
   }, submitLabel);
 
   // Wire up the all-day toggle after the modal DOM is built
+  // showModal builds the DOM synchronously — attach the date-shift listener immediately.
+  const startEl = document.getElementById('modal_input_start');
+  const endEl   = document.getElementById('modal_input_end');
+  if (startEl && endEl) {
+    const origStart = defaults.start_date || todayStr();
+    const origEnd   = defaults.end_date   || todayStr();
+    startEl.addEventListener('input', () => {
+      if (!startEl.value) return;
+      const delta = Math.round((parseDateLocal(startEl.value) - parseDateLocal(origStart)) / 86400000);
+      endEl.value = shiftDateStr(origEnd, delta);
+    });
+  }
+
   setTimeout(() => {
     const cb     = document.getElementById('modal_input_all_day');
     const fields = document.querySelectorAll('#genericModal .event-time-field');
