@@ -134,6 +134,12 @@ class ProjectPage(BasePage):
         DashboardPage(self.page).navigate_to_project(name)
         expect(self.page.locator(self.PROJECT_NAME)).to_contain_text(name)
 
+    def navigate_by_id(self, project_id: int) -> None:
+        """Navigate directly to a project by ID, bypassing the dashboard."""
+        from .base_page import BASE_URL
+        self.page.goto(BASE_URL + f"/project/{project_id}")
+        self.page.wait_for_load_state("networkidle")
+
     # ── Tabs ───────────────────────────────────────────────────────────────────
 
     def switch_to_timeline(self):

@@ -20,11 +20,13 @@ class TestLogin:
         ctx.close()
 
     def test_wrong_password_stays_on_login(self, browser: Browser):
+        from faker import Faker
+        from conftest import TEST_AUTH_EMAIL
         ctx = browser.new_context()
         pg = ctx.new_page()
         login = LoginPage(pg)
         login.goto()
-        login.login("admin@example.com", "definitely-wrong-password")
+        login.login(TEST_AUTH_EMAIL, Faker().password(length=20))
         assert login.is_on_login_page(), "Expected to remain on /login after bad credentials"
         ctx.close()
 

@@ -2,11 +2,13 @@
 ICS / calendar subscription tests.
 """
 import re
+from datetime import datetime, timedelta
+
 import pytest
 from playwright.sync_api import Page, expect
 
 from pages import BASE_URL, ProjectPage
-from conftest import rand_milestone_name, rand_event_name
+from conftest import rand_milestone_name, rand_event_name, rand_date_range, rand_future_date
 
 
 def _vevent_block(body: str, summary_fragment: str) -> str:
@@ -21,40 +23,39 @@ class TestICSSubscription:
     """Modal, URL structure, and auth-gate tests."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self, page: Page, session_project):
+    def _setup(self, page: Page, project):
         self.project = ProjectPage(page)
-        self.project_name = session_project
+        self.project_name = project
+        self.project_id = project.id
 
     def test_subscribe_button_opens_modal(self, page: Page):
-        self.project.navigate_to(self.project_name)
+        self.project.navigate_by_id(self.project_id)
         self.project.open_subscribe_modal()
         expect(page.locator(ProjectPage.ICS_URL)).to_be_visible()
 
     def test_subscribe_modal_url_contains_token(self, page: Page):
-        self.project.navigate_to(self.project_name)
+        self.project.navigate_by_id(self.project_id)
         self.project.open_subscribe_modal()
         ics_url = self.project.get_ics_url()
         assert "token=" in ics_url, f"ICS URL missing token parameter: {ics_url}"
         assert "/calendar.ics" in ics_url, f"ICS URL missing /calendar.ics: {ics_url}"
 
     def test_ics_feed_returns_vcalendar(self, page: Page):
-        self.project.navigate_to(self.project_name)
+        self.project.navigate_by_id(self.project_id)
         body = self.project.fetch_ics()
         assert "BEGIN:VCALENDAR" in body, "ICS response missing BEGIN:VCALENDAR"
         assert "END:VCALENDAR" in body, "ICS response missing END:VCALENDAR"
 
     def test_ics_feed_rejected_without_token(self, page: Page):
-        self.project.navigate_to(self.project_name)
-        project_id = re.search(r"/project/(\d+)", page.url).group(1)
-        resp = page.request.get(BASE_URL + f"/project/{project_id}/calendar.ics")
+        self.project.navigate_by_id(self.project_id)
+        resp = page.request.get(BASE_URL + f"/project/{self.project_id}/calendar.ics")
         assert resp.status in (401, 403), \
             f"Expected 401/403 for ICS without token, got {resp.status}"
 
     def test_ics_feed_rejected_with_wrong_token(self, page: Page):
-        self.project.navigate_to(self.project_name)
-        project_id = re.search(r"/project/(\d+)", page.url).group(1)
+        self.project.navigate_by_id(self.project_id)
         resp = page.request.get(
-            BASE_URL + f"/project/{project_id}/calendar.ics?token=invalid-token-value"
+            BASE_URL + f"/project/{self.project_id}/calendar.ics?token=invalid-token-value"
         )
         assert resp.status in (401, 403), \
             f"Expected 401/403 for ICS with wrong token, got {resp.status}"
@@ -92,8 +93,9 @@ class TestICSContent:
         project_name = make_project()
         phase_name = make_phase(project_name)
         milestone_name = rand_milestone_name()
+        target = rand_future_date()
         project = ProjectPage(page)
-        project.add_milestone(phase_name, milestone_name, "2027-03-15")
+        project.add_milestone(phase_name, milestone_name, target)
 
         body = project.fetch_ics()
         assert milestone_name in body, \
@@ -103,8 +105,9 @@ class TestICSContent:
         project_name = make_project()
         phase_name = make_phase(project_name)
         milestone_name = rand_milestone_name()
+        target = rand_future_date()
         project = ProjectPage(page)
-        project.add_milestone(phase_name, milestone_name, "2027-03-15")
+        project.add_milestone(phase_name, milestone_name, target)
 
         assert milestone_name in project.fetch_ics(), \
             f"Pre-condition failed: milestone '{milestone_name}' not in ICS before deletion"
@@ -120,8 +123,9 @@ class TestICSContent:
         project_name = make_project()
         phase_name = make_phase(project_name)
         event_name = rand_event_name()
+        start, end = rand_date_range()
         project = ProjectPage(page)
-        project.add_phase_event(phase_name, event_name, "2027-02-01", "2027-02-03")
+        project.add_phase_event(phase_name, event_name, start, end)
 
         body = project.fetch_ics()
         assert event_name in body, \
@@ -131,8 +135,9 @@ class TestICSContent:
         project_name = make_project()
         phase_name = make_phase(project_name)
         event_name = rand_event_name()
+        start, end = rand_date_range()
         project = ProjectPage(page)
-        project.add_phase_event(phase_name, event_name, "2027-02-01", "2027-02-03")
+        project.add_phase_event(phase_name, event_name, start, end)
 
         assert event_name in project.fetch_ics(), \
             f"Pre-condition failed: phase event '{event_name}' not in ICS before deletion"
@@ -147,9 +152,10 @@ class TestICSContent:
     def test_project_event_appears_in_ics_feed(self, page: Page, make_project):
         project_name = make_project()
         project = ProjectPage(page)
-        project.navigate_to(project_name)
+        project.navigate_by_id(project_name.id)
         event_name = rand_event_name()
-        project.add_project_event(event_name, "2027-05-01", "2027-05-02")
+        start, end = rand_date_range()
+        project.add_project_event(event_name, start, end)
 
         body = project.fetch_ics()
         assert event_name in body, \
@@ -158,9 +164,10 @@ class TestICSContent:
     def test_project_event_removal_removes_from_ics(self, page: Page, make_project):
         project_name = make_project()
         project = ProjectPage(page)
-        project.navigate_to(project_name)
+        project.navigate_by_id(project_name.id)
         event_name = rand_event_name()
-        project.add_project_event(event_name, "2027-05-01", "2027-05-02")
+        start, end = rand_date_range()
+        project.add_project_event(event_name, start, end)
 
         assert event_name in project.fetch_ics(), \
             f"Pre-condition failed: project event '{event_name}' not in ICS before deletion"
@@ -188,7 +195,8 @@ class TestICSFormat:
 
     def test_phase_uses_date_dtstart(self, page: Page, make_project, make_phase):
         project_name = make_project()
-        make_phase(project_name, start="2027-03-01", end="2027-05-31")
+        start, end = rand_date_range()
+        make_phase(project_name, start=start, end=end)
         project = ProjectPage(page)
         body = project.fetch_ics()
         # All phase VEVENTs must use VALUE=DATE (phases are always all-day spans)
@@ -202,15 +210,17 @@ class TestICSFormat:
 
     def test_phase_dtend_is_day_after_end_date(self, page: Page, make_project, make_phase):
         project_name = make_project()
-        make_phase(project_name, start="2027-04-01", end="2027-04-30")
+        start, end = rand_date_range()
+        make_phase(project_name, start=start, end=end)
         project = ProjectPage(page)
         body = project.fetch_ics()
+        end_dt = datetime.strptime(end, "%Y-%m-%d").date()
+        expected_dtend = (end_dt + timedelta(days=1)).strftime("%Y%m%d")
         for block in re.split(r'BEGIN:VEVENT', body)[1:]:
             if 'SUMMARY:📅' not in block:
                 continue
-            # Per RFC 5545 DTEND for a DATE value is exclusive — one day after
-            assert 'DTEND;VALUE=DATE:20270501' in block, \
-                f"Phase DTEND should be 20270501 (exclusive day after 2027-04-30):\n{block}"
+            assert f'DTEND;VALUE=DATE:{expected_dtend}' in block, \
+                f"Phase DTEND should be {expected_dtend} (exclusive day after {end}):\n{block}"
 
     # ── Phase milestones ──────────────────────────────────────────────────────
 
@@ -220,8 +230,9 @@ class TestICSFormat:
         project_name = make_project()
         phase_name = make_phase(project_name)
         ms_name = rand_milestone_name()
+        target = rand_future_date()
         project = ProjectPage(page)
-        project.add_milestone(phase_name, ms_name, "2027-06-15")
+        project.add_milestone(phase_name, ms_name, target)
         body = project.fetch_ics()
         block = _vevent_block(body, ms_name)
         assert block, f"VEVENT for milestone '{ms_name}' not found"
@@ -234,8 +245,9 @@ class TestICSFormat:
         project_name = make_project()
         phase_name = make_phase(project_name)
         ms_name = rand_milestone_name()
+        target = rand_future_date()
         project = ProjectPage(page)
-        project.add_milestone(phase_name, ms_name, "2027-06-15")
+        project.add_milestone(phase_name, ms_name, target)
         body = project.fetch_ics()
         assert '[Milestone]' not in body, \
             "Legacy '[Milestone]' text prefix must not appear anywhere in the ICS feed"
@@ -244,14 +256,18 @@ class TestICSFormat:
         project_name = make_project()
         phase_name = make_phase(project_name)
         ms_name = rand_milestone_name()
+        target = rand_future_date()
+        target_dt = datetime.strptime(target, "%Y-%m-%d").date()
+        expected_dtstart = target_dt.strftime("%Y%m%d")
+        expected_dtend = (target_dt + timedelta(days=1)).strftime("%Y%m%d")
         project = ProjectPage(page)
-        project.add_milestone(phase_name, ms_name, "2027-07-10")
+        project.add_milestone(phase_name, ms_name, target)
         body = project.fetch_ics()
         block = _vevent_block(body, ms_name)
-        assert 'DTSTART;VALUE=DATE:20270710' in block, \
-            f"Milestone DTSTART should be 20270710:\n{block}"
-        assert 'DTEND;VALUE=DATE:20270711' in block, \
-            f"Milestone DTEND should be 20270711 (exclusive next day):\n{block}"
+        assert f'DTSTART;VALUE=DATE:{expected_dtstart}' in block, \
+            f"Milestone DTSTART should be {expected_dtstart}:\n{block}"
+        assert f'DTEND;VALUE=DATE:{expected_dtend}' in block, \
+            f"Milestone DTEND should be {expected_dtend} (exclusive next day):\n{block}"
 
     # ── Project-level milestones ──────────────────────────────────────────────
 
@@ -260,10 +276,10 @@ class TestICSFormat:
     ):
         project_name = make_project()
         project = ProjectPage(page)
-        project.navigate_to(project_name)
+        project.navigate_by_id(project_name.id)
         ms_name = rand_milestone_name()
-        # Add via the project-wide milestone button
-        project.add_project_milestone(ms_name, "2027-08-01")
+        target = rand_future_date()
+        project.add_project_milestone(ms_name, target)
         body = project.fetch_ics()
         block = _vevent_block(body, ms_name)
         assert block, f"VEVENT for project milestone '{ms_name}' not found"
@@ -275,9 +291,10 @@ class TestICSFormat:
     ):
         project_name = make_project()
         project = ProjectPage(page)
-        project.navigate_to(project_name)
+        project.navigate_by_id(project_name.id)
         ms_name = rand_milestone_name()
-        project.add_project_milestone(ms_name, "2027-08-01")
+        target = rand_future_date()
+        project.add_project_milestone(ms_name, target)
         body = project.fetch_ics()
         assert '[Milestone]' not in body, \
             "Legacy '[Milestone]' text prefix must not appear in the ICS feed"
@@ -288,8 +305,9 @@ class TestICSFormat:
         project_name = make_project()
         phase_name = make_phase(project_name)
         event_name = rand_event_name()
+        start, end = rand_date_range()
         project = ProjectPage(page)
-        project.add_phase_event(phase_name, event_name, "2027-09-01", "2027-09-02")
+        project.add_phase_event(phase_name, event_name, start, end)
         body = project.fetch_ics()
         block = _vevent_block(body, event_name)
         assert block, f"VEVENT for phase event '{event_name}' not found"
@@ -299,9 +317,10 @@ class TestICSFormat:
     def test_project_event_summary_is_bare_name(self, page: Page, make_project):
         project_name = make_project()
         project = ProjectPage(page)
-        project.navigate_to(project_name)
+        project.navigate_by_id(project_name.id)
         event_name = rand_event_name()
-        project.add_project_event(event_name, "2027-10-05", "2027-10-06")
+        start, end = rand_date_range()
+        project.add_project_event(event_name, start, end)
         body = project.fetch_ics()
         block = _vevent_block(body, event_name)
         assert block, f"VEVENT for project event '{event_name}' not found"
@@ -317,10 +336,11 @@ class TestICSEventTiming:
     def test_timed_project_event_uses_datetime_dtstart(self, page: Page, make_project):
         project_name = make_project()
         project = ProjectPage(page)
-        project.navigate_to(project_name)
+        project.navigate_by_id(project_name.id)
         event_name = rand_event_name()
+        event_date = rand_future_date()
         project.add_project_event(
-            event_name, "2027-07-15", "2027-07-15",
+            event_name, event_date, event_date,
             all_day=False, start_time="09:15", end_time="10:45",
         )
 
@@ -340,9 +360,10 @@ class TestICSEventTiming:
     def test_all_day_project_event_uses_date_dtstart(self, page: Page, make_project):
         project_name = make_project()
         project = ProjectPage(page)
-        project.navigate_to(project_name)
+        project.navigate_by_id(project_name.id)
         event_name = rand_event_name()
-        project.add_project_event(event_name, "2027-08-01", "2027-08-02", all_day=True)
+        start, end = rand_date_range()
+        project.add_project_event(event_name, start, end, all_day=True)
 
         body = project.fetch_ics()
         block = _vevent_block(body, event_name)
@@ -362,8 +383,9 @@ class TestICSEventTiming:
         phase_name = make_phase(project_name)
         project = ProjectPage(page)
         event_name = rand_event_name()
+        event_date = rand_future_date()
         project.add_phase_event(
-            phase_name, event_name, "2027-09-10", "2027-09-10",
+            phase_name, event_name, event_date, event_date,
             all_day=False, start_time="14:00", end_time="15:30",
         )
 
@@ -387,9 +409,8 @@ class TestICSEventTiming:
         phase_name = make_phase(project_name)
         project = ProjectPage(page)
         event_name = rand_event_name()
-        project.add_phase_event(
-            phase_name, event_name, "2027-10-01", "2027-10-03", all_day=True,
-        )
+        start, end = rand_date_range()
+        project.add_phase_event(phase_name, event_name, start, end, all_day=True)
 
         body = project.fetch_ics()
         block = _vevent_block(body, event_name)

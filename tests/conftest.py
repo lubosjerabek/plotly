@@ -20,9 +20,11 @@ Authentication:
 """
 import json
 import os
+import random
 import socket
 import subprocess
 import time
+from datetime import date, timedelta
 from typing import Generator
 
 import pytest
@@ -61,6 +63,39 @@ def rand_event_name() -> str:
 
 def rand_email() -> str:
     return fake.unique.email()
+
+
+def rand_future_date(min_days: int = 60, max_days: int = 365) -> str:
+    """Return a random future date string in YYYY-MM-DD format."""
+    return (date.today() + timedelta(days=random.randint(min_days, max_days))).strftime("%Y-%m-%d")
+
+
+def rand_date_range(
+    min_start: int = 30,
+    max_start: int = 180,
+    min_dur: int = 30,
+    max_dur: int = 180,
+) -> tuple[str, str]:
+    """Return a (start, end) pair of future date strings."""
+    s = date.today() + timedelta(days=random.randint(min_start, max_start))
+    e = s + timedelta(days=random.randint(min_dur, max_dur))
+    return s.strftime("%Y-%m-%d"), e.strftime("%Y-%m-%d")
+
+
+# ── ProjectRef ────────────────────────────────────────────────────────────────
+
+class ProjectRef(str):
+    """
+    A string subclass that also carries the project's database id.
+
+    Behaves exactly like a plain string (has_text=ref, f"{ref}", comparisons)
+    so existing test code that treats it as a name requires no changes.
+    Use ref.id for direct URL navigation or API calls.
+    """
+    def __new__(cls, name: str, pid: int):
+        obj = super().__new__(cls, name)
+        obj.id = pid
+        return obj
 
 
 # ── Docker / server bootstrap ─────────────────────────────────────────────────
@@ -191,55 +226,63 @@ def second_user_page(browser: Browser, second_user_auth_state):
 
 # ── Resource factory fixtures ─────────────────────────────────────────────────
 
-@pytest.fixture(scope="session")
-def session_project(browser: Browser, auth_state) -> Generator[str, None, None]:
+@pytest.fixture
+def project(page: Page) -> Generator[ProjectRef, None, None]:
     """
-    Creates a randomly-named project once per session for tests that need a
-    pre-existing project (pesticide paradox: name changes every run).
-    Deleted automatically at session teardown — no separate cleanup test needed.
+    Function-scoped: creates a project via the REST API, yields a ProjectRef
+    (behaves as the project name string but also has a .id attribute for direct
+    URL navigation), and deletes the project via API on teardown.
+
+    Each test that requests this fixture gets its own isolated project.
     """
     name = rand_project_name()
-    ctx = browser.new_context(storage_state=auth_state)
-    pg = ctx.new_page()
-    DashboardPage(pg).create_project(name)
-    ctx.close()
-
-    yield name
-
-    ctx2 = browser.new_context(storage_state=auth_state)
-    pg2 = ctx2.new_page()
-    try:
-        DashboardPage(pg2).delete_project(name)
-    except Exception:
-        pass
-    finally:
-        ctx2.close()
+    resp = page.request.post(
+        BASE_URL + "/api/projects",
+        data=json.dumps({"name": name}),
+        headers={"Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest"},
+    )
+    assert resp.status == 201, f"Project creation failed: {resp.text()}"
+    pid = resp.json()["id"]
+    yield ProjectRef(name, pid)
+    page.request.delete(
+        BASE_URL + f"/api/projects/{pid}",
+        headers={"X-Requested-With": "XMLHttpRequest"},
+    )
 
 
 @pytest.fixture
 def make_project(page: Page):
     """
-    Factory fixture — call ``name = make_project()`` (or ``make_project(name=…)``)
-    to create a project via the UI.  Every project created this way is
-    automatically deleted after the test, regardless of pass/fail.
+    Factory fixture — call ``ref = make_project()`` (or ``make_project(name=…)``)
+    to create a project via the REST API.  Every project created this way is
+    automatically deleted after the test via API, regardless of pass/fail.
 
+    Returns a ProjectRef (string subclass with .id attribute).
     Names default to ``rand_project_name()`` so each run exercises different
     input data (pesticide paradox countermeasure).
     """
-    dashboard = DashboardPage(page)
-    created: list[str] = []
+    created: list[int] = []
 
-    def _make(name: str | None = None, desc: str = "") -> str:
+    def _make(name: str | None = None, desc: str = "") -> ProjectRef:
         n = name or rand_project_name()
-        dashboard.create_project(n, desc)
-        created.append(n)
-        return n
+        resp = page.request.post(
+            BASE_URL + "/api/projects",
+            data=json.dumps({"name": n, "description": desc}),
+            headers={"Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest"},
+        )
+        assert resp.status == 201, f"Project creation failed: {resp.text()}"
+        pid = resp.json()["id"]
+        created.append(pid)
+        return ProjectRef(n, pid)
 
     yield _make
 
-    for n in created:
+    for pid in created:
         try:
-            dashboard.delete_project(n)
+            page.request.delete(
+                BASE_URL + f"/api/projects/{pid}",
+                headers={"X-Requested-With": "XMLHttpRequest"},
+            )
         except Exception:
             pass  # best-effort cleanup
 
@@ -248,21 +291,29 @@ def make_project(page: Page):
 def make_phase(page: Page):
     """
     Factory fixture.
-    Call ``phase_name = make_phase(project_name)`` to navigate to the project
+    Call ``phase_name = make_phase(project_ref)`` to navigate to the project
     and add a phase. Optionally pass ``name``, ``start``, ``end``, ``desc``.
 
     Names default to ``rand_phase_name()``.
+    Dates default to a random future range via ``rand_date_range()``.
     """
     project = ProjectPage(page)
 
     def _make(
-        project_name: str,
+        project_ref: "ProjectRef | str",
         name:  str | None = None,
-        start: str        = "2027-01-01",
-        end:   str        = "2027-06-30",
+        start: str | None = None,
+        end:   str | None = None,
         desc:  str        = "",
     ) -> str:
-        project.navigate_to(project_name)
+        if start is None or end is None:
+            _start, _end = rand_date_range()
+            start = start or _start
+            end = end or _end
+        if hasattr(project_ref, "id"):
+            project.navigate_by_id(project_ref.id)
+        else:
+            project.navigate_to(project_ref)
         return project.add_phase(name or rand_phase_name(), start, end, desc)
 
     return _make
@@ -272,21 +323,27 @@ def make_phase(page: Page):
 def make_milestone(page: Page):
     """
     Factory fixture.
-    Call ``ms_name = make_milestone(project_name, phase_name)`` to navigate to the
+    Call ``ms_name = make_milestone(project_ref, phase_name)`` to navigate to the
     project and add a milestone under the given phase.
 
     Expands the target phase card automatically.
     Names default to ``rand_milestone_name()``.
+    Target date defaults to ``rand_future_date()``.
     """
     project = ProjectPage(page)
 
     def _make(
-        project_name: str,
+        project_ref:  "ProjectRef | str",
         phase_name:   str,
         name:         str | None = None,
-        target:       str        = "2027-03-01",
+        target:       str | None = None,
     ) -> str:
-        project.navigate_to(project_name)
+        if target is None:
+            target = rand_future_date()
+        if hasattr(project_ref, "id"):
+            project.navigate_by_id(project_ref.id)
+        else:
+            project.navigate_to(project_ref)
         return project.add_milestone(phase_name, name or rand_milestone_name(), target)
 
     return _make

@@ -43,27 +43,22 @@ class TestRegistration:
 
 class TestProjectIsolation:
 
-    def test_admin_project_not_in_second_user_list(self, page: Page, second_user_page: Page):
+    def test_admin_project_not_in_second_user_list(self, page: Page, second_user_page: Page, make_project):
         """Admin creates a project; second user should not see it in their list."""
+        ref = make_project()
         dashboard = DashboardPage(page)
-        dashboard.create_project("Admin Only Project")
+        dashboard.goto()
 
         second_user_page.goto(BASE_URL + "/")
         second_user_page.wait_for_load_state("networkidle")
         expect(
-            DashboardPage(second_user_page).get_project_card("Admin Only Project")._loc
+            DashboardPage(second_user_page).get_project_card(ref)._loc
         ).not_to_be_attached()
 
-        dashboard.delete_project("Admin Only Project")
-
-    def test_second_user_cannot_access_admin_project_url(self, page: Page, second_user_page: Page):
+    def test_second_user_cannot_access_admin_project_url(self, page: Page, second_user_page: Page, make_project):
         """Direct URL access to another user's project should be denied."""
-        dashboard = DashboardPage(page)
-        dashboard.create_project("Private Admin Project")
-        dashboard.goto()
-        card = dashboard.get_project_card("Private Admin Project")
-        href = card.open_link.get_attribute("href")
-        project_url = BASE_URL + href
+        ref = make_project()
+        project_url = BASE_URL + f"/project/{ref.id}"
 
         second_user_page.goto(project_url)
         second_user_page.wait_for_load_state("networkidle")
@@ -75,8 +70,6 @@ class TestProjectIsolation:
         )
         assert in_login or at_home or has_forbidden, \
             f"Second user should not see admin's private project. URL: {second_user_page.url}"
-
-        dashboard.delete_project("Private Admin Project")
 
     def test_second_user_project_not_visible_to_admin_without_collab(
         self, page: Page, second_user_page: Page
@@ -97,57 +90,64 @@ class TestProjectIsolation:
 class TestCollaborators:
 
     @pytest.fixture(autouse=True)
-    def _setup(self, page: Page, session_project):
-        self.project = ProjectPage(page)
-        self.project_name = session_project
+    def _setup(self, page: Page, project):
+        self.project_page = ProjectPage(page)
+        self.project_name = project
+        self.project_id = project.id
+        self.page = page
 
-    def test_collaborators_tab_switches_panel(self, page: Page):
-        self.project.navigate_to(self.project_name)
-        self.project.switch_to_collaborators()
-        expect(page.locator(ProjectPage.TAB_COLLABORATORS)).to_be_visible()
-        expect(page.locator(ProjectPage.TAB_PHASES)).not_to_be_visible()
-
-    def test_add_collaborator_by_email(self, page: Page, second_user_auth_state):
-        _state, email, _pass = second_user_auth_state
-        self.project.navigate_to(self.project_name)
-        self.project.switch_to_collaborators()
-        expect(page.locator(ProjectPage.TAB_COLLABORATORS)).to_be_visible()
-
+    def _add_collaborator(self, page: Page, email: str) -> None:
+        """Add a collaborator to the test project via API."""
         resp = page.request.post(
-            page.url.split("/project/")[0] + "/api/projects/" +
-            re.search(r"/project/(\d+)", page.url).group(1) + "/collaborators",
+            BASE_URL + f"/api/projects/{self.project_id}/collaborators",
             data=json.dumps({"email": email, "role": "viewer"}),
             headers={"Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest"},
         )
         assert resp.status in (200, 201), f"Add collaborator failed: {resp.text()}"
 
+    def test_collaborators_tab_switches_panel(self, page: Page):
+        self.project_page.navigate_by_id(self.project_id)
+        self.project_page.switch_to_collaborators()
+        expect(page.locator(ProjectPage.TAB_COLLABORATORS)).to_be_visible()
+        expect(page.locator(ProjectPage.TAB_PHASES)).not_to_be_visible()
+
+    def test_add_collaborator_by_email(self, page: Page, second_user_auth_state):
+        _state, email, _pass = second_user_auth_state
+        self.project_page.navigate_by_id(self.project_id)
+        self.project_page.switch_to_collaborators()
+        expect(page.locator(ProjectPage.TAB_COLLABORATORS)).to_be_visible()
+
+        self._add_collaborator(page, email)
+
         page.reload()
         page.wait_for_load_state("networkidle")
-        self.project.switch_to_collaborators()
+        self.project_page.switch_to_collaborators()
         page.wait_for_timeout(500)
         expect(page.locator(ProjectPage.TAB_COLLABORATORS)).to_contain_text(email)
 
-    def test_collaborator_can_see_shared_project(self, page: Page, second_user_page: Page):
-        self.project.navigate_to(self.project_name)
-        project_url = page.url
+    def test_collaborator_can_see_shared_project(self, page: Page, second_user_page: Page, second_user_auth_state):
+        _state, email, _pass = second_user_auth_state
+        # Add the collaborator first (independently, without relying on another test)
+        self._add_collaborator(page, email)
 
+        project_url = BASE_URL + f"/project/{self.project_id}"
         second_user_page.goto(project_url)
         second_user_page.wait_for_load_state("networkidle")
         expect(second_user_page.locator(ProjectPage.PROJECT_NAME)).to_contain_text(self.project_name)
 
     def test_remove_collaborator(self, page: Page, second_user_auth_state):
         _state, email, _pass = second_user_auth_state
-        self.project.navigate_to(self.project_name)
-        project_id = re.search(r"/project/(\d+)", page.url).group(1)
+        # Add collaborator first (independently)
+        self._add_collaborator(page, email)
 
-        resp = page.request.get(BASE_URL + f"/api/projects/{project_id}/collaborators")
+        resp = page.request.get(BASE_URL + f"/api/projects/{self.project_id}/collaborators")
         assert resp.status == 200
         collabs = resp.json()
         collab = next((c for c in collabs if c["email"] == email), None)
         assert collab is not None, f"{email} not found in collaborators"
 
         del_resp = page.request.delete(
-            BASE_URL + f"/api/projects/{project_id}/collaborators/{collab['id']}",
+            BASE_URL + f"/api/projects/{self.project_id}/collaborators/{collab['id']}",
             headers={"X-Requested-With": "XMLHttpRequest"}
         )
         assert del_resp.status == 200
