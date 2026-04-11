@@ -1003,15 +1003,20 @@ function editPhase(phaseId) {
   }, T.save_changes);
 
   // showModal builds the DOM synchronously, so we can attach immediately.
+  // Listen to both 'input' and 'change': 'input' covers programmatic changes
+  // (Playwright fill, spinners); 'change' covers the native date picker and
+  // keyboard segment editing followed by Tab-out.
   const startEl = document.getElementById('modal_input_start');
   const endEl   = document.getElementById('modal_input_end');
   if (startEl && endEl) {
     const origStart = phase.start_date, origEnd = phase.end_date;
-    startEl.addEventListener('input', () => {
+    const shiftEnd = () => {
       if (!startEl.value) return;
       const delta = Math.round((parseDateLocal(startEl.value) - parseDateLocal(origStart)) / 86400000);
       endEl.value = shiftDateStr(origEnd, delta);
-    });
+    };
+    startEl.addEventListener('input',  shiftEnd);
+    startEl.addEventListener('change', shiftEnd);
   }
 }
 
@@ -1178,16 +1183,21 @@ function _openEventModal(title, defaults, onSave, submitLabel) {
 
   // Wire up the all-day toggle after the modal DOM is built
   // showModal builds the DOM synchronously — attach the date-shift listener immediately.
+  // Listen to both 'input' and 'change': 'input' covers programmatic changes
+  // (Playwright fill, spinners); 'change' covers the native date picker and
+  // keyboard segment editing followed by Tab-out.
   const startEl = document.getElementById('modal_input_start');
   const endEl   = document.getElementById('modal_input_end');
   if (startEl && endEl) {
     const origStart = defaults.start_date || todayStr();
     const origEnd   = defaults.end_date   || todayStr();
-    startEl.addEventListener('input', () => {
+    const shiftEnd = () => {
       if (!startEl.value) return;
       const delta = Math.round((parseDateLocal(startEl.value) - parseDateLocal(origStart)) / 86400000);
       endEl.value = shiftDateStr(origEnd, delta);
-    });
+    };
+    startEl.addEventListener('input',  shiftEnd);
+    startEl.addEventListener('change', shiftEnd);
   }
 
   setTimeout(() => {
