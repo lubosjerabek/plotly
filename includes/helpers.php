@@ -1,9 +1,11 @@
 <?php
+
 defined('APP_BOOT') or die;
 
 // ── i18n ─────────────────────────────────────────────────────────────────────
 
-function load_lang(): array {
+function load_lang(): array
+{
     static $strings = null;
     if ($strings === null) {
         $lang = $_SESSION['lang'] ?? APP_LANG;
@@ -14,27 +16,31 @@ function load_lang(): array {
 }
 
 /** Translate a key, optionally sprintf-formatting with $args */
-function t(string $key, mixed ...$args): string {
+function t(string $key, mixed ...$args): string
+{
     $str = load_lang()[$key] ?? $key;
     if (!is_string($str)) return $key;
     return $args ? sprintf($str, ...$args) : $str;
 }
 
 /** Return the full translation map as a JSON object for window.T injection */
-function t_js(): string {
+function t_js(): string
+{
     $map = load_lang();
     return json_encode($map, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
 
 /** Current active language code */
-function current_lang(): string {
+function current_lang(): string
+{
     $lang = $_SESSION['lang'] ?? APP_LANG;
     return in_array($lang, ['en', 'cs'], true) ? $lang : 'en';
 }
 
 // ── Core helpers ──────────────────────────────────────────────────────────────
 
-function pdo(): PDO {
+function pdo(): PDO
+{
     static $pdo = null;
     if ($pdo === null) {
         $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET;
@@ -47,14 +53,16 @@ function pdo(): PDO {
     return $pdo;
 }
 
-function json_out(mixed $data, int $code = 200): void {
+function json_out(mixed $data, int $code = 200): void
+{
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
 
-function body(): array {
+function body(): array
+{
     static $parsed = null;
     if ($parsed === null) {
         $raw    = file_get_contents('php://input');
@@ -63,11 +71,13 @@ function body(): array {
     return $parsed;
 }
 
-function not_found(): void {
+function not_found(): void
+{
     json_out(['detail' => 'Not found'], 404);
 }
 
-function setting_get(string $key, string $default = ''): string {
+function setting_get(string $key, string $default = ''): string
+{
     try {
         $stmt = pdo()->prepare("SELECT value FROM settings WHERE `key` = ?");
         $stmt->execute([$key]);
@@ -78,12 +88,14 @@ function setting_get(string $key, string $default = ''): string {
     }
 }
 
-function setting_set(string $key, string $value): void {
+function setting_set(string $key, string $value): void
+{
     pdo()->prepare("INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?")
          ->execute([$key, $value, $value]);
 }
 
-function serve_template(string $name, array $vars = []): void {
+function serve_template(string $name, array $vars = []): void
+{
     extract($vars, EXTR_SKIP);
     require __DIR__ . '/../templates/' . $name;
     exit;
@@ -91,18 +103,21 @@ function serve_template(string $name, array $vars = []): void {
 
 // ── CSRF protection ───────────────────────────────────────────────────────────
 
-function csrf_token(): string {
+function csrf_token(): string
+{
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
     return $_SESSION['csrf_token'];
 }
 
-function csrf_field(): string {
+function csrf_field(): string
+{
     return '<input type="hidden" name="_csrf" value="' . htmlspecialchars(csrf_token()) . '">';
 }
 
-function verify_csrf(): void {
+function verify_csrf(): void
+{
     // XHR requests: a custom header is sufficient (browsers block
     // cross-origin custom headers without a CORS preflight)
     if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest') {

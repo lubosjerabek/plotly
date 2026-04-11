@@ -1,4 +1,5 @@
-<?php $page_title = t('page_title_login'); require __DIR__ . '/partials/head.php'; ?>
+<?php $page_title = t('page_title_login');
+require __DIR__ . '/partials/head.php'; ?>
   <style>
     :root {
       --bg:        #0f0f13;

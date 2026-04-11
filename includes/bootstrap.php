@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 defined('APP_BOOT') or die;
 
 $_session_lifetime = (int)setting_get('session_timeout', '0');
@@ -24,4 +26,3 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-i
 if (($_SERVER['HTTPS'] ?? '') === 'on') {
     header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
 }
-

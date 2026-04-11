@@ -1,9 +1,11 @@
 <?php
+
 defined('APP_BOOT') or die;
 
 // ── Auth pages ────────────────────────────────────────────────────────────────
 
-function page_login(): void {
+function page_login(): void
+{
     $error = '';
     $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 
@@ -43,13 +45,15 @@ function page_login(): void {
     serve_template('login.php', ['error' => $error]);
 }
 
-function page_logout(): void {
+function page_logout(): void
+{
     session_destroy();
     header('Location: /login');
     exit;
 }
 
-function page_register(string $token): void {
+function page_register(string $token): void
+{
     // Validate token
     $stmt = pdo()->prepare(
         'SELECT id, label FROM invites WHERE token = ? AND used_by IS NULL AND expires_at > NOW() LIMIT 1'
@@ -110,7 +114,8 @@ function page_register(string $token): void {
     serve_template('register.php', ['error' => $error, 'invite' => $invite, 'token' => $token]);
 }
 
-function page_reset_password(string $token): void {
+function page_reset_password(string $token): void
+{
     $stmt = pdo()->prepare(
         'SELECT id, user_id FROM password_resets WHERE token = ? AND used_at IS NULL AND expires_at > NOW() LIMIT 1'
     );
@@ -148,12 +153,14 @@ function page_reset_password(string $token): void {
 
 // ── Page handlers ─────────────────────────────────────────────────────────────
 
-function page_index(): void {
+function page_index(): void
+{
     require_auth();
     serve_template('index.php');
 }
 
-function page_project(int $project_id): void {
+function page_project(int $project_id): void
+{
     require_auth();
     if (!can_read_project($project_id)) {
         header('Location: /');
@@ -162,7 +169,8 @@ function page_project(int $project_id): void {
     serve_template('project.php', ['project_id' => $project_id]);
 }
 
-function page_admin_users(): void {
+function page_admin_users(): void
+{
     require_admin();
     serve_template('admin.php');
 }

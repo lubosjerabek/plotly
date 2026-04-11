@@ -1,4 +1,5 @@
 <?php
+
 // English translations
 return [
     // ── Meta / page titles ─────────────────────────────────────

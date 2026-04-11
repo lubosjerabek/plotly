@@ -1,7 +1,7 @@
 """Dashboard page object and ProjectCard component."""
 import re
 
-from playwright.sync_api import Page, Locator, expect
+from playwright.sync_api import Locator, expect
 
 from .base_page import BasePage
 

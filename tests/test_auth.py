@@ -1,10 +1,8 @@
 """
 Auth tests: login page, bad credentials, logout, unauthenticated redirects.
 """
-import pytest
-from playwright.sync_api import Browser, expect
-
 from pages import BASE_URL, LoginPage
+from playwright.sync_api import Browser, expect
 
 
 class TestLogin:
@@ -20,8 +18,8 @@ class TestLogin:
         ctx.close()
 
     def test_wrong_password_stays_on_login(self, browser: Browser):
-        from faker import Faker
         from conftest import TEST_AUTH_EMAIL
+        from faker import Faker
         ctx = browser.new_context()
         pg = ctx.new_page()
         login = LoginPage(pg)

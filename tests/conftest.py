@@ -29,10 +29,9 @@ from typing import Generator
 
 import pytest
 from faker import Faker
-from playwright.sync_api import Browser, Page
-
-from pages import BASE_URL, DashboardPage, ProjectPage
+from pages import BASE_URL, ProjectPage
 from pages.login_page import LoginPage
+from playwright.sync_api import Browser, Page
 
 TEST_AUTH_EMAIL = os.getenv("TEST_AUTH_EMAIL", os.getenv("TEST_AUTH_USER", "admin@example.com"))
 TEST_AUTH_PASS  = os.getenv("TEST_AUTH_PASS", "plotly_admin_pass")

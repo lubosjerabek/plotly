@@ -1,15 +1,18 @@
 <?php
+
 defined('APP_BOOT') or die;
 
 // ── ICS helpers ───────────────────────────────────────────────────────────────
 
-function ics_escape(string $s): string {
+function ics_escape(string $s): string
+{
     $s = str_replace(['\\', ';', ','], ['\\\\', '\\;', '\\,'], $s);
     $s = str_replace(["\r\n", "\n", "\r"], '\\n', $s);
     return $s;
 }
 
-function build_ics(array $items): string {
+function build_ics(array $items): string
+{
     $now   = gmdate('Ymd\THis\Z');
     $lines = [
         'BEGIN:VCALENDAR',
@@ -31,7 +34,7 @@ function build_ics(array $items): string {
             // the wall-clock time rather than converting from UTC.
             $tz = date_default_timezone_get() ?: 'UTC';
             $dtstart = str_replace('-', '', $ev['start']) . 'T' . str_replace(':', '', substr($startTime, 0, 5)) . '00';
-            $dtend   = str_replace('-', '', $ev['end'])   . 'T' . str_replace(':', '', substr($endTime,   0, 5)) . '00';
+            $dtend   = str_replace('-', '', $ev['end'])   . 'T' . str_replace(':', '', substr($endTime, 0, 5)) . '00';
             $lines[] = 'DTSTART;TZID=' . $tz . ':' . $dtstart;
             $lines[] = 'DTEND;TZID='   . $tz . ':' . $dtend;
         } else {
@@ -51,7 +54,8 @@ function build_ics(array $items): string {
     return implode("\r\n", $lines) . "\r\n";
 }
 
-function collect_project_ics_items(array $project): array {
+function collect_project_ics_items(array $project): array
+{
     $items = [];
     foreach ($project['phases'] as $phase) {
         $items[] = [
@@ -107,7 +111,8 @@ function collect_project_ics_items(array $project): array {
 
 // ── ICS feed handlers ─────────────────────────────────────────────────────────
 
-function ics_all(): void {
+function ics_all(): void
+{
     header('Referrer-Policy: no-referrer');
     header('Cache-Control: private, no-store');
     $ics_user = require_ics_token();
@@ -136,7 +141,8 @@ function ics_all(): void {
     exit;
 }
 
-function ics_project(int $id): void {
+function ics_project(int $id): void
+{
     header('Referrer-Policy: no-referrer');
     header('Cache-Control: private, no-store');
     $ics_user = require_ics_token();

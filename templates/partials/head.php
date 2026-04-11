@@ -1,4 +1,6 @@
-<?php $lang = current_lang(); ?>
+<?php
+
+$lang = current_lang(); ?>
 <!DOCTYPE html>
 <html lang="<?= $lang ?>">
 <head>

@@ -5,10 +5,9 @@ import re
 from datetime import datetime, timedelta
 
 import pytest
-from playwright.sync_api import Page, expect
-
+from conftest import rand_date_range, rand_event_name, rand_future_date, rand_milestone_name
 from pages import BASE_URL, ProjectPage
-from conftest import rand_milestone_name, rand_event_name, rand_date_range, rand_future_date
+from playwright.sync_api import Page, expect
 
 
 def _vevent_block(body: str, summary_fragment: str) -> str:

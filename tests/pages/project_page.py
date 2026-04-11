@@ -1,7 +1,7 @@
 """Project detail page object, PhaseCard component."""
 import re
 
-from playwright.sync_api import Page, Locator, expect
+from playwright.sync_api import Locator, Page, expect
 
 from .base_page import BasePage
 

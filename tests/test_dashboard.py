@@ -2,11 +2,10 @@
 Dashboard tests: project list, create, edit, delete, modals.
 """
 import re
-import pytest
-from playwright.sync_api import Page, expect
 
-from pages import DashboardPage
 from conftest import fake
+from pages import DashboardPage
+from playwright.sync_api import Page, expect
 
 
 class TestDashboard:
@@ -36,8 +35,8 @@ class TestDashboard:
         expect(page.locator(DashboardPage.PROJECT_MODAL)).not_to_have_class(re.compile(r"is-open"))
 
     def test_create_project_shows_toast_and_card(self, page: Page):
-        from pages import BASE_URL
         from conftest import rand_project_name
+        from pages import BASE_URL
         name = rand_project_name()
         dashboard = DashboardPage(page)
         dashboard.create_project(name)

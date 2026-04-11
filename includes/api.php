@@ -1,14 +1,17 @@
 <?php
+
 defined('APP_BOOT') or die;
 
 // ── Projects API ──────────────────────────────────────────────────────────────
 
-function api_get_projects(): void {
+function api_get_projects(): void
+{
     require_auth();
     json_out(get_projects());
 }
 
-function api_create_project(): void {
+function api_create_project(): void
+{
     require_auth();
     $b    = body();
     $name = trim($b['name'] ?? '');
@@ -20,7 +23,8 @@ function api_create_project(): void {
     json_out(['id' => $id, 'user_id' => $uid, 'name' => $name, 'description' => $b['description'] ?? null, 'phases' => []], 201);
 }
 
-function api_get_project(int $id): void {
+function api_get_project(int $id): void
+{
     require_auth();
     assert_project_read($id);
     $project = get_full_project($id);
@@ -30,7 +34,8 @@ function api_get_project(int $id): void {
     json_out($project);
 }
 
-function api_update_project(int $id): void {
+function api_update_project(int $id): void
+{
     require_auth();
     assert_project_write($id);
     $b = body();
@@ -44,7 +49,8 @@ function api_update_project(int $id): void {
     json_out($project);
 }
 
-function api_delete_project(int $id): void {
+function api_delete_project(int $id): void
+{
     require_auth();
     if (!is_project_owner($id)) json_out(['detail' => 'Forbidden'], 403);
     $del = pdo()->prepare('DELETE FROM projects WHERE id = ?');
@@ -54,7 +60,8 @@ function api_delete_project(int $id): void {
 
 // ── Phases API ────────────────────────────────────────────────────────────────
 
-function api_create_phase(): void {
+function api_create_phase(): void
+{
     require_auth();
     $b          = body();
     $project_id = (int)($_GET['project_id'] ?? 0);
@@ -86,7 +93,8 @@ function api_create_phase(): void {
     json_out($phase, 201);
 }
 
-function api_update_phase(int $id): void {
+function api_update_phase(int $id): void
+{
     require_auth();
     $b = body();
 
@@ -134,7 +142,8 @@ function api_update_phase(int $id): void {
     json_out($phase);
 }
 
-function api_delete_phase(int $id): void {
+function api_delete_phase(int $id): void
+{
     require_auth();
     $pid = project_id_for_phase($id);
     if ($pid) assert_project_write($pid);
@@ -145,7 +154,8 @@ function api_delete_phase(int $id): void {
 
 // ── Milestones API ────────────────────────────────────────────────────────────
 
-function api_create_project_milestone(int $project_id): void {
+function api_create_project_milestone(int $project_id): void
+{
     require_auth();
     assert_project_write($project_id);
     $b    = body();
@@ -155,7 +165,8 @@ function api_create_project_milestone(int $project_id): void {
     json_out(['id' => $new_id, 'project_id' => $project_id, 'phase_id' => null, 'name' => $b['name'] ?? '', 'target_date' => $b['target_date'] ?? '', 'google_event_id' => null], 201);
 }
 
-function api_create_milestone(int $phase_id): void {
+function api_create_milestone(int $phase_id): void
+{
     require_auth();
     $pid = project_id_for_phase($phase_id);
     if ($pid) assert_project_write($pid);
@@ -166,7 +177,8 @@ function api_create_milestone(int $phase_id): void {
     json_out(['id' => $new_id, 'phase_id' => $phase_id, 'name' => $b['name'] ?? '', 'target_date' => $b['target_date'] ?? '', 'google_event_id' => null], 201);
 }
 
-function api_update_milestone(int $id): void {
+function api_update_milestone(int $id): void
+{
     require_auth();
     $b = body();
 
@@ -206,7 +218,8 @@ function api_update_milestone(int $id): void {
     json_out($ms);
 }
 
-function api_delete_milestone(int $id): void {
+function api_delete_milestone(int $id): void
+{
     require_auth();
     $pid = project_id_for_milestone($id);
     if ($pid) assert_project_write($pid);
@@ -217,7 +230,8 @@ function api_delete_milestone(int $id): void {
 
 // ── Events API ────────────────────────────────────────────────────────────────
 
-function api_create_project_event(int $project_id): void {
+function api_create_project_event(int $project_id): void
+{
     require_auth();
     assert_project_write($project_id);
     $b          = body();
@@ -231,7 +245,8 @@ function api_create_project_event(int $project_id): void {
               'start_time' => $start_time, 'end_time' => $end_time, 'google_event_id' => null], 201);
 }
 
-function api_create_event(int $phase_id): void {
+function api_create_event(int $phase_id): void
+{
     require_auth();
     $pid = project_id_for_phase($phase_id);
     if ($pid) assert_project_write($pid);
@@ -246,7 +261,8 @@ function api_create_event(int $phase_id): void {
               'start_time' => $start_time, 'end_time' => $end_time, 'google_event_id' => null], 201);
 }
 
-function api_update_event(int $id): void {
+function api_update_event(int $id): void
+{
     require_auth();
     $b = body();
     $sel = pdo()->prepare('SELECT * FROM events WHERE id = ?');
@@ -263,7 +279,7 @@ function api_update_event(int $id): void {
         $end_time   = $b['all_day'] ? null : (($b['end_time']   ?? null) ?: null);
     } else {
         $start_time = array_key_exists('start_time', $b) ? ($b['start_time'] ?: null) : $existing['start_time'];
-        $end_time   = array_key_exists('end_time',   $b) ? ($b['end_time']   ?: null) : $existing['end_time'];
+        $end_time   = array_key_exists('end_time', $b) ? ($b['end_time']   ?: null) : $existing['end_time'];
     }
 
     $upd = pdo()->prepare('UPDATE events SET name=?, start_date=?, end_date=?, start_time=?, end_time=? WHERE id=?');
@@ -281,7 +297,8 @@ function api_update_event(int $id): void {
     json_out($ev);
 }
 
-function api_delete_event(int $id): void {
+function api_delete_event(int $id): void
+{
     require_auth();
     $pid = project_id_for_event($id);
     if ($pid) assert_project_write($pid);
@@ -292,7 +309,8 @@ function api_delete_event(int $id): void {
 
 // ── Collaborators API ─────────────────────────────────────────────────────────
 
-function api_get_collaborators(int $project_id): void {
+function api_get_collaborators(int $project_id): void
+{
     require_auth();
     assert_project_read($project_id);
     $stmt = pdo()->prepare(
@@ -307,7 +325,8 @@ function api_get_collaborators(int $project_id): void {
     json_out($rows);
 }
 
-function api_add_collaborator(int $project_id): void {
+function api_add_collaborator(int $project_id): void
+{
     require_auth();
     if (!is_project_owner($project_id)) json_out(['detail' => 'Forbidden'], 403);
     $b     = body();
@@ -341,7 +360,8 @@ function api_add_collaborator(int $project_id): void {
     json_out($row, 201);
 }
 
-function api_update_collaborator(int $project_id, int $user_id): void {
+function api_update_collaborator(int $project_id, int $user_id): void
+{
     require_auth();
     if (!is_project_owner($project_id)) json_out(['detail' => 'Forbidden'], 403);
     $b    = body();
@@ -351,7 +371,8 @@ function api_update_collaborator(int $project_id, int $user_id): void {
     json_out(['ok' => true]);
 }
 
-function api_remove_collaborator(int $project_id, int $user_id): void {
+function api_remove_collaborator(int $project_id, int $user_id): void
+{
     require_auth();
     if (!is_project_owner($project_id)) json_out(['detail' => 'Forbidden'], 403);
     $del = pdo()->prepare('DELETE FROM project_collaborators WHERE project_id = ? AND user_id = ?');
@@ -361,7 +382,8 @@ function api_remove_collaborator(int $project_id, int $user_id): void {
 
 // ── ICS / Settings API ────────────────────────────────────────────────────────
 
-function api_get_ics_token(): void {
+function api_get_ics_token(): void
+{
     require_auth();
     $token = current_user_ics_token();
     $base  = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
@@ -369,7 +391,8 @@ function api_get_ics_token(): void {
     json_out(['token' => $token, 'url' => $base . '/calendar.ics?token=' . urlencode($token)]);
 }
 
-function api_rotate_ics_token(): void {
+function api_rotate_ics_token(): void
+{
     require_auth();
     $token = bin2hex(random_bytes(32));
     $stmt  = pdo()->prepare('UPDATE users SET ics_token = ? WHERE id = ?');
@@ -379,12 +402,14 @@ function api_rotate_ics_token(): void {
     json_out(['token' => $token, 'url' => $base . '/calendar.ics?token=' . urlencode($token)]);
 }
 
-function api_get_admin_settings(): void {
+function api_get_admin_settings(): void
+{
     require_admin();
     json_out(['session_timeout' => (int)setting_get('session_timeout', '0')]);
 }
 
-function api_update_admin_settings(): void {
+function api_update_admin_settings(): void
+{
     require_admin();
     $b       = body();
     $timeout = (int)($b['session_timeout'] ?? 0);
@@ -396,13 +421,15 @@ function api_update_admin_settings(): void {
 
 // ── Profile API ───────────────────────────────────────────────────────────────
 
-function api_get_profile(): void {
+function api_get_profile(): void
+{
     require_auth();
     $u = current_user();
     json_out(['id' => $u['id'], 'name' => $u['name'], 'email' => $u['email'], 'role' => $u['role']]);
 }
 
-function api_change_password(): void {
+function api_change_password(): void
+{
     require_auth();
     $b    = body();
     $curr = $b['current_password'] ?? '';
@@ -424,7 +451,8 @@ function api_change_password(): void {
 
 // ── Admin API ─────────────────────────────────────────────────────────────────
 
-function api_get_users(): void {
+function api_get_users(): void
+{
     require_admin();
     $rows = pdo()->query(
         'SELECT id, email, name, role, is_active, created_at FROM users ORDER BY id'
@@ -432,7 +460,8 @@ function api_get_users(): void {
     json_out(array_map(fn($r) => array_merge($r, ['id' => (int)$r['id']]), $rows));
 }
 
-function api_create_invite(): void {
+function api_create_invite(): void
+{
     require_admin();
     $b       = body();
     $label   = trim($b['label']   ?? '');
@@ -458,7 +487,8 @@ function api_create_invite(): void {
     ], 201);
 }
 
-function api_get_invites(): void {
+function api_get_invites(): void
+{
     require_admin();
     $rows = pdo()->query(
         'SELECT i.id, i.token, i.label, i.expires_at, i.created_at,
@@ -470,7 +500,8 @@ function api_get_invites(): void {
     json_out(array_map(fn($r) => array_merge($r, ['id' => (int)$r['id']]), $rows));
 }
 
-function api_revoke_invite(int $id): void {
+function api_revoke_invite(int $id): void
+{
     require_admin();
     // Mark as expired immediately by setting expires_at to now
     pdo()->prepare('UPDATE invites SET expires_at = NOW() WHERE id = ? AND used_by IS NULL')
@@ -478,7 +509,8 @@ function api_revoke_invite(int $id): void {
     json_out(['ok' => true]);
 }
 
-function api_create_password_reset(int $user_id): void {
+function api_create_password_reset(int $user_id): void
+{
     require_admin();
     $stmt = pdo()->prepare('SELECT id FROM users WHERE id = ? LIMIT 1');
     $stmt->execute([$user_id]);
@@ -494,7 +526,8 @@ function api_create_password_reset(int $user_id): void {
     json_out(['url' => $base . '/reset-password/' . $token, 'expires_at' => $expires], 201);
 }
 
-function api_update_user(int $user_id): void {
+function api_update_user(int $user_id): void
+{
     require_admin();
     $b         = body();
     $is_active = isset($b['is_active']) ? ($b['is_active'] ? 1 : 0) : null;

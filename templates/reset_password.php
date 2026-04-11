@@ -1,4 +1,5 @@
-<?php $page_title = t('page_title_reset_password'); require __DIR__ . '/partials/head.php'; ?>
+<?php $page_title = t('page_title_reset_password');
+require __DIR__ . '/partials/head.php'; ?>
   <style>
     :root {
       --bg:        #0f0f13;
@@ -73,10 +74,10 @@
     <?php elseif ($success): ?>
       <div class="success-box"><?= htmlspecialchars(t('reset_success')) ?></div>
       <a class="sign-in-link" href="/login"><?= htmlspecialchars(t('sign_in')) ?></a>
-    <?php else: ?>
-      <?php if (!empty($error)): ?>
+    <?php else : ?>
+        <?php if (!empty($error)): ?>
         <div class="error"><?= htmlspecialchars($error) ?></div>
-      <?php endif; ?>
+        <?php endif; ?>
       <form method="post" action="/reset-password/<?= htmlspecialchars($token) ?>">
         <?= csrf_field() ?>
         <label for="password"><?= htmlspecialchars(t('new_password')) ?></label>

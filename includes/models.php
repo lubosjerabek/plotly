@@ -1,10 +1,12 @@
 <?php
+
 defined('APP_BOOT') or die;
 
 // ── Project access helpers ────────────────────────────────────────────────────
 
 /** True if the current user can read this project (owner, collaborator, or admin) */
-function can_read_project(int $project_id): bool {
+function can_read_project(int $project_id): bool
+{
     $user = current_user();
     if (!$user) return false;
     if ($user['role'] === 'admin') return true;
@@ -20,7 +22,8 @@ function can_read_project(int $project_id): bool {
 }
 
 /** True if the current user can write to this project (owner, editor-collaborator, or admin) */
-function can_write_project(int $project_id): bool {
+function can_write_project(int $project_id): bool
+{
     $user = current_user();
     if (!$user) return false;
     if ($user['role'] === 'admin') return true;
@@ -36,7 +39,8 @@ function can_write_project(int $project_id): bool {
 }
 
 /** True if the current user owns this project (or is admin) */
-function is_project_owner(int $project_id): bool {
+function is_project_owner(int $project_id): bool
+{
     $user = current_user();
     if (!$user) return false;
     if ($user['role'] === 'admin') return true;
@@ -45,16 +49,19 @@ function is_project_owner(int $project_id): bool {
     return (bool)$stmt->fetch();
 }
 
-function assert_project_read(int $project_id): void {
+function assert_project_read(int $project_id): void
+{
     if (!can_read_project($project_id)) json_out(['detail' => 'Forbidden'], 403);
 }
 
-function assert_project_write(int $project_id): void {
+function assert_project_write(int $project_id): void
+{
     if (!can_write_project($project_id)) json_out(['detail' => 'Forbidden'], 403);
 }
 
 /** Get project_id for a phase (returns 0 if not found) */
-function project_id_for_phase(int $phase_id): int {
+function project_id_for_phase(int $phase_id): int
+{
     $stmt = pdo()->prepare('SELECT project_id FROM phases WHERE id = ?');
     $stmt->execute([$phase_id]);
     $row = $stmt->fetch();
@@ -62,7 +69,8 @@ function project_id_for_phase(int $phase_id): int {
 }
 
 /** Get project_id for a milestone */
-function project_id_for_milestone(int $milestone_id): int {
+function project_id_for_milestone(int $milestone_id): int
+{
     $stmt = pdo()->prepare('SELECT project_id, phase_id FROM milestones WHERE id = ?');
     $stmt->execute([$milestone_id]);
     $row = $stmt->fetch();
@@ -73,7 +81,8 @@ function project_id_for_milestone(int $milestone_id): int {
 }
 
 /** Get project_id for an event */
-function project_id_for_event(int $event_id): int {
+function project_id_for_event(int $event_id): int
+{
     $stmt = pdo()->prepare('SELECT project_id, phase_id FROM events WHERE id = ?');
     $stmt->execute([$event_id]);
     $row = $stmt->fetch();
@@ -86,7 +95,8 @@ function project_id_for_event(int $event_id): int {
 // ── ICS token helpers ─────────────────────────────────────────────────────────
 
 /** Find user by ICS token. Returns user row or null. */
-function user_by_ics_token(string $token): ?array {
+function user_by_ics_token(string $token): ?array
+{
     if ($token === '') return null;
     $stmt = pdo()->prepare('SELECT id, role FROM users WHERE ics_token = ? AND is_active = 1 LIMIT 1');
     $stmt->execute([$token]);
@@ -96,7 +106,8 @@ function user_by_ics_token(string $token): ?array {
 }
 
 /** Get per-user ICS token for the currently authenticated user */
-function current_user_ics_token(): string {
+function current_user_ics_token(): string
+{
     $u = current_user();
     if (!$u || $u['ics_token'] === '') {
         // Generate on first use
@@ -108,7 +119,8 @@ function current_user_ics_token(): string {
     return $u['ics_token'];
 }
 
-function require_ics_token(): ?array {
+function require_ics_token(): ?array
+{
     $token = $_GET['token'] ?? '';
     $user  = user_by_ics_token($token);
     if (!$user) {
@@ -122,7 +134,8 @@ function require_ics_token(): ?array {
 
 // ── Database helpers ──────────────────────────────────────────────────────────
 
-function get_projects(): array {
+function get_projects(): array
+{
     $user = current_user();
     if ($user['role'] === 'admin') {
         $rows = pdo()->query('SELECT id, user_id, name, description FROM projects ORDER BY id')->fetchAll();
@@ -147,7 +160,8 @@ function get_projects(): array {
     ], $rows);
 }
 
-function get_full_project(int $id): ?array {
+function get_full_project(int $id): ?array
+{
     $stmt = pdo()->prepare('SELECT id, user_id, name, description FROM projects WHERE id = ?');
     $stmt->execute([$id]);
     $project = $stmt->fetch();
@@ -170,7 +184,7 @@ function get_full_project(int $id): ?array {
         // Milestones
         $ms = pdo()->prepare('SELECT id, phase_id, name, target_date, google_event_id FROM milestones WHERE phase_id = ? ORDER BY target_date');
         $ms->execute([$phase['id']]);
-        $phase['milestones'] = array_map(function($m) {
+        $phase['milestones'] = array_map(function ($m) {
             $m['id']       = (int)$m['id'];
             $m['phase_id'] = (int)$m['phase_id'];
             return $m;
@@ -179,7 +193,7 @@ function get_full_project(int $id): ?array {
         // Events
         $ev = pdo()->prepare('SELECT id, phase_id, name, start_date, end_date, start_time, end_time, google_event_id FROM events WHERE phase_id = ? ORDER BY start_date');
         $ev->execute([$phase['id']]);
-        $phase['events'] = array_map(function($e) {
+        $phase['events'] = array_map(function ($e) {
             $e['id']       = (int)$e['id'];
             $e['phase_id'] = (int)$e['phase_id'];
             return $e;
@@ -192,7 +206,7 @@ function get_full_project(int $id): ?array {
     // Project-level milestones (not tied to any phase)
     $ms = pdo()->prepare('SELECT id, project_id, name, target_date, google_event_id FROM milestones WHERE project_id = ? AND phase_id IS NULL ORDER BY target_date');
     $ms->execute([$id]);
-    $project['milestones'] = array_map(function($m) {
+    $project['milestones'] = array_map(function ($m) {
         $m['id']         = (int)$m['id'];
         $m['project_id'] = (int)$m['project_id'];
         $m['phase_id']   = null;
@@ -202,7 +216,7 @@ function get_full_project(int $id): ?array {
     // Project-level events (not tied to any phase)
     $ev = pdo()->prepare('SELECT id, project_id, name, start_date, end_date, start_time, end_time, google_event_id FROM events WHERE project_id = ? AND phase_id IS NULL ORDER BY start_date');
     $ev->execute([$id]);
-    $project['events'] = array_map(function($e) {
+    $project['events'] = array_map(function ($e) {
         $e['id']         = (int)$e['id'];
         $e['project_id'] = (int)$e['project_id'];
         $e['phase_id']   = null;
@@ -218,7 +232,7 @@ function get_full_project(int $id): ?array {
          ORDER BY pc.added_at'
     );
     $co->execute([$id]);
-    $project['collaborators'] = array_map(function($c) {
+    $project['collaborators'] = array_map(function ($c) {
         $c['id'] = (int)$c['id'];
         return $c;
     }, $co->fetchAll());
@@ -226,7 +240,8 @@ function get_full_project(int $id): ?array {
     return $project;
 }
 
-function shift_dependents(int $phase_id, int $delta_days): void {
+function shift_dependents(int $phase_id, int $delta_days): void
+{
     if ($delta_days === 0) return;
     $stmt = pdo()->prepare('SELECT id, start_date, end_date FROM phases WHERE depends_on_id = ?');
     $stmt->execute([$phase_id]);

@@ -4,10 +4,8 @@ Gantt / Timeline tab tests: bar rendering, view mode switches, date labels.
 Each test creates its own project+phase via fixtures so tests are fully
 self-contained and independent of execution order.
 """
-import pytest
-from playwright.sync_api import Page, expect
-
 from pages import ProjectPage
+from playwright.sync_api import Page, expect
 
 
 class TestGantt:

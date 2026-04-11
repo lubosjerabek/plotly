@@ -1,13 +1,12 @@
 """
 Multi-user tests: registration, project isolation, access control, collaborators.
 """
-import re
 import json
-import pytest
-from playwright.sync_api import Browser, Page, expect
 
-from pages import BASE_URL, DashboardPage, ProjectPage
+import pytest
 from conftest import rand_project_name
+from pages import BASE_URL, DashboardPage, ProjectPage
+from playwright.sync_api import Browser, Page, expect
 
 
 class TestRegistration:

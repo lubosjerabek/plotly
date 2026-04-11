@@ -6,10 +6,9 @@ import re
 from datetime import datetime, timedelta
 
 import pytest
+from conftest import rand_date_range, rand_event_name, rand_future_date, rand_milestone_name, rand_phase_name
+from pages import BASE_URL, ProjectPage
 from playwright.sync_api import Page, expect
-
-from pages import BASE_URL, DashboardPage, ProjectPage
-from conftest import rand_phase_name, rand_milestone_name, rand_event_name, rand_date_range, rand_future_date
 
 
 class TestProjectDetail:

@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<ruleset name="Plotly">
+    <description>PSR-12 with relaxed control-structure rules to match this project's one-liner if style.</description>
+
+    <!-- PHP files in the project root and includes/ -->
+    <file>.</file>
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/venv/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+
+    <arg name="extensions" value="php"/>
+    <arg name="colors"/>
+    <arg value="sp"/>   <!-- show sources and progress -->
+
+    <!-- Base: PSR-12 -->
+    <rule ref="PSR12">
+        <!-- The router uses intentional one-liner ifs:  if ($c) { fn(); }
+             Excluding brace-placement rules that would expand every one-liner. -->
+        <exclude name="Generic.ControlStructures.InlineControlStructure"/>
+        <exclude name="Squiz.ControlStructures.ControlSignature.NewlineAfterOpenBrace"/>
+        <exclude name="Squiz.ControlStructures.ControlSignature.SpaceAfterCloseParenthesis"/>
+        <exclude name="Squiz.WhiteSpace.ScopeClosingBrace.ContentBefore"/>
+
+        <!-- Procedural files legitimately mix function declarations with side effects. -->
+        <exclude name="PSR1.Files.SideEffects.FoundWithSymbols"/>
+
+        <!-- Line length: warn at 200 chars (default 80/120 is too tight for long route conditions). -->
+        <exclude name="Generic.Files.LineLength"/>
+    </rule>
+
+    <!-- Re-add line length with a generous limit -->
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="lineLimit" value="200"/>
+            <property name="absoluteLineLimit" value="0"/>
+        </properties>
+    </rule>
+
+    <!-- Catch use of deprecated or forbidden PHP functions -->
+    <rule ref="Generic.PHP.DeprecatedFunctions"/>
+    <rule ref="Generic.PHP.DisallowShortOpenTag"/>
+
+    <!-- Flag unreachable code after return/throw/continue/break -->
+    <rule ref="Squiz.PHP.NonExecutableCode"/>
+
+    <!-- Flag eval() usage -->
+    <rule ref="Squiz.PHP.Eval"/>
+</ruleset>

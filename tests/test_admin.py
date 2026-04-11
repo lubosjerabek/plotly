@@ -2,10 +2,9 @@
 Admin panel tests: access control, invite generation, user listing, password reset links.
 """
 import re
-import pytest
-from playwright.sync_api import Page, expect
 
 from pages import BASE_URL, AdminPage, DashboardPage
+from playwright.sync_api import Page, expect
 
 
 class TestAdminAccess:

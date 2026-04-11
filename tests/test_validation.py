@@ -10,11 +10,9 @@ import re
 from datetime import date, timedelta
 
 import pytest
-from playwright.sync_api import Page, expect
-
+from conftest import rand_event_name, rand_future_date, rand_phase_name
 from pages import DashboardPage, ProjectPage
-from conftest import rand_phase_name, rand_event_name, rand_future_date
-
+from playwright.sync_api import Page, expect
 
 # ── Selectors for validation feedback ──────────────────────────────────────────
 FIELD_ERROR      = ".field-error"
@@ -54,8 +52,8 @@ class TestDashboardValidation:
 
     def test_create_project_error_clears_on_valid_submit(self, page: Page):
         """After a failed submission, a valid name clears the error and saves."""
-        from pages import BASE_URL
         from conftest import rand_project_name
+        from pages import BASE_URL
         dashboard = DashboardPage(page)
         dashboard.goto()
         dashboard.open_new_project_modal()

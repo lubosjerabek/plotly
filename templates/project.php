@@ -1,4 +1,5 @@
-<?php $page_title = t('page_title_project'); require __DIR__ . '/partials/head.php'; ?>
+<?php $page_title = t('page_title_project');
+require __DIR__ . '/partials/head.php'; ?>
   <link rel="stylesheet" href="/assets/base.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.min.js"></script>
@@ -433,7 +434,7 @@
     <?php if (can_write_project($project_id)): ?>
     <button class="btn btn-ghost" onclick="editProject()">
       <svg><use href="#icon-pencil"/></svg>
-      <?= htmlspecialchars(t('edit')) ?>
+        <?= htmlspecialchars(t('edit')) ?>
     </button>
     <?php endif; ?>
   </div>
@@ -452,7 +453,7 @@
       <?php if (can_write_project($project_id)): ?>
       <button class="btn btn-primary" onclick="addPhase()">
         <svg><use href="#icon-plus"/></svg>
-        <?= htmlspecialchars(t('add_phase')) ?>
+            <?= htmlspecialchars(t('add_phase')) ?>
       </button>
       <?php endif; ?>
     </div>

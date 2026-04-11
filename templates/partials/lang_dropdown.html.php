@@ -1,9 +1,11 @@
 <?php
+
 /**
  * Language dropdown widget.
  * Requires: $lang (current language code), csrf_field(), t(), htmlspecialchars()
  * Requires lang_dropdown.css.php in <style> and lang_dropdown.js.php in <script>.
  */
+
 ?>
 <div class="lang-dropdown" id="langDropdown">
   <button type="button" class="lang-dropdown__btn" onclick="toggleLangDropdown(event)" aria-haspopup="true" aria-expanded="false">
@@ -15,7 +17,7 @@
   <div class="lang-dropdown__menu" role="menu">
     <?php foreach (['en' => 'English', 'cs' => 'Čeština'] as $code => $label): ?>
     <form method="post" action="/set-lang" class="lang-dropdown__item-form">
-      <?= csrf_field() ?>
+        <?= csrf_field() ?>
       <input type="hidden" name="lang" value="<?= $code ?>">
       <button type="submit" class="lang-dropdown__item<?= $lang === $code ? ' is-active' : '' ?>" role="menuitem">
         <span class="lang-dropdown__code"><?= strtoupper($code) ?></span><?= htmlspecialchars($label) ?>

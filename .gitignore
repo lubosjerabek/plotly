@@ -18,3 +18,7 @@ venv/
 __pycache__/
 *.pyc
 .env
+
+# Composer dev tools — never deploy to hosting
+vendor/
+composer.lock

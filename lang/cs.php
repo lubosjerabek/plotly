@@ -1,4 +1,5 @@
 <?php
+
 // Czech translations (čeština)
 return [
     // ── Meta / page titles ─────────────────────────────────────

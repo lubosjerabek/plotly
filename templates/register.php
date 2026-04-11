@@ -1,4 +1,5 @@
-<?php $page_title = t('page_title_register'); require __DIR__ . '/partials/head.php'; ?>
+<?php $page_title = t('page_title_register');
+require __DIR__ . '/partials/head.php'; ?>
   <style>
     :root {
       --bg:        #0f0f13;
@@ -71,10 +72,10 @@
 
     <?php if (!$invite): ?>
       <div class="error"><?= htmlspecialchars($error) ?></div>
-    <?php else: ?>
-      <?php if (!empty($error)): ?>
+    <?php else : ?>
+        <?php if (!empty($error)): ?>
         <div class="error"><?= htmlspecialchars($error) ?></div>
-      <?php endif; ?>
+        <?php endif; ?>
       <form method="post" action="/register/<?= htmlspecialchars($token) ?>">
         <?= csrf_field() ?>
         <label for="name"><?= htmlspecialchars(t('full_name')) ?></label>

@@ -1,8 +1,10 @@
-.PHONY: up build down reset deploy check test test-file logs shell help
+.PHONY: up build down reset deploy check test test-file lint lint-py lint-php logs shell help
 
 COMPOSE  = docker-compose
 APP      = plotly-app
 PYTEST   = ./venv/bin/pytest
+RUFF     = ./venv/bin/ruff
+PHPCS    = ./vendor/bin/phpcs
 TESTS    = tests
 
 # ── Stack ─────────────────────────────────────────────────────────────────────
@@ -44,6 +46,20 @@ test-file: ## Run one test file: make test-file FILE=tests/test_ics.py
 	$(PYTEST) $(FILE) -v
 
 check: deploy test ## Deploy current source then run the full test suite
+
+# ── Lint ──────────────────────────────────────────────────────────────────────
+
+lint-py: ## Lint Python test files with ruff
+	$(RUFF) check $(TESTS)
+
+lint-php: ## Lint PHP source files with phpcs
+	$(PHPCS) --standard=phpcs.xml
+
+lint: lint-py lint-php ## Run all linters (Python + PHP)
+
+lint-fix: ## Auto-fix all lintable issues (ruff + phpcbf)
+	$(RUFF) check $(TESTS) --fix
+	./vendor/bin/phpcbf --standard=phpcs.xml
 
 # ── Ops ───────────────────────────────────────────────────────────────────────
 

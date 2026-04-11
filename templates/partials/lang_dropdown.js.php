@@ -1,4 +1,6 @@
-<?php /* Language dropdown — shared JS. Include inside a <script> block. */ ?>
+<?php
+
+/* Language dropdown — shared JS. Include inside a <script> block. */ ?>
   function toggleLangDropdown(e) {
     e.stopPropagation();
     const dd = document.getElementById('langDropdown');

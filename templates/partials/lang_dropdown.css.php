@@ -1,4 +1,6 @@
-<?php /* Language dropdown — shared CSS. Include inside a <style> block. */ ?>
+<?php
+
+/* Language dropdown — shared CSS. Include inside a <style> block. */ ?>
     .lang-dropdown { position: relative; }
     .lang-dropdown__btn {
       display: inline-flex; align-items: center; gap: 0.3em;

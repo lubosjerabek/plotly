@@ -1,0 +1,11 @@
+line-length = 120
+
+[lint]
+# E/W: pycodestyle errors and warnings
+# F:   Pyflakes (undefined names, unused imports, etc.)
+# I:   isort (import ordering)
+select = ["E", "W", "F", "I"]
+
+# E501 line-too-long — tests have long assertion strings; exempt test files
+[lint.per-file-ignores]
+"tests/**" = ["E501"]

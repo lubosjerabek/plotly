@@ -1,4 +1,5 @@
 <?php
+
 define('APP_BOOT', true);
 require __DIR__ . '/config.php';
 require __DIR__ . '/includes/helpers.php';

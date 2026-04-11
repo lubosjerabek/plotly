@@ -1,4 +1,5 @@
-<?php $page_title = t('page_title_projects'); require __DIR__ . '/partials/head.php'; ?>
+<?php $page_title = t('page_title_projects');
+require __DIR__ . '/partials/head.php'; ?>
   <link rel="stylesheet" href="/assets/base.css">
   <style>
     /* ── Page ── */

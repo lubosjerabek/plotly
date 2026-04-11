@@ -1,5 +1,4 @@
 """Login page object."""
-from playwright.sync_api import Page
 
 from .base_page import BasePage
 
