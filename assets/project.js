@@ -485,6 +485,8 @@ function renderGantt(project) {
     name: '▸ ' + e.name,
     start: e.start_date,
     end: e.end_date,
+    start_time: e.start_time || null,
+    end_time: e.end_time   || null,
     progress: 0,
     dependencies: '',
     custom_class: 'gantt-event',
@@ -621,6 +623,15 @@ function addGanttDateLabels(tasks) {
   tasks.forEach(t => {
     if (t.id.startsWith('ms-')) {
       taskMap[t.id] = fmtDate(t.start);
+    } else if (t.id.startsWith('ev') && t.start_time) {
+      // Timed event: show date + time range
+      const st = fmtTime(t.start_time), et = fmtTime(t.end_time);
+      const s = fmtDate(t.start), e = fmtDate(t.end);
+      if (s === e) {
+        taskMap[t.id] = `${s} ${st}${et && et !== st ? ` – ${et}` : ''}`;
+      } else {
+        taskMap[t.id] = `${s} ${st} → ${e}${et ? ` ${et}` : ''}`;
+      }
     } else {
       const s = fmtDate(t.start), e = fmtDate(t.end);
       taskMap[t.id] = s === e ? s : `${s} → ${e}`;
