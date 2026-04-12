@@ -38,7 +38,7 @@ It turned out to be useful for more than house renovations — but that's where 
 ### Docker (recommended)
 
 ```bash
-git clone https://github.com/yourusername/plotly.git
+git clone https://github.com/lubosjerabek/plotly.git
 cd plotly
 make build        # rebuild image and start (docker-compose up --build -d)
 ```
