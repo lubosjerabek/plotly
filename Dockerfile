@@ -18,7 +18,8 @@ RUN rm -f /var/www/html/schema.sql \
            /var/www/html/docker-entrypoint.sh \
            /var/www/html/.gitignore \
            /var/www/html/Dockerfile \
-           /var/www/html/docker-compose.yml
+           /var/www/html/docker-compose.yml \
+           /var/www/html/favicon.php
 
 RUN chown -R www-data:www-data /var/www/html
 

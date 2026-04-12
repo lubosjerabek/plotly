@@ -29,7 +29,9 @@ reset: ## Stop the stack and delete all data volumes (clean slate)
 deploy: ## Copy PHP source into the running container (fast, no rebuild)
 	docker cp index.php   $(APP):/var/www/html/
 	docker cp config.php  $(APP):/var/www/html/
-	docker cp favicon.php $(APP):/var/www/html/
+	docker cp .htaccess   $(APP):/var/www/html/
+	docker cp favicon.svg $(APP):/var/www/html/
+	docker cp favicon.png $(APP):/var/www/html/
 	docker cp includes    $(APP):/var/www/html/
 	docker cp assets      $(APP):/var/www/html/
 	docker cp templates   $(APP):/var/www/html/
