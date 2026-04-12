@@ -4,6 +4,7 @@ Gantt / Timeline tab tests: bar rendering, view mode switches, date labels.
 Each test creates its own project+phase via fixtures so tests are fully
 self-contained and independent of execution order.
 """
+from conftest import rand_event_name, rand_future_date
 from pages import ProjectPage
 from playwright.sync_api import Page, expect
 
@@ -123,6 +124,68 @@ class TestGantt:
         project.wait_for_gantt_bars()
         assert page.locator(ProjectPage.GANTT_ERROR).count() == 0, \
             "Gantt rendered an error fallback — check browser console for the exception"
+
+    def test_timed_event_shows_time_in_date_label(self, page: Page, make_project, make_phase):
+        """A timed (non-all-day) event should display start/end times in its Gantt date label."""
+        name = make_project()
+        phase_name = make_phase(name)
+        project = ProjectPage(page)
+        event_name = rand_event_name()
+        event_date = rand_future_date()
+        project.add_phase_event(
+            phase_name, event_name,
+            start=event_date, end=event_date,
+            all_day=False, start_time="09:00", end_time="17:30",
+        )
+        project.switch_to_timeline()
+        project.wait_for_gantt_bars()
+        page.wait_for_timeout(400)
+
+        # Find the date label text on the event's bar-wrapper
+        label_text = page.evaluate("""() => {
+            const wrappers = document.querySelectorAll('.bar-wrapper');
+            for (const w of wrappers) {
+                const id = w.getAttribute('data-id') || '';
+                if (!id.startsWith('ev')) continue;
+                const dl = w.querySelector('.gantt-date-label');
+                if (dl) return dl.textContent;
+            }
+            return '';
+        }""")
+        assert "09:00" in label_text, \
+            f"Expected start time '09:00' in date label, got: '{label_text}'"
+        assert "17:30" in label_text, \
+            f"Expected end time '17:30' in date label, got: '{label_text}'"
+
+    def test_all_day_event_shows_no_time_in_date_label(self, page: Page, make_project, make_phase):
+        """An all-day event should display only dates, no times, in its Gantt date label."""
+        name = make_project()
+        phase_name = make_phase(name)
+        project = ProjectPage(page)
+        event_name = rand_event_name()
+        event_date = rand_future_date()
+        project.add_phase_event(
+            phase_name, event_name,
+            start=event_date, end=event_date,
+            all_day=True,
+        )
+        project.switch_to_timeline()
+        project.wait_for_gantt_bars()
+        page.wait_for_timeout(400)
+
+        label_text = page.evaluate("""() => {
+            const wrappers = document.querySelectorAll('.bar-wrapper');
+            for (const w of wrappers) {
+                const id = w.getAttribute('data-id') || '';
+                if (!id.startsWith('ev')) continue;
+                const dl = w.querySelector('.gantt-date-label');
+                if (dl) return dl.textContent;
+            }
+            return '';
+        }""")
+        assert label_text, "Expected a date label on the event bar"
+        assert ":" not in label_text, \
+            f"All-day event should not show a time, got: '{label_text}'"
 
     def test_timeline_renders_after_direct_navigation(self, page: Page, make_project, make_phase):
         """Timeline must render on a fresh direct page load, not only after SPA navigation."""
