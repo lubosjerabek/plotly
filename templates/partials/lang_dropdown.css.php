@@ -8,8 +8,8 @@
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       color: var(--text-muted);
-      font-family: inherit; font-size: 11px; font-weight: 600;
-      letter-spacing: 0.05em; padding: 0.25rem 0.5rem;
+      font-family: inherit; font-size: 12px; font-weight: 600;
+      letter-spacing: 0.05em; padding: 0.35rem 0.65rem;
       cursor: pointer; transition: all var(--t-fast);
     }
     .lang-dropdown__btn:hover { border-color: var(--border-hover); color: var(--text); }

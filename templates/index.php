@@ -208,10 +208,29 @@ require __DIR__ . '/partials/head.php'; ?>
     <button class="btn btn-ghost btn-icon" title="<?= htmlspecialchars(t('cal_sync_button_title')) ?>" onclick="openCalSyncModal()">
       <svg><use href="#icon-calendar"/></svg>
     </button>
-    <?php if (current_user()['role'] === 'admin'): ?>
-      <a class="btn btn-ghost" href="/admin/users" style="font-size:12px"><?= htmlspecialchars(t('admin')) ?></a>
-    <?php endif; ?>
-    <a class="btn btn-ghost" href="/logout" style="font-size:12px"><?= htmlspecialchars(t('sign_out')) ?></a>
+    <?php
+      $u = current_user();
+      $nm = $u['name'];
+      $parts = explode(' ', $nm, 2);
+      $initials = mb_strtoupper(mb_substr($parts[0], 0, 1))
+                . (isset($parts[1]) ? mb_strtoupper(mb_substr($parts[1], 0, 1)) : '');
+    ?>
+    <div class="user-menu" id="userMenu">
+      <button class="user-menu__trigger" onclick="toggleUserMenu(event)" aria-haspopup="true" aria-expanded="false">
+        <span class="user-menu__initials"><?= htmlspecialchars($initials) ?></span>
+        <svg class="user-menu__chevron" viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M4.427 7.427l3.396 3.396a.25.25 0 0 0 .354 0l3.396-3.396A.25.25 0 0 0 11.396 7H4.604a.25.25 0 0 0-.177.427z"/>
+        </svg>
+      </button>
+      <div class="user-menu__dropdown" role="menu">
+        <div class="user-menu__name"><?= htmlspecialchars($nm) ?></div>
+        <?php if ($u['role'] === 'admin'): ?>
+        <a class="user-menu__item" href="/admin/users" role="menuitem"><?= htmlspecialchars(t('admin')) ?></a>
+        <?php endif; ?>
+        <div class="user-menu__sep"></div>
+        <a class="user-menu__item user-menu__item--danger" href="/logout" role="menuitem"><?= htmlspecialchars(t('sign_out')) ?></a>
+      </div>
+    </div>
   </div>
 </nav>
 

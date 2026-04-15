@@ -10,8 +10,10 @@ from playwright.sync_api import Page, expect
 class TestAdminAccess:
 
     def test_admin_nav_link_visible_for_admin(self, page: Page):
-        # The admin nav link lives in the topbar — check from the dashboard
-        DashboardPage(page).goto()
+        # The admin nav link is inside the user menu dropdown — open it first
+        dash = DashboardPage(page)
+        dash.goto()
+        dash.open_user_menu()
         expect(AdminPage(page).admin_nav_link).to_be_visible()
 
     def test_admin_panel_loads_for_admin(self, page: Page):

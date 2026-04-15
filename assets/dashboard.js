@@ -13,6 +13,21 @@ document.addEventListener('click', () => {
   }
 });
 
+// ── User menu ────────────────────────────────────────────────────────────────
+function toggleUserMenu(e) {
+  e.stopPropagation();
+  const m = document.getElementById('userMenu');
+  const open = m.classList.toggle('is-open');
+  e.currentTarget.setAttribute('aria-expanded', open);
+}
+document.addEventListener('click', () => {
+  const m = document.getElementById('userMenu');
+  if (m && m.classList.contains('is-open')) {
+    m.classList.remove('is-open');
+    m.querySelector('.user-menu__trigger').setAttribute('aria-expanded', 'false');
+  }
+});
+
 // ── State ────────────────────────────────────────────────────────────────────
 const state = { projects: [] };
 let _editingProjectId = null;

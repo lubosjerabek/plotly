@@ -70,8 +70,9 @@ class DashboardPage(BasePage):
     BRAND   = ".topbar__brand"
     HEADING = "h1"
 
-    # Admin nav link
-    ADMIN_NAV = "a[href='/admin/users']"
+    # Admin nav link (inside user menu dropdown)
+    ADMIN_NAV        = "a[href='/admin/users']"
+    USER_MENU_TRIGGER = ".user-menu__trigger"
 
     def goto(self):
         super().goto("/")
@@ -80,6 +81,11 @@ class DashboardPage(BasePage):
         # networkidle fires, causing click() timeouts in long test runs.
         expect(self.page.locator(self.NEW_PROJECT_BTN)).to_be_visible()
         return self
+
+    # ── User menu ──────────────────────────────────────────────────────────────
+
+    def open_user_menu(self):
+        self.page.locator(self.USER_MENU_TRIGGER).click()
 
     # ── Project modal ──────────────────────────────────────────────────────────
 

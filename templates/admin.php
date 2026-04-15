@@ -52,8 +52,27 @@ require __DIR__ . '/partials/head.php'; ?>
   </a>
   <div class="topbar__right">
     <?php require __DIR__ . '/partials/lang_dropdown.html.php' ?>
-    <a class="btn btn-ghost" href="/" style="font-size:12px"><?= htmlspecialchars(t('projects')) ?></a>
-    <a class="btn btn-ghost" href="/logout" style="font-size:12px"><?= htmlspecialchars(t('sign_out')) ?></a>
+    <a class="btn btn-ghost" href="/"><?= htmlspecialchars(t('projects')) ?></a>
+    <?php
+      $u = current_user();
+      $nm = $u['name'];
+      $parts = explode(' ', $nm, 2);
+      $initials = mb_strtoupper(mb_substr($parts[0], 0, 1))
+                . (isset($parts[1]) ? mb_strtoupper(mb_substr($parts[1], 0, 1)) : '');
+    ?>
+    <div class="user-menu" id="userMenu">
+      <button class="user-menu__trigger" onclick="toggleUserMenu(event)" aria-haspopup="true" aria-expanded="false">
+        <span class="user-menu__initials"><?= htmlspecialchars($initials) ?></span>
+        <svg class="user-menu__chevron" viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M4.427 7.427l3.396 3.396a.25.25 0 0 0 .354 0l3.396-3.396A.25.25 0 0 0 11.396 7H4.604a.25.25 0 0 0-.177.427z"/>
+        </svg>
+      </button>
+      <div class="user-menu__dropdown" role="menu">
+        <div class="user-menu__name"><?= htmlspecialchars($nm) ?></div>
+        <div class="user-menu__sep"></div>
+        <a class="user-menu__item user-menu__item--danger" href="/logout" role="menuitem"><?= htmlspecialchars(t('sign_out')) ?></a>
+      </div>
+    </div>
   </div>
 </nav>
 
@@ -147,6 +166,21 @@ require __DIR__ . '/partials/head.php'; ?>
 <script>
 window.T = <?= t_js() ?>;
 <?php require __DIR__ . '/partials/lang_dropdown.js.php' ?>
+
+// ── User menu ────────────────────────────────────────────────────────────────
+function toggleUserMenu(e) {
+  e.stopPropagation();
+  const m = document.getElementById('userMenu');
+  const open = m.classList.toggle('is-open');
+  e.currentTarget.setAttribute('aria-expanded', open);
+}
+document.addEventListener('click', () => {
+  const m = document.getElementById('userMenu');
+  if (m && m.classList.contains('is-open')) {
+    m.classList.remove('is-open');
+    m.querySelector('.user-menu__trigger').setAttribute('aria-expanded', 'false');
+  }
+});
 
 function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
