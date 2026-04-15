@@ -1,6 +1,6 @@
 <?php $page_title = t('page_title_admin');
 require __DIR__ . '/partials/head.php'; ?>
-  <link rel="stylesheet" href="/assets/base.css">
+  <link rel="stylesheet" href="/assets/base.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/assets/base.css') ?>">
   <style>
     /* Layout */
     .page{max-width:900px;margin:0 auto;padding:2rem 1.5rem}

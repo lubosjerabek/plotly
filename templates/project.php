@@ -1,6 +1,6 @@
 <?php $page_title = t('page_title_project');
 require __DIR__ . '/partials/head.php'; ?>
-  <link rel="stylesheet" href="/assets/base.css">
+  <link rel="stylesheet" href="/assets/base.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/assets/base.css') ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.min.js"></script>
   <style>
@@ -597,6 +597,6 @@ require __DIR__ . '/partials/head.php'; ?>
   const isOwner = <?= is_project_owner($project_id) ? 'true' : 'false' ?>;
   const icsToken = <?= json_encode(current_user_ics_token()) ?>;
 </script>
-<script src="/assets/project.js"></script>
+<script src="/assets/project.js?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/assets/project.js') ?>"></script>
 </body>
 </html>
