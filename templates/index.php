@@ -1,6 +1,6 @@
 <?php $page_title = t('page_title_projects');
 require __DIR__ . '/partials/head.php'; ?>
-  <link rel="stylesheet" href="/assets/base.css?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/assets/base.css') ?>">
+  <link rel="stylesheet" href="/assets/base.css?v=<?= filemtime(__DIR__ . '/../assets/base.css') ?>">
   <style>
     /* ── Page ── */
     .page {
@@ -325,6 +325,6 @@ require __DIR__ . '/partials/head.php'; ?>
 <script>
   const T = <?= t_js() ?>;
 </script>
-<script src="/assets/dashboard.js?v=<?= filemtime($_SERVER['DOCUMENT_ROOT'] . '/assets/dashboard.js') ?>"></script>
+<script src="/assets/dashboard.js?v=<?= filemtime(__DIR__ . '/../assets/dashboard.js') ?>"></script>
 </body>
 </html>
