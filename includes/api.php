@@ -192,9 +192,11 @@ function api_update_milestone(int $id): void
 
     $old_date  = $existing['target_date'];
     $new_date  = $b['target_date'] ?? $old_date;
+    $new_name  = isset($b['name']) ? trim($b['name']) : $existing['name'];
+    if ($new_name === '') $new_name = $existing['name'];
 
-    $upd = pdo()->prepare('UPDATE milestones SET target_date = ? WHERE id = ?');
-    $upd->execute([$new_date, $id]);
+    $upd = pdo()->prepare('UPDATE milestones SET name = ?, target_date = ? WHERE id = ?');
+    $upd->execute([$new_name, $new_date, $id]);
 
     $delta_days = (int)round((strtotime($new_date) - strtotime($old_date)) / 86400);
     if ($delta_days !== 0) {

@@ -105,6 +105,7 @@ class ProjectPage(BasePage):
     ICS_URL         = "#icsUrl"
 
     # Edit / Delete buttons (used inside item rows)
+    EDIT_MILESTONE_BTN   = "button[title='Edit milestone']"
     EDIT_EVENT_BTN       = "button[title='Edit event']"
     DELETE_MILESTONE_BTN = "button[title='Delete milestone']"
     DELETE_EVENT_BTN     = "button[title='Delete event']"
@@ -201,6 +202,20 @@ class ProjectPage(BasePage):
         expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
         self.page.wait_for_load_state("networkidle")
         return name
+
+    def edit_milestone(self, phase_name: str, old_name: str, new_name: str, new_target: str | None = None) -> None:
+        phase = self.get_phase_card(phase_name)
+        phase.expand(self.page)
+        phase.milestones_section() \
+             .locator(".item-list li", has_text=old_name) \
+             .locator(self.EDIT_MILESTONE_BTN).click()
+        expect(self.page.locator(self.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
+        self.page.locator(self.MODAL_NAME).fill(new_name)
+        if new_target:
+            self.page.locator(self.MODAL_TARGET).fill(new_target)
+        self.page.locator(self.MODAL_SUBMIT).click()
+        expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
+        self.page.wait_for_load_state("networkidle")
 
     def delete_milestone(self, phase_name: str, name: str) -> None:
         phase = self.get_phase_card(phase_name)

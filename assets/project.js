@@ -176,7 +176,7 @@ function renderProjectItems(milestones, events) {
           <span class="item-list__name">${escHtml(m.name)}</span>
           <span class="item-list__meta">${fmtDate(m.target_date)}</span>
           ${canEdit ? `
-          <button class="btn btn-icon btn-ghost" title="Edit milestone date" style="width:22px;height:22px;padding:2px;"
+          <button class="btn btn-icon btn-ghost" title="Edit milestone" style="width:22px;height:22px;padding:2px;"
             onclick="editMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}', '${m.target_date}')">
             <svg><use href="#icon-pencil"/></svg>
           </button>
@@ -269,7 +269,7 @@ function renderPhases(phases) {
             <span class="item-list__name">${escHtml(m.name)}</span>
             <span class="item-list__meta">${fmtDate(m.target_date)}</span>
             ${canEdit ? `
-            <button class="btn btn-icon btn-ghost" title="Edit milestone date" style="width:22px;height:22px;padding:2px;"
+            <button class="btn btn-icon btn-ghost" title="Edit milestone" style="width:22px;height:22px;padding:2px;"
               onclick="editMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}', '${m.target_date}')">
               <svg><use href="#icon-pencil"/></svg>
             </button>
@@ -1147,14 +1147,16 @@ function addMilestone(phaseId) {
 
 function editMilestone(id, name, currentDate) {
   showModal(`${T.modal_edit_milestone}: ${name}`, [
-    { id: 'target', label: T.target_date, type: 'date', defaultValue: currentDate },
+    { id: 'name',   label: T.milestone_name, type: 'text', defaultValue: name },
+    { id: 'target', label: T.target_date,    type: 'date', defaultValue: currentDate },
   ], async () => {
-    const date = document.getElementById('modal_input_target').value;
-    if (!date) return;
+    const newName = document.getElementById('modal_input_name').value.trim();
+    const date    = document.getElementById('modal_input_target').value;
+    if (!newName || !date) return;
     const btn = document.getElementById('modalSubmitBtn');
     btn.disabled = true;
     try {
-      const resp = await api.updateMilestone(id, { target_date: date });
+      const resp = await api.updateMilestone(id, { name: newName, target_date: date });
       if (resp.ok) { toast.success(T.toast_milestone_updated); closeModal(); await refresh(); }
       else toast.error(T.toast_milestone_update_failed);
     } finally { btn.disabled = false; }

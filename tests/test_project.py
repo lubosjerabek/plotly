@@ -156,6 +156,20 @@ class TestProjectDetail:
         phase.expand(page)
         expect(phase.milestones_section().locator(ProjectPage.ITEM_LIST)).not_to_contain_text(ms_name)
 
+    def test_edit_milestone_name(self, page: Page, make_project, make_phase):
+        ref = make_project()
+        phase_name = make_phase(ref)
+        original_name = rand_milestone_name()
+        updated_name  = rand_milestone_name()
+        target = rand_future_date()
+        project = ProjectPage(page)
+        project.add_milestone(phase_name, original_name, target)
+        project.edit_milestone(phase_name, original_name, updated_name)
+        phase = project.get_phase_card(phase_name)
+        phase.expand(page)
+        expect(phase.milestones_section().locator(ProjectPage.ITEM_LIST)).to_contain_text(updated_name)
+        expect(phase.milestones_section().locator(ProjectPage.ITEM_LIST)).not_to_contain_text(original_name)
+
     def test_delete_event(self, page: Page, make_project, make_phase):
         ref = make_project()
         phase_name = make_phase(ref)
