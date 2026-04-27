@@ -92,3 +92,8 @@ class TestDashboard:
         expect(page.locator(DashboardPage.TOAST_SUCCESS).last).to_be_visible()
         page.wait_for_load_state("networkidle")
         expect(dashboard.get_project_card(ref)._loc).not_to_be_attached()
+
+    def test_non_collaborator_cannot_see_project(self, page: Page, second_user_page, make_project):
+        ref = make_project()
+        DashboardPage(second_user_page).goto()
+        expect(second_user_page.locator(DashboardPage.PROJECT_CARD, has_text=str(ref))).not_to_be_attached()
