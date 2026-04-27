@@ -240,6 +240,9 @@ return [
     'toast_milestone_add_failed'    => 'Failed to add milestone',
     'toast_milestone_update_failed' => 'Failed to update milestone',
     'toast_milestone_delete_failed' => 'Failed to delete milestone',
+    'upcoming_milestones'           => 'Upcoming Milestones',
+    'upcoming_today'                => 'Today',
+    'upcoming_overdue'              => 'overdue',
 
     // ── Toast messages — events ────────────────────────────────
     'toast_event_added'             => 'Event added',

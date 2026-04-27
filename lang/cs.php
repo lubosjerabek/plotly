@@ -240,6 +240,9 @@ return [
     'toast_milestone_add_failed'    => 'Nepodařilo se přidat milník',
     'toast_milestone_update_failed' => 'Nepodařilo se aktualizovat milník',
     'toast_milestone_delete_failed' => 'Nepodařilo se smazat milník',
+    'upcoming_milestones'           => 'Nadcházející milníky',
+    'upcoming_today'                => 'Dnes',
+    'upcoming_overdue'              => 'po termínu',
 
     // ── Toast messages — events ────────────────────────────────
     'toast_event_added'             => 'Událost přidána',

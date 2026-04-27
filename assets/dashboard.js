@@ -29,13 +29,14 @@ document.addEventListener('click', () => {
 });
 
 // ── State ────────────────────────────────────────────────────────────────────
-const state = { projects: [] };
+const state = { projects: [], upcomingMilestones: [] };
 let _editingProjectId = null;
 
 // ── API ──────────────────────────────────────────────────────────────────────
 const h = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
 const api = {
-  getProjects:   ()         => fetch('/api/projects').then(r => r.json()),
+  getProjects:          ()  => fetch('/api/projects').then(r => r.json()),
+  getUpcomingMilestones: () => fetch('/api/upcoming-milestones').then(r => r.json()),
   createProject: (data)     => fetch('/api/projects', { method: 'POST', headers: h, body: JSON.stringify(data) }),
   updateProject: (id, data) => fetch(`/api/projects/${id}`, { method: 'PUT', headers: h, body: JSON.stringify(data) }),
   deleteProject: (id)       => fetch(`/api/projects/${id}`, { method: 'DELETE', headers: h }),
@@ -231,6 +232,16 @@ const toast = {
 };
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
+function fmtDate(d) {
+  if (!d) return '';
+  const [y, m, day] = d.split('-');
+  return `${T.months[parseInt(m,10)-1]} ${parseInt(day,10)}, ${y}`;
+}
+function fmtRelative(days_until, target_date) {
+  if (days_until === 0) return T.upcoming_today;
+  if (days_until < 0)  return fmtDate(target_date) + ' · ' + T.upcoming_overdue;
+  return fmtDate(target_date);
+}
 function escHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -297,9 +308,37 @@ document.addEventListener('keydown', e => {
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+function renderUpcomingMilestones() {
+  const panel = document.getElementById('upcomingPanel');
+  if (!panel) return;
+  const milestones = state.upcomingMilestones || [];
+  if (milestones.length === 0) { panel.hidden = true; return; }
+  panel.hidden = false;
+  panel.querySelector('.upcoming__heading-text').textContent = T.upcoming_milestones;
+  panel.querySelector('.upcoming__count').textContent = milestones.length;
+  const list = panel.querySelector('.upcoming__list');
+  list.innerHTML = '';
+  milestones.forEach(m => {
+    const overdue = m.days_until < 0;
+    const today   = m.days_until === 0;
+    const row = document.createElement('div');
+    row.className = 'upcoming__row';
+    row.innerHTML = `
+      <span class="upcoming__dot${overdue ? ' upcoming__dot--danger' : today ? ' upcoming__dot--today' : ''}" aria-hidden="true"></span>
+      <span class="upcoming__name">${escHtml(m.name)}</span>
+      <span class="upcoming__project">${escHtml(m.project_name)}</span>
+      <span class="upcoming__date${overdue ? ' upcoming__date--danger' : ''}">${escHtml(fmtRelative(m.days_until, m.target_date))}</span>`;
+    list.appendChild(row);
+  });
+}
+
 async function refresh() {
-  state.projects = await api.getProjects();
+  [state.projects, state.upcomingMilestones] = await Promise.all([
+    api.getProjects(),
+    api.getUpcomingMilestones(),
+  ]);
   renderProjects();
+  renderUpcomingMilestones();
 }
 
 refresh();

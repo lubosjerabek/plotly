@@ -72,6 +72,7 @@ if ($method === 'POST'   && preg_match('#^/api/projects/(\d+)/milestones$#', $pa
 if ($method === 'POST'   && preg_match('#^/api/phases/(\d+)/milestones$#', $path, $m))   { api_create_milestone((int)$m[1]); }
 if ($method === 'PATCH'  && preg_match('#^/api/milestones/(\d+)$#', $path, $m))          { api_update_milestone((int)$m[1]); }
 if ($method === 'DELETE' && preg_match('#^/api/milestones/(\d+)$#', $path, $m))          { api_delete_milestone((int)$m[1]); }
+if ($method === 'GET'    && $path === '/api/upcoming-milestones')                          { api_get_upcoming_milestones(); }
 
 // Events API
 if ($method === 'POST'   && preg_match('#^/api/projects/(\d+)/events$#', $path, $m)) { api_create_project_event((int)$m[1]); }

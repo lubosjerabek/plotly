@@ -230,6 +230,45 @@ function api_delete_milestone(int $id): void
     json_out(['ok' => true]);
 }
 
+function api_get_upcoming_milestones(): void
+{
+    require_auth();
+    $user = current_user();
+
+    $select = 'SELECT m.id, m.name, m.target_date,
+                      DATEDIFF(m.target_date, CURDATE()) AS days_until,
+                      COALESCE(m.project_id, ph.project_id) AS project_id,
+                      p.name AS project_name
+               FROM milestones m
+               LEFT JOIN phases ph ON ph.id = m.phase_id
+               JOIN projects p     ON p.id = COALESCE(m.project_id, ph.project_id)';
+    $tail   = 'WHERE m.target_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+               ORDER BY m.target_date ASC
+               LIMIT 15';
+
+    if ($user['role'] === 'admin') {
+        $stmt = pdo()->prepare("$select $tail");
+        $stmt->execute();
+    } else {
+        $uid  = $user['id'];
+        $stmt = pdo()->prepare(
+            "$select LEFT JOIN project_collaborators pc
+                        ON pc.project_id = p.id AND pc.user_id = ?
+             $tail AND (p.user_id = ? OR pc.user_id = ?)"
+        );
+        $stmt->execute([$uid, $uid, $uid]);
+    }
+
+    json_out(array_map(fn($r) => [
+        'id'           => (int)$r['id'],
+        'name'         => $r['name'],
+        'target_date'  => $r['target_date'],
+        'days_until'   => (int)$r['days_until'],
+        'project_id'   => (int)$r['project_id'],
+        'project_name' => $r['project_name'],
+    ], $stmt->fetchAll()));
+}
+
 // ── Events API ────────────────────────────────────────────────────────────────
 
 function api_create_project_event(int $project_id): void

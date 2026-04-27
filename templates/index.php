@@ -123,6 +123,49 @@ require __DIR__ . '/partials/head.php'; ?>
     .empty-state h3 { margin: 0 0 0.5rem; font-size: 15px; color: var(--text); }
     .empty-state p { margin: 0 0 1.5rem; font-size: 13px; }
 
+    /* ── Upcoming Milestones ── */
+    #upcomingPanel  { margin-top: 2.5rem; }
+    .upcoming__header { margin-bottom: 1rem; }
+    .upcoming__title {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-size: 15px; font-weight: 600; margin: 0; color: var(--text);
+    }
+    .upcoming__count-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 20px; padding: 0 0.5rem;
+      min-width: 24px; height: 20px;
+      font-size: 11px; font-weight: 600; color: var(--text-subtle);
+    }
+    .upcoming__list {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .upcoming__row {
+      display: grid;
+      grid-template-columns: 12px 1fr auto auto;
+      align-items: center; gap: 0.75rem;
+      padding: 0.7rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      transition: background var(--t-fast);
+    }
+    .upcoming__row:last-child { border-bottom: none; }
+    .upcoming__row:hover { background: var(--surface-2); }
+    .upcoming__dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+      background: var(--accent-muted); border: 1.5px solid var(--accent);
+    }
+    .upcoming__dot--danger { background: var(--danger-muted); border-color: var(--danger); }
+    .upcoming__dot--today  { background: rgba(34,197,94,0.15); border-color: var(--success); }
+    .upcoming__name { font-size: 13px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .upcoming__project {
+      font-size: 11px; font-weight: 600; color: var(--accent);
+      background: var(--accent-muted); border-radius: 20px;
+      padding: 0.15rem 0.5rem; white-space: nowrap; flex-shrink: 0;
+    }
+    .upcoming__date { font-size: 12px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+    .upcoming__date--danger { color: var(--danger); }
+
     /* ── Calendar sync modal ── */
     .cal-url-row {
       display: flex;
@@ -171,6 +214,9 @@ require __DIR__ . '/partials/head.php'; ?>
       .topbar__right { gap: 0.35rem; }
       .topbar__right .btn-ghost:not(.btn-icon) { font-size: 11px; padding: 0.35rem 0.6rem; }
       .page__header { flex-direction: column; align-items: flex-start; }
+      .upcoming__row { grid-template-columns: 12px 1fr auto; grid-template-rows: auto auto; row-gap: 0.15rem; padding: 0.65rem 1rem; }
+      .upcoming__project { grid-column: 3; grid-row: 1; }
+      .upcoming__date    { grid-column: 2 / 4; grid-row: 2; }
     }
   </style>
 </head>
@@ -247,6 +293,16 @@ require __DIR__ . '/partials/head.php'; ?>
   </div>
 
   <div class="projects-grid" id="projectsGrid"></div>
+
+  <div id="upcomingPanel" hidden>
+    <div class="upcoming__header">
+      <h2 class="upcoming__title">
+        <span class="upcoming__heading-text"></span>
+        <span class="upcoming__count-badge"><span class="upcoming__count"></span></span>
+      </h2>
+    </div>
+    <div class="upcoming__list"></div>
+  </div>
 </main>
 
 <!-- New / Edit Project Modal -->

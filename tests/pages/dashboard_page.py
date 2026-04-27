@@ -71,8 +71,15 @@ class DashboardPage(BasePage):
     HEADING = "h1"
 
     # Admin nav link (inside user menu dropdown)
-    ADMIN_NAV        = "a[href='/admin/users']"
+    ADMIN_NAV         = "a[href='/admin/users']"
     USER_MENU_TRIGGER = ".user-menu__trigger"
+
+    # Upcoming milestones panel
+    UPCOMING_PANEL      = "#upcomingPanel"
+    UPCOMING_LIST       = "#upcomingPanel .upcoming__list"
+    UPCOMING_DOT_TODAY  = "#upcomingPanel .upcoming__dot--today"
+    UPCOMING_DOT_DANGER = "#upcomingPanel .upcoming__dot--danger"
+    UPCOMING_DATE_DANGER= "#upcomingPanel .upcoming__date--danger"
 
     def goto(self):
         super().goto("/")
