@@ -24,7 +24,7 @@ if ($method === 'POST' && preg_match('#^/reset-password/([a-f0-9]{64})$#', $path
 // Language switcher (no auth required)
 if ($method === 'POST' && $path === '/set-lang') {
     $lang = $_POST['lang'] ?? '';
-    if (in_array($lang, ['en', 'cs'], true)) {
+    if (in_array($lang, ['en', 'cs', 'uk'], true)) {
         $_SESSION['lang'] = $lang;
         // Persist for authenticated users
         if (!empty($_SESSION['user_id'])) {

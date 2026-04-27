@@ -297,6 +297,7 @@ return [
     // ── Language switcher ──────────────────────────────────────
     'lang_en'               => 'EN',
     'lang_cs'               => 'CS',
+    'lang_uk'               => 'UA',
     'lang_label'            => 'Jazyk',
 
     // ── Validation ─────────────────────────────────────────────

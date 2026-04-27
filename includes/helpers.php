@@ -9,7 +9,7 @@ function load_lang(): array
     static $strings = null;
     if ($strings === null) {
         $lang = $_SESSION['lang'] ?? APP_LANG;
-        if (!in_array($lang, ['en', 'cs'], true)) $lang = 'en';
+        if (!in_array($lang, ['en', 'cs', 'uk'], true)) $lang = 'en';
         $strings = require __DIR__ . '/../lang/' . $lang . '.php';
     }
     return $strings;
@@ -34,7 +34,7 @@ function t_js(): string
 function current_lang(): string
 {
     $lang = $_SESSION['lang'] ?? APP_LANG;
-    return in_array($lang, ['en', 'cs'], true) ? $lang : 'en';
+    return in_array($lang, ['en', 'cs', 'uk'], true) ? $lang : 'en';
 }
 
 // ── Core helpers ──────────────────────────────────────────────────────────────

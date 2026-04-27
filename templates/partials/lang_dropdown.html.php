@@ -15,7 +15,7 @@
     </svg>
   </button>
   <div class="lang-dropdown__menu" role="menu">
-    <?php foreach (['en' => 'English', 'cs' => 'Čeština'] as $code => $label): ?>
+    <?php foreach (['en' => 'English', 'cs' => 'Čeština', 'uk' => 'Українська'] as $code => $label): ?>
     <form method="post" action="/set-lang" class="lang-dropdown__item-form">
         <?= csrf_field() ?>
       <input type="hidden" name="lang" value="<?= $code ?>">
