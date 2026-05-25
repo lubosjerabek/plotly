@@ -59,6 +59,42 @@ class PhaseCard:
         return self._loc.locator(self.DESCRIPTION)
 
 
+class GroupCard:
+    """Wraps a single .phase-group-card locator."""
+
+    HEADER      = ".phase-group-card__header"
+    NAME_SEL    = ".phase-group-card__name"
+    EDIT_BTN    = "button[title='Edit group']"
+    DELETE_BTN  = "button[title='Delete group']"
+    PHASE_CARDS = ".phase-card"
+
+    def __init__(self, locator: Locator):
+        self._loc = locator
+
+    def is_collapsed(self) -> bool:
+        return "is-collapsed" in (self._loc.get_attribute("class") or "")
+
+    def expand(self, page: Page):
+        if self.is_collapsed():
+            self._loc.locator(self.HEADER).click()
+            page.wait_for_timeout(300)
+
+    def toggle(self, page: Page):
+        self._loc.locator(self.HEADER).click()
+        page.wait_for_timeout(300)
+
+    def child_phases(self) -> Locator:
+        return self._loc.locator(self.PHASE_CARDS)
+
+    @property
+    def edit_btn(self) -> Locator:
+        return self._loc.locator(self.EDIT_BTN)
+
+    @property
+    def delete_btn(self) -> Locator:
+        return self._loc.locator(self.DELETE_BTN)
+
+
 class ProjectPage(BasePage):
     # Header
     PROJECT_NAME = "#pName"
@@ -118,6 +154,10 @@ class ProjectPage(BasePage):
     START_TIME      = "#modal_input_start_time"
     END_TIME        = "#modal_input_end_time"
     ITEMS_BODY      = "#projectItemsBody"
+
+    # Phase group cards
+    GROUP_CARD    = ".phase-group-card"
+    ADD_GROUP_BTN = "#addGroupBtn"
 
     # Timeline / Gantt
     GANTT_BARS    = ".gantt .bar"
@@ -341,3 +381,50 @@ class ProjectPage(BasePage):
 
     def switch_gantt_view(self, view: str):
         self.page.locator(self.GANTT_VIEW_BTNS + " button", has_text=view).click()
+
+    # ── Phase group operations ─────────────────────────────────────────────────
+
+    def add_group(self, name: str, color: str | None = None) -> str:
+        self.page.locator(self.ADD_GROUP_BTN).click()
+        expect(self.page.locator(self.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
+        self.page.locator(self.MODAL_NAME).fill(name)
+        self.page.locator(self.MODAL_SUBMIT).click()
+        expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
+        self.page.wait_for_load_state("networkidle")
+        return name
+
+    def get_group_card(self, name: str) -> "GroupCard":
+        return GroupCard(self.page.locator(self.GROUP_CARD, has_text=name))
+
+    def delete_group(self, name: str) -> None:
+        card = self.get_group_card(name)
+        card.delete_btn.click()
+        expect(self.page.locator(self.CONFIRM_MODAL)).to_have_class(re.compile(r"is-open"))
+        self.page.locator(self.CONFIRM_OK).click()
+        expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
+        self.page.wait_for_load_state("networkidle")
+
+    def assign_phase_to_group(self, phase_name: str, group_name: str | None) -> None:
+        """Open the edit-phase modal and change the group dropdown.
+
+        Handles the case where the phase is nested inside a collapsed group card —
+        expands the parent group before attempting to click the edit button.
+        """
+        # Expand any parent group card that contains this phase
+        parent_group = self.page.locator(
+            f"{self.GROUP_CARD}:has({self.PHASE_CARD}:has-text('{phase_name}'))"
+        )
+        if parent_group.count() > 0:
+            GroupCard(parent_group.first).expand(self.page)
+
+        phase = self.get_phase_card(phase_name)
+        phase._loc.locator(PhaseCard.EDIT_BTN).click()
+        expect(self.page.locator(self.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
+        group_select = self.page.locator("#modal_input_group")
+        if group_name is None:
+            group_select.select_option("")
+        else:
+            group_select.select_option(label=group_name)
+        self.page.locator(self.MODAL_SUBMIT).click()
+        expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
+        self.page.wait_for_load_state("networkidle")

@@ -52,6 +52,10 @@ def rand_phase_name() -> str:
     return f"{fake.word().title()} Phase"
 
 
+def rand_group_name() -> str:
+    return f"{fake.word().title()} Group"
+
+
 def rand_milestone_name() -> str:
     return fake.catch_phrase()
 
@@ -316,6 +320,45 @@ def make_phase(page: Page):
         return project.add_phase(name or rand_phase_name(), start, end, desc)
 
     return _make
+
+
+@pytest.fixture
+def make_group(page: Page):
+    """
+    Factory fixture — call ``gid, name = make_group(project_ref)`` to create a
+    phase group via the REST API.  All groups created this way are automatically
+    deleted after the test (best-effort; deletion also cascades when the project
+    is deleted).
+    """
+    created: list[tuple[int, int]] = []  # (project_id, group_id)
+
+    def _make(
+        project_ref: "ProjectRef | str",
+        name:  str | None = None,
+        color: str        = "#6366f1",
+    ) -> tuple[int, str]:
+        n   = name or rand_group_name()
+        pid = project_ref.id if hasattr(project_ref, "id") else int(str(project_ref))
+        resp = page.request.post(
+            BASE_URL + f"/api/phase-groups?project_id={pid}",
+            data=json.dumps({"name": n, "color": color}),
+            headers={"Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest"},
+        )
+        assert resp.status == 201, f"Phase group creation failed: {resp.text()}"
+        gid = resp.json()["id"]
+        created.append((pid, gid))
+        return gid, n
+
+    yield _make
+
+    for _pid, gid in created:
+        try:
+            page.request.delete(
+                BASE_URL + f"/api/phase-groups/{gid}",
+                headers={"X-Requested-With": "XMLHttpRequest"},
+            )
+        except Exception:
+            pass  # best-effort; project deletion cascades anyway
 
 
 @pytest.fixture

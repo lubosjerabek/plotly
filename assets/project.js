@@ -34,12 +34,15 @@ const state = { project: null, activeTab: 'phases', ganttView: 'Month', ganttIns
 // ── API ──────────────────────────────────────────────────────────────────────
 const H = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
 const api = {
-  getProject:      (id)       => fetch(`/api/projects/${id}`).then(r => r.json()),
-  updateProject:   (id, data) => fetch(`/api/projects/${id}`, { method: 'PUT', headers: H, body: JSON.stringify(data) }),
-  deleteProject:   (id)       => fetch(`/api/projects/${id}`, { method: 'DELETE', headers: H }),
-  createPhase:     (pid, data)=> fetch(`/api/phases?project_id=${pid}`, { method: 'POST', headers: H, body: JSON.stringify(data) }),
-  updatePhase:     (id, data) => fetch(`/api/phases/${id}`, { method: 'PUT', headers: H, body: JSON.stringify(data) }),
-  deletePhase:     (id)       => fetch(`/api/phases/${id}`, { method: 'DELETE', headers: H }),
+  getProject:        (id)       => fetch(`/api/projects/${id}`).then(r => r.json()),
+  updateProject:     (id, data) => fetch(`/api/projects/${id}`, { method: 'PUT', headers: H, body: JSON.stringify(data) }),
+  deleteProject:     (id)       => fetch(`/api/projects/${id}`, { method: 'DELETE', headers: H }),
+  createPhaseGroup:  (pid, data)=> fetch(`/api/phase-groups?project_id=${pid}`, { method: 'POST', headers: H, body: JSON.stringify(data) }),
+  updatePhaseGroup:  (id, data) => fetch(`/api/phase-groups/${id}`, { method: 'PUT', headers: H, body: JSON.stringify(data) }),
+  deletePhaseGroup:  (id)       => fetch(`/api/phase-groups/${id}`, { method: 'DELETE', headers: H }),
+  createPhase:       (pid, data)=> fetch(`/api/phases?project_id=${pid}`, { method: 'POST', headers: H, body: JSON.stringify(data) }),
+  updatePhase:       (id, data) => fetch(`/api/phases/${id}`, { method: 'PUT', headers: H, body: JSON.stringify(data) }),
+  deletePhase:       (id)       => fetch(`/api/phases/${id}`, { method: 'DELETE', headers: H }),
   createMilestone:        (phid, d)  => fetch(`/api/phases/${phid}/milestones`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
   deleteMilestone:        (id)       => fetch(`/api/milestones/${id}`, { method: 'DELETE', headers: H }),
   createEvent:            (phid, d)  => fetch(`/api/phases/${phid}/events`, { method: 'POST', headers: H, body: JSON.stringify(d) }),
@@ -98,13 +101,22 @@ function parseDateLocal(str) {
   return new Date(y, m - 1, d);
 }
 
+/** Return a flat array of ALL phases (standalone + grouped) for a project. */
+function allPhasesFlat(project) {
+  if (!project) return [];
+  const standalone = project.phases || [];
+  const grouped    = (project.groups || []).flatMap(g => g.phases || []);
+  return [...standalone, ...grouped];
+}
+
 function shiftDateStr(str, days) {
   const d = parseDateLocal(str);
   d.setDate(d.getDate() + days);
   return dateToYMD(d);
 }
 
-// Recursively collect all phases that cascade from a moved phase
+// Recursively collect all phases that cascade from a moved phase.
+// `phases` should be the full flat list (use allPhasesFlat).
 function collectPhaseDependents(rootId, delta, phases) {
   const results = [];
   const visit = id => phases.forEach(p => {
@@ -150,7 +162,8 @@ function renderProject(p) {
   document.getElementById('pName').textContent = p.name;
   document.getElementById('pDesc').textContent = p.description || T.no_description_provided;
   document.getElementById('topbarTitle').textContent = p.name;
-  const pc = p.phases.length;
+  // Count all phases: standalone + those inside groups
+  const pc = allPhasesFlat(p).length;
   let phasesLabel;
   if (pc === 1) {
     phasesLabel = T.n_phases.replace('%d', pc);
@@ -161,7 +174,7 @@ function renderProject(p) {
   }
   document.getElementById('phaseCount').textContent = phasesLabel;
   renderProjectItems(p.milestones || [], p.events || []);
-  renderPhases(p.phases);
+  renderPhases(p.phases, p.groups || []);
   if (state.activeTab === 'timeline') requestAnimationFrame(() => renderGantt(p));
 }
 
@@ -221,131 +234,203 @@ function renderProjectItems(milestones, events) {
     </div>`;
 }
 
-function renderPhases(phases) {
+/** Build a phase card element (used for standalone phases and phases inside groups). */
+function buildPhaseCard(phase, phaseMap, msMap, wasCollapsed, wasExpanded, hadState) {
+  const status = getPhaseStatus(phase.start_date, phase.end_date);
+  const color  = phase.color || '#6366f1';
+  const depName   = phase.depends_on_id           ? phaseMap[phase.depends_on_id]           : null;
+  const depMsName = phase.depends_on_milestone_id ? msMap[phase.depends_on_milestone_id]    : null;
+  const collapsed = hadState ? !wasExpanded.has(phase.id) : status !== 'active';
+
+  const card = document.createElement('div');
+  card.className = 'phase-card' + (collapsed ? ' is-collapsed' : '');
+  card.dataset.phaseId = phase.id;
+  card.dataset.status  = status;
+
+  const msItems = phase.milestones.length > 0
+    ? phase.milestones.map(m => `
+        <li>
+          <span class="item-list__name">${escHtml(m.name)}</span>
+          <span class="item-list__meta">${fmtDate(m.target_date)}</span>
+          ${canEdit ? `
+          <button class="btn btn-icon btn-ghost" title="Edit milestone" style="width:22px;height:22px;padding:2px;"
+            onclick="editMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}', '${m.target_date}')">
+            <svg><use href="#icon-pencil"/></svg>
+          </button>
+          <button class="btn btn-icon btn-danger-outline" title="Delete milestone" style="width:22px;height:22px;padding:2px;"
+            onclick="confirmDeleteMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}')">
+            <svg><use href="#icon-trash"/></svg>
+          </button>` : ''}
+        </li>`).join('')
+    : `<li class="item-empty" style="background:none;padding:0.25rem 0;">${T.none}</li>`;
+
+  const evItems = phase.events.length > 0
+    ? phase.events.map(e => `
+        <li>
+          <span class="item-list__name">${escHtml(e.name)}</span>
+          <span class="item-list__meta">${fmtEventMeta(e)}</span>
+          ${canEdit ? `
+          <button class="btn btn-icon btn-ghost" title="${T.tooltip_edit_event}" style="width:22px;height:22px;padding:2px;"
+            onclick="editEvent(${e.id})">
+            <svg><use href="#icon-pencil"/></svg>
+          </button>
+          <button class="btn btn-icon btn-danger-outline" title="${T.tooltip_delete_event}" style="width:22px;height:22px;padding:2px;"
+            onclick="confirmDeleteEvent(${e.id}, '${escHtml(e.name).replace(/'/g,"\\'")}')">
+            <svg><use href="#icon-trash"/></svg>
+          </button>` : ''}
+        </li>`).join('')
+    : `<li class="item-empty" style="background:none;padding:0.25rem 0;">${T.none}</li>`;
+
+  card.innerHTML = `
+    <div class="phase-card__header">
+      <div class="phase-card__toggle-area" onclick="togglePhase(${phase.id})" title="${collapsed ? T.expand_phase : T.collapse_phase}">
+        <svg class="phase-card__chevron"><use href="#icon-chevron-down"/></svg>
+        <div class="phase-card__color-dot" style="background:${color};--dot-color:${color}"></div>
+        <div class="phase-card__title-area">
+          <h3 class="phase-card__name">${escHtml(phase.name)}</h3>
+          <div class="phase-card__meta">
+            ${statusBadge(status)}
+            <span class="phase-card__dates">${fmtDate(phase.start_date)} → ${fmtDate(phase.end_date)}</span>
+            ${depName   ? `<span class="badge badge-dep">↳ ${T.after_prefix} ${escHtml(depName)}</span>`   : ''}
+            ${depMsName ? `<span class="badge badge-dep">◆ ${T.after_prefix} ${escHtml(depMsName)}</span>` : ''}
+          </div>
+        </div>
+      </div>
+      ${canEdit ? `
+      <div class="phase-card__actions">
+        <button class="btn btn-icon btn-ghost" title="${T.tooltip_edit_phase}" onclick="editPhase(${phase.id})">
+          <svg><use href="#icon-pencil"/></svg>
+        </button>
+        <button class="btn btn-icon btn-ghost" title="${T.tooltip_set_dependency}" onclick="setDependency(${phase.id})">
+          <svg><use href="#icon-link"/></svg>
+        </button>
+        <button class="btn btn-icon btn-danger-outline" title="${T.tooltip_delete_phase}" onclick="confirmDeletePhase(${phase.id}, '${escHtml(phase.name).replace(/'/g,"\\'")}')">
+          <svg><use href="#icon-trash"/></svg>
+        </button>
+      </div>` : ''}
+    </div>
+    <div class="phase-card__body">
+      ${phase.description ? `<p class="phase-description">${escHtml(phase.description)}</p>` : ''}
+      <div class="phase-section">
+        <div class="phase-section__header">
+          <span class="phase-section__label">${T.milestones}</span>
+          ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addMilestone(${phase.id})">${T.add}</button>` : ''}
+        </div>
+        <ul class="item-list" id="ms-list-${phase.id}">${msItems}</ul>
+      </div>
+      <div class="phase-section">
+        <div class="phase-section__header">
+          <span class="phase-section__label">${T.events}</span>
+          ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addEvent(${phase.id})">${T.add}</button>` : ''}
+        </div>
+        <ul class="item-list" id="ev-list-${phase.id}">${evItems}</ul>
+      </div>
+    </div>`;
+
+  return card;
+}
+
+function renderPhases(phases, groups = []) {
   const list = document.getElementById('phasesList');
 
-  // Preserve collapse state across re-renders
+  // Preserve collapse state across re-renders (phase cards + group cards)
   const wasCollapsed = new Set();
   const wasExpanded  = new Set();
   list.querySelectorAll('.phase-card[data-phase-id]').forEach(c => {
     const pid = parseInt(c.dataset.phaseId);
     (c.classList.contains('is-collapsed') ? wasCollapsed : wasExpanded).add(pid);
   });
-  const hadState = wasCollapsed.size + wasExpanded.size > 0;
+  const wasGroupCollapsed = new Set();
+  const wasGroupExpanded  = new Set();
+  list.querySelectorAll('.phase-group-card[data-group-id]').forEach(c => {
+    const gid = parseInt(c.dataset.groupId);
+    (c.classList.contains('is-collapsed') ? wasGroupCollapsed : wasGroupExpanded).add(gid);
+  });
+  const hadState      = wasCollapsed.size + wasExpanded.size > 0;
+  const hadGroupState = wasGroupCollapsed.size + wasGroupExpanded.size > 0;
 
   list.innerHTML = '';
-  if (phases.length === 0) {
-    list.innerHTML = `<div class="item-empty" style="text-align:center;padding:2rem;">
-      ${T.no_phases}
-    </div>`;
+
+  const allPhases = [...phases, ...groups.flatMap(g => g.phases || [])];
+
+  if (allPhases.length === 0 && groups.length === 0) {
+    list.innerHTML = `<div class="item-empty" style="text-align:center;padding:2rem;">${T.no_phases}</div>`;
     return;
   }
 
   const phaseMap = {};
-  phases.forEach(p => { phaseMap[p.id] = p.name; });
+  allPhases.forEach(p => { phaseMap[p.id] = p.name; });
 
   // Build milestone map for dependency display
   const msMap = {};
   (state.project.milestones || []).forEach(m => { msMap[m.id] = m.name; });
-  phases.forEach(p => (p.milestones || []).forEach(m => { msMap[m.id] = m.name; }));
+  allPhases.forEach(p => (p.milestones || []).forEach(m => { msMap[m.id] = m.name; }));
 
-  phases.forEach(phase => {
-    const status = getPhaseStatus(phase.start_date, phase.end_date);
-    const color = phase.color || '#6366f1';
-    const depName = phase.depends_on_id ? phaseMap[phase.depends_on_id] : null;
-    const depMsName = phase.depends_on_milestone_id ? msMap[phase.depends_on_milestone_id] : null;
-    const collapsed = hadState
-      ? !wasExpanded.has(phase.id)  // preserve: expanded stays expanded, everything else stays collapsed
-      : status !== 'active';        // first render: default by status
+  // ── Render groups first ──
+  groups.forEach(group => {
+    const memberPhases = group.phases || [];
+    // Compute group date span
+    let groupStart = null, groupEnd = null;
+    memberPhases.forEach(p => {
+      if (!groupStart || p.start_date < groupStart) groupStart = p.start_date;
+      if (!groupEnd   || p.end_date   > groupEnd)   groupEnd   = p.end_date;
+    });
+    const groupStatus = groupStart && groupEnd ? getPhaseStatus(groupStart, groupEnd) : 'upcoming';
+    const color       = group.color || '#6366f1';
 
-    const card = document.createElement('div');
-    card.className = 'phase-card' + (collapsed ? ' is-collapsed' : '');
-    card.dataset.phaseId = phase.id;
-    card.dataset.status = status;
+    // Default: collapse if all members are non-active, or if had previous state honour it
+    const groupCollapsed = hadGroupState
+      ? !wasGroupExpanded.has(group.id)
+      : groupStatus !== 'active';
 
-    const msItems = phase.milestones.length > 0
-      ? phase.milestones.map(m => `
-          <li>
-            <span class="item-list__name">${escHtml(m.name)}</span>
-            <span class="item-list__meta">${fmtDate(m.target_date)}</span>
-            ${canEdit ? `
-            <button class="btn btn-icon btn-ghost" title="Edit milestone" style="width:22px;height:22px;padding:2px;"
-              onclick="editMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}', '${m.target_date}')">
-              <svg><use href="#icon-pencil"/></svg>
-            </button>
-            <button class="btn btn-icon btn-danger-outline" title="Delete milestone" style="width:22px;height:22px;padding:2px;"
-              onclick="confirmDeleteMilestone(${m.id}, '${escHtml(m.name).replace(/'/g,"\\'")}')">
-              <svg><use href="#icon-trash"/></svg>
-            </button>` : ''}
-          </li>`).join('')
-      : `<li class="item-empty" style="background:none;padding:0.25rem 0;">${T.none}</li>`;
+    const groupCard = document.createElement('div');
+    groupCard.className    = 'phase-group-card' + (groupCollapsed ? ' is-collapsed' : '');
+    groupCard.dataset.groupId = group.id;
+    groupCard.dataset.status  = groupStatus;
 
-    const evItems = phase.events.length > 0
-      ? phase.events.map(e => `
-          <li>
-            <span class="item-list__name">${escHtml(e.name)}</span>
-            <span class="item-list__meta">${fmtEventMeta(e)}</span>
-            ${canEdit ? `
-            <button class="btn btn-icon btn-ghost" title="${T.tooltip_edit_event}" style="width:22px;height:22px;padding:2px;"
-              onclick="editEvent(${e.id})">
-              <svg><use href="#icon-pencil"/></svg>
-            </button>
-            <button class="btn btn-icon btn-danger-outline" title="${T.tooltip_delete_event}" style="width:22px;height:22px;padding:2px;"
-              onclick="confirmDeleteEvent(${e.id}, '${escHtml(e.name).replace(/'/g,"\\'")}')">
-              <svg><use href="#icon-trash"/></svg>
-            </button>` : ''}
-          </li>`).join('')
-      : `<li class="item-empty" style="background:none;padding:0.25rem 0;">${T.none}</li>`;
+    const segCount = memberPhases.length;
+    const segLabel = segCount === 1 ? (T.segment_singular || '1 segment') : `${segCount} ${T.segments_plural || 'segments'}`;
 
-    card.innerHTML = `
-      <div class="phase-card__header">
-        <div class="phase-card__toggle-area" onclick="togglePhase(${phase.id})" title="${collapsed ? T.expand_phase : T.collapse_phase}">
-          <svg class="phase-card__chevron"><use href="#icon-chevron-down"/></svg>
-          <div class="phase-card__color-dot" style="background:${color};--dot-color:${color}"></div>
-          <div class="phase-card__title-area">
-            <h3 class="phase-card__name">${escHtml(phase.name)}</h3>
-            <div class="phase-card__meta">
-              ${statusBadge(status)}
-              <span class="phase-card__dates">${fmtDate(phase.start_date)} → ${fmtDate(phase.end_date)}</span>
-              ${depName ? `<span class="badge badge-dep">↳ ${T.after_prefix} ${escHtml(depName)}</span>` : ''}
-              ${depMsName ? `<span class="badge badge-dep">◆ ${T.after_prefix} ${escHtml(depMsName)}</span>` : ''}
-            </div>
+    groupCard.innerHTML = `
+      <div class="phase-group-card__header" onclick="toggleGroup(${group.id})">
+        <svg class="phase-group-card__chevron"><use href="#icon-chevron-down"/></svg>
+        <div class="phase-card__color-dot" style="background:${color};--dot-color:${color};margin-top:3px;flex-shrink:0;"></div>
+        <div class="phase-group-card__title-area">
+          <h3 class="phase-group-card__name">${escHtml(group.name)}</h3>
+          <div class="phase-group-card__meta">
+            ${statusBadge(groupStatus)}
+            ${groupStart ? `<span class="phase-group-card__dates">${fmtDate(groupStart)} → ${fmtDate(groupEnd)}</span>` : ''}
+            <span class="badge-group">${segLabel}</span>
           </div>
         </div>
         ${canEdit ? `
-        <div class="phase-card__actions">
-          <button class="btn btn-icon btn-ghost" title="${T.tooltip_edit_phase}" onclick="editPhase(${phase.id})">
+        <div class="phase-group-card__actions" onclick="event.stopPropagation()">
+          <button class="btn btn-icon btn-ghost" title="${T.tooltip_edit_group || 'Edit group'}" onclick="editGroup(${group.id})">
             <svg><use href="#icon-pencil"/></svg>
           </button>
-          <button class="btn btn-icon btn-ghost" title="${T.tooltip_set_dependency}" onclick="setDependency(${phase.id})">
-            <svg><use href="#icon-link"/></svg>
-          </button>
-          <button class="btn btn-icon btn-danger-outline" title="${T.tooltip_delete_phase}" onclick="confirmDeletePhase(${phase.id}, '${escHtml(phase.name).replace(/'/g,"\\'")}')">
+          <button class="btn btn-icon btn-danger-outline" title="${T.tooltip_delete_group || 'Delete group'}" onclick="confirmDeleteGroup(${group.id}, '${escHtml(group.name).replace(/'/g,"\\'")}')">
             <svg><use href="#icon-trash"/></svg>
           </button>
         </div>` : ''}
       </div>
+      <div class="phase-group-card__body" id="group-body-${group.id}"></div>`;
 
-      <div class="phase-card__body">
-        ${phase.description ? `<p class="phase-description">${escHtml(phase.description)}</p>` : ''}
-        <div class="phase-section">
-          <div class="phase-section__header">
-            <span class="phase-section__label">${T.milestones}</span>
-            ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addMilestone(${phase.id})">${T.add}</button>` : ''}
-          </div>
-          <ul class="item-list" id="ms-list-${phase.id}">${msItems}</ul>
-        </div>
+    list.appendChild(groupCard);
 
-        <div class="phase-section">
-          <div class="phase-section__header">
-            <span class="phase-section__label">${T.events}</span>
-            ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addEvent(${phase.id})">${T.add}</button>` : ''}
-          </div>
-          <ul class="item-list" id="ev-list-${phase.id}">${evItems}</ul>
-        </div>
-      </div>`;
+    // Render member phases into the group body
+    const body = document.getElementById(`group-body-${group.id}`);
+    if (memberPhases.length === 0) {
+      body.innerHTML = `<p class="phase-group-card__empty">${T.group_empty || 'No phases in this group yet.'}</p>`;
+    } else {
+      memberPhases.forEach(phase => {
+        body.appendChild(buildPhaseCard(phase, phaseMap, msMap, wasCollapsed, wasExpanded, hadState));
+      });
+    }
+  });
 
-    list.appendChild(card);
+  // ── Render standalone phases ──
+  phases.forEach(phase => {
+    list.appendChild(buildPhaseCard(phase, phaseMap, msMap, wasCollapsed, wasExpanded, hadState));
   });
 }
 
@@ -427,20 +512,23 @@ function openAddCollaboratorModal() {
 }
 
 function renderGantt(project) {
-  const phases = (project && project.phases) ? project.phases : [];
-  const container = document.querySelector('.gantt-container');
+  // Collect all phases: standalone + grouped
+  const standalonePhases = (project && project.phases) ? project.phases : [];
+  const groups           = (project && project.groups) ? project.groups : [];
+  const allPhases        = allPhasesFlat(project);
+  const container        = document.querySelector('.gantt-container');
 
   // Collect all milestones and events
   const allMilestones = [
     ...(project.milestones || []),
-    ...phases.flatMap(p => p.milestones || []),
+    ...allPhases.flatMap(p => p.milestones || []),
   ];
   const allEvents = [
     ...(project.events || []),
-    ...phases.flatMap(p => p.events || []),
+    ...allPhases.flatMap(p => p.events || []),
   ];
 
-  if (phases.length === 0 && allMilestones.length === 0 && allEvents.length === 0) {
+  if (allPhases.length === 0 && allMilestones.length === 0 && allEvents.length === 0) {
     container.innerHTML = `<div class="item-empty" style="text-align:center;padding:2rem;">${T.no_phases_gantt}</div>`;
     return;
   }
@@ -448,16 +536,56 @@ function renderGantt(project) {
   const styleId = 'gantt-phase-colors';
   let styleTag = document.getElementById(styleId);
   if (!styleTag) { styleTag = document.createElement('style'); styleTag.id = styleId; document.head.appendChild(styleTag); }
-  styleTag.textContent = phases.map(p =>
+  styleTag.textContent = allPhases.map(p =>
     `.gantt .phase-bar-${p.id} .bar { fill: ${p.color || '#6366f1'} !important; }` +
     `.gantt .phase-bar-${p.id} .bar-progress { fill: ${p.color || '#6366f1'} !important; opacity: 0.7; }`
   ).join('\n');
 
-  const tasks = phases.map(p => {
+  // Build tasks: groups get a virtual summary bar, then their member phases follow
+  const tasks = [];
+
+  // 1. Groups (summary bar + member phases)
+  groups.forEach(group => {
+    const memberPhases = group.phases || [];
+    if (memberPhases.length === 0) return;
+    let groupStart = memberPhases[0].start_date, groupEnd = memberPhases[0].end_date;
+    memberPhases.forEach(p => {
+      if (p.start_date < groupStart) groupStart = p.start_date;
+      if (p.end_date   > groupEnd)   groupEnd   = p.end_date;
+    });
+    // Summary bar — cosmetic only, no interaction
+    tasks.push({
+      id: 'grp' + group.id,
+      name: '▸ ' + group.name,
+      start: groupStart,
+      end: groupEnd,
+      progress: 0,
+      dependencies: '',
+      custom_class: 'gantt-group-bar',
+    });
+    // Member phase bars
+    memberPhases.forEach(p => {
+      let deps = 'grp' + group.id; // visual dependency on group bar
+      if (p.depends_on_id) deps = 'p' + p.depends_on_id;
+      if (p.depends_on_milestone_id) deps = 'ms' + p.depends_on_milestone_id;
+      tasks.push({
+        id: 'p' + p.id,
+        name: p.name,
+        start: p.start_date,
+        end: p.end_date,
+        progress: getPhaseStatus(p.start_date, p.end_date) === 'past' ? 100 : 0,
+        dependencies: deps,
+        custom_class: 'phase-bar-' + p.id + ' gantt-grouped-phase',
+      });
+    });
+  });
+
+  // 2. Standalone phases
+  standalonePhases.forEach(p => {
     let deps = '';
     if (p.depends_on_id) deps = 'p' + p.depends_on_id;
     if (p.depends_on_milestone_id) deps = 'ms' + p.depends_on_milestone_id;
-    return {
+    tasks.push({
       id: 'p' + p.id,
       name: p.name,
       start: p.start_date,
@@ -465,7 +593,7 @@ function renderGantt(project) {
       progress: getPhaseStatus(p.start_date, p.end_date) === 'past' ? 100 : 0,
       dependencies: deps,
       custom_class: 'phase-bar-' + p.id,
-    };
+    });
   });
 
   // Group milestones by date so same-day milestones share one row
@@ -525,14 +653,17 @@ function renderGantt(project) {
     on_date_change(task, start, end) {
       const revert = () => renderGantt(state.project);
 
+      // Group summary bars are cosmetic — ignore drags on them
+      if (task.id.startsWith('grp')) { return revert(); }
+
       if (task.id.startsWith('p')) {
         const phaseId = parseInt(task.id.slice(1));
-        const phase   = state.project.phases.find(p => p.id === phaseId);
+        const phase   = allPhasesFlat(state.project).find(p => p.id === phaseId);
         if (!phase) return revert();
         const newStart = dateToYMD(start), newEnd = dateToYMD(end);
         const delta      = Math.round((parseDateLocal(newStart) - parseDateLocal(phase.start_date)) / 86400000);
         if (delta === 0) return;
-        const dependents = collectPhaseDependents(phaseId, delta, state.project.phases);
+        const dependents = collectPhaseDependents(phaseId, delta, allPhasesFlat(state.project));
         showImpactConfirm(
           buildImpactHTML(phase.name, delta, dependents),
           async () => {
@@ -540,6 +671,7 @@ function renderGantt(project) {
               name: phase.name, description: phase.description,
               start_date: newStart, end_date: newEnd,
               color: phase.color || '#6366f1',
+              group_id: phase.group_id ?? null,
               depends_on_id: phase.depends_on_id ?? null,
               depends_on_milestone_id: phase.depends_on_milestone_id ?? null,
             });
@@ -554,13 +686,13 @@ function renderGantt(project) {
         if (newDate === origDate) return;
         const allMs     = [
           ...(state.project.milestones || []),
-          ...state.project.phases.flatMap(p => p.milestones || []),
+          ...allPhasesFlat(state.project).flatMap(p => p.milestones || []),
         ];
         const group     = allMs.filter(m => m.target_date === origDate);
         const delta     = Math.round((parseDateLocal(newDate) - parseDateLocal(origDate)) / 86400000);
         // collect phases that depend on any milestone in the group
         const msDeps = group.flatMap(m => {
-          return state.project.phases
+          return allPhasesFlat(state.project)
             .filter(p => p.depends_on_milestone_id === m.id)
             .map(p => ({ name: p.name, newStart: shiftDateStr(p.start_date, delta), newEnd: shiftDateStr(p.end_date, delta) }));
         });
@@ -576,7 +708,7 @@ function renderGantt(project) {
 
       } else if (task.id.startsWith('ev')) {
         const evId     = parseInt(task.id.slice(2));
-        const allEvs   = [...(state.project.events || []), ...state.project.phases.flatMap(p => p.events || [])];
+        const allEvs   = [...(state.project.events || []), ...allPhasesFlat(state.project).flatMap(p => p.events || [])];
         const ev       = allEvs.find(e => e.id === evId);
         if (!ev) return revert();
         const newStart = dateToYMD(start), newEnd = dateToYMD(end);
@@ -594,14 +726,18 @@ function renderGantt(project) {
     },
 
     on_click(task) {
-      if (task.id.startsWith('p')) {
+      if (task.id.startsWith('grp')) {
+        // Click on group summary bar — open group edit
+        editGroup(parseInt(task.id.slice(3)));
+
+      } else if (task.id.startsWith('p')) {
         editPhase(parseInt(task.id.slice(1)));
 
       } else if (task.id.startsWith('ms-')) {
         const date = task.id.slice(3);
         const allMs = [
           ...(state.project.milestones || []),
-          ...state.project.phases.flatMap(p => p.milestones || []),
+          ...allPhasesFlat(state.project).flatMap(p => p.milestones || []),
         ];
         const group = allMs.filter(m => m.target_date === date);
         if (group.length === 1) {
@@ -620,6 +756,7 @@ function renderGantt(project) {
       } else if (task.id.startsWith('ev')) {
         editEvent(parseInt(task.id.slice(2)));
       }
+      // grp clicks already handled above; ignore any other prefixes
     },
   });
   requestAnimationFrame(() => { addGanttDateLabels(tasks); addTodayLine(); });
@@ -952,7 +1089,7 @@ const toast = {
   info:    (msg) => toast._show(msg, 'info'),
 };
 
-// ── Phase collapse / expand ───────────────────────────────────────────────────
+// ── Phase / group collapse / expand ──────────────────────────────────────────
 function togglePhase(phaseId) {
   const card = document.querySelector(`.phase-card[data-phase-id="${phaseId}"]`);
   if (!card) return;
@@ -960,6 +1097,67 @@ function togglePhase(phaseId) {
   card.classList.toggle('is-collapsed', collapsing);
   const toggleArea = card.querySelector('.phase-card__toggle-area');
   if (toggleArea) toggleArea.title = collapsing ? T.expand_phase : T.collapse_phase;
+}
+
+function toggleGroup(groupId) {
+  const card = document.querySelector(`.phase-group-card[data-group-id="${groupId}"]`);
+  if (!card) return;
+  card.classList.toggle('is-collapsed');
+}
+
+// ── Phase Group Actions ───────────────────────────────────────────────────────
+function addGroup() {
+  showModal(T.modal_add_group || 'Add Group', [
+    { id: 'name',  label: T.group_name  || 'Group name',   type: 'text' },
+    { id: 'desc',  label: T.description,                   type: 'textarea' },
+    { id: 'color', label: T.color,                         type: 'color', defaultValue: '#6366f1' },
+  ], async () => {
+    const name  = document.getElementById('modal_input_name').value.trim();
+    const desc  = document.getElementById('modal_input_desc').value.trim();
+    const color = document.getElementById('modal_input_color').value;
+    clearFieldErrors();
+    if (!name) { setFieldError('name', T.error_name_required); return; }
+    const btn = document.getElementById('modalSubmitBtn');
+    btn.disabled = true;
+    try {
+      const resp = await api.createPhaseGroup(projectId, { name, description: desc || null, color });
+      if (resp.ok) { toast.success(T.toast_group_added || 'Group added'); closeModal(); await refresh(); }
+      else toast.error(T.toast_group_add_failed || 'Failed to add group');
+    } finally { btn.disabled = false; }
+  }, T.modal_add_group || 'Add Group');
+}
+
+function editGroup(groupId) {
+  const group = (state.project.groups || []).find(g => g.id === groupId);
+  if (!group) return;
+  showModal(T.modal_edit_group || 'Edit Group', [
+    { id: 'name',  label: T.group_name  || 'Group name',   type: 'text',     defaultValue: group.name },
+    { id: 'desc',  label: T.description,                   type: 'textarea', defaultValue: group.description || '' },
+    { id: 'color', label: T.color,                         type: 'color',    defaultValue: group.color || '#6366f1' },
+  ], async () => {
+    const name  = document.getElementById('modal_input_name').value.trim();
+    const desc  = document.getElementById('modal_input_desc').value.trim();
+    const color = document.getElementById('modal_input_color').value;
+    clearFieldErrors();
+    if (!name) { setFieldError('name', T.error_name_required); return; }
+    const btn = document.getElementById('modalSubmitBtn');
+    btn.disabled = true;
+    try {
+      const resp = await api.updatePhaseGroup(groupId, { name, description: desc || null, color });
+      if (resp.ok) { toast.success(T.toast_group_updated || 'Group updated'); closeModal(); await refresh(); }
+      else toast.error(T.toast_group_update_failed || 'Failed to update group');
+    } finally { btn.disabled = false; }
+  }, T.save_changes);
+}
+
+function confirmDeleteGroup(groupId, name) {
+  const msg = (T.confirm_delete_group || 'Delete group "%s"? Member phases will become standalone.')
+    .replace('%s', name);
+  showConfirm(msg, async () => {
+    const resp = await api.deletePhaseGroup(groupId);
+    if (resp.ok) { toast.success(T.toast_group_deleted || 'Group deleted'); await refresh(); }
+    else toast.error(T.toast_group_delete_failed || 'Failed to delete group');
+  });
 }
 
 // ── Phase Actions ─────────────────────────────────────────────────────────────
@@ -994,20 +1192,29 @@ function addPhase() {
 }
 
 function editPhase(phaseId) {
-  const phase = state.project.phases.find(p => p.id === phaseId);
+  const phase = allPhasesFlat(state.project).find(p => p.id === phaseId);
   if (!phase) return;
+  const groups = state.project.groups || [];
+  const groupFields = groups.length > 0 ? [
+    { id: 'group', label: T.group_label || 'Group', type: 'select',
+      defaultValue: phase.group_id ? String(phase.group_id) : '',
+      options: groups.map(g => ({ value: String(g.id), text: g.name })) },
+  ] : [];
   showModal(T.modal_edit_phase, [
     { id: 'name',  label: T.phase_name,   type: 'text',     defaultValue: phase.name },
     { id: 'desc',  label: T.description,  type: 'textarea', defaultValue: phase.description || '' },
     { id: 'start', label: T.start_date,   type: 'date',     defaultValue: phase.start_date },
     { id: 'end',   label: T.end_date,     type: 'date',     defaultValue: phase.end_date },
     { id: 'color', label: T.color,        type: 'color',    defaultValue: phase.color || '#6366f1' },
+    ...groupFields,
   ], async () => {
     const name  = document.getElementById('modal_input_name').value.trim();
     const desc  = document.getElementById('modal_input_desc').value.trim();
     const start = document.getElementById('modal_input_start').value;
     const end   = document.getElementById('modal_input_end').value;
     const color = document.getElementById('modal_input_color').value;
+    const groupEl = document.getElementById('modal_input_group');
+    const group_id = groupEl && groupEl.value ? parseInt(groupEl.value) : null;
     clearFieldErrors();
     { let ok = true;
       if (!name)  { setFieldError('name',  T.error_name_required);    ok = false; }
@@ -1020,6 +1227,7 @@ function editPhase(phaseId) {
     try {
       const resp = await api.updatePhase(phaseId, {
         name, description: desc || null, start_date: start, end_date: end, color,
+        group_id,
         depends_on_id: phase.depends_on_id ?? null,
         depends_on_milestone_id: phase.depends_on_milestone_id ?? null,
       });
@@ -1047,16 +1255,17 @@ function editPhase(phaseId) {
 }
 
 function setDependency(phaseId) {
-  const phaseOpts = (state.project.phases || [])
+  const allPhases = allPhasesFlat(state.project);
+  const phaseOpts = allPhases
     .filter(p => p.id !== phaseId)
     .map(p => ({ value: 'phase:' + p.id, text: '📋 ' + p.name }));
   const allMilestones = [
     ...(state.project.milestones || []),
-    ...(state.project.phases || []).flatMap(p => p.milestones || []),
+    ...allPhases.flatMap(p => p.milestones || []),
   ];
   const msOpts = allMilestones.map(m => ({ value: 'ms:' + m.id, text: '◆ ' + m.name + ' (' + fmtDate(m.target_date) + ')' }));
   const opts = [...phaseOpts, ...msOpts];
-  const phase = state.project.phases.find(p => p.id === phaseId);
+  const phase = allPhases.find(p => p.id === phaseId);
   const currentVal = phase.depends_on_milestone_id
     ? 'ms:' + phase.depends_on_milestone_id
     : (phase.depends_on_id ? 'phase:' + phase.depends_on_id : '');
@@ -1247,7 +1456,7 @@ function addEvent(phaseId) {
 function editEvent(evId) {
   const allEvents = [
     ...(state.project.events || []),
-    ...state.project.phases.flatMap(p => p.events || []),
+    ...allPhasesFlat(state.project).flatMap(p => p.events || []),
   ];
   const ev = allEvents.find(e => e.id === evId);
   if (!ev) return;

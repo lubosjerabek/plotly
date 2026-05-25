@@ -161,6 +161,25 @@ return [
     'gantt_week'            => 'Week',
     'gantt_month'           => 'Month',
 
+    // ── Phase Groups ───────────────────────────────────────────
+    'add_group'             => 'Add Group',
+    'group_label'           => 'Group',
+    'group_name'            => 'Group Name',
+    'group_empty'           => 'No phases in this group yet.',
+    'segment_singular'      => '1 segment',
+    'segments_plural'       => 'segments',
+    'modal_add_group'       => 'Add Group',
+    'modal_edit_group'      => 'Edit Group',
+    'confirm_delete_group'  => 'Delete group "%s"? Member phases will become standalone.',
+    'tooltip_edit_group'    => 'Edit group',
+    'tooltip_delete_group'  => 'Delete group',
+    'toast_group_added'          => 'Group added',
+    'toast_group_updated'        => 'Group updated',
+    'toast_group_deleted'        => 'Group deleted',
+    'toast_group_add_failed'     => 'Failed to add group',
+    'toast_group_update_failed'  => 'Failed to update group',
+    'toast_group_delete_failed'  => 'Failed to delete group',
+
     // ── Phase card / phases panel ──────────────────────────────
     'milestones'            => 'Milestones',
     'events'                => 'Events',

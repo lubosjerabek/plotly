@@ -68,6 +68,15 @@ function project_id_for_phase(int $phase_id): int
     return $row ? (int)$row['project_id'] : 0;
 }
 
+/** Get project_id for a phase group (returns 0 if not found) */
+function project_id_for_group(int $group_id): int
+{
+    $stmt = pdo()->prepare('SELECT project_id FROM phase_groups WHERE id = ?');
+    $stmt->execute([$group_id]);
+    $row = $stmt->fetch();
+    return $row ? (int)$row['project_id'] : 0;
+}
+
 /** Get project_id for a milestone */
 function project_id_for_milestone(int $milestone_id): int
 {
@@ -170,14 +179,30 @@ function get_full_project(int $id): ?array
     $project['id']      = (int)$project['id'];
     $project['user_id'] = $project['user_id'] !== null ? (int)$project['user_id'] : null;
 
-    // Phases
-    $stmt = pdo()->prepare('SELECT id, project_id, name, start_date, end_date, color, description, google_event_id, depends_on_id, depends_on_milestone_id FROM phases WHERE project_id = ? ORDER BY start_date');
+    // Phase groups
+    $stmt = pdo()->prepare('SELECT id, project_id, name, color, description, sort_order FROM phase_groups WHERE project_id = ? ORDER BY sort_order, id');
     $stmt->execute([$id]);
-    $phases = $stmt->fetchAll();
+    $groups_raw = $stmt->fetchAll();
+    $groups_map = []; // keyed by group id
+    foreach ($groups_raw as $g) {
+        $g['id']         = (int)$g['id'];
+        $g['project_id'] = (int)$g['project_id'];
+        $g['sort_order'] = (int)$g['sort_order'];
+        $g['phases']     = [];
+        $groups_map[$g['id']] = $g;
+    }
 
-    foreach ($phases as &$phase) {
+    // Phases (include group_id)
+    $stmt = pdo()->prepare('SELECT id, project_id, group_id, name, start_date, end_date, color, description, google_event_id, depends_on_id, depends_on_milestone_id FROM phases WHERE project_id = ? ORDER BY start_date');
+    $stmt->execute([$id]);
+    $phases_raw = $stmt->fetchAll();
+
+    $standalone_phases = [];
+
+    foreach ($phases_raw as &$phase) {
         $phase['id']                      = (int)$phase['id'];
         $phase['project_id']              = (int)$phase['project_id'];
+        $phase['group_id']                = $phase['group_id'] !== null ? (int)$phase['group_id'] : null;
         $phase['depends_on_id']           = $phase['depends_on_id'] !== null ? (int)$phase['depends_on_id'] : null;
         $phase['depends_on_milestone_id'] = $phase['depends_on_milestone_id'] !== null ? (int)$phase['depends_on_milestone_id'] : null;
 
@@ -198,10 +223,17 @@ function get_full_project(int $id): ?array
             $e['phase_id'] = (int)$e['phase_id'];
             return $e;
         }, $ev->fetchAll());
+
+        if ($phase['group_id'] !== null && isset($groups_map[$phase['group_id']])) {
+            $groups_map[$phase['group_id']]['phases'][] = $phase;
+        } else {
+            $standalone_phases[] = $phase;
+        }
     }
     unset($phase);
 
-    $project['phases'] = $phases;
+    $project['phases']  = $standalone_phases;
+    $project['groups']  = array_values($groups_map);
 
     // Project-level milestones (not tied to any phase)
     $ms = pdo()->prepare('SELECT id, project_id, name, target_date, google_event_id FROM milestones WHERE project_id = ? AND phase_id IS NULL ORDER BY target_date');
@@ -238,6 +270,61 @@ function get_full_project(int $id): ?array
     }, $co->fetchAll());
 
     return $project;
+}
+
+// ── Phase group CRUD ──────────────────────────────────────────────────────────
+
+function create_phase_group(int $project_id, array $data): int
+{
+    $stmt = pdo()->prepare(
+        'INSERT INTO phase_groups (project_id, name, color, description, sort_order)
+         VALUES (?, ?, ?, ?, ?)'
+    );
+    $stmt->execute([
+        $project_id,
+        $data['name'],
+        $data['color']       ?? '#cccccc',
+        $data['description'] ?? null,
+        $data['sort_order']  ?? 0,
+    ]);
+    return (int)pdo()->lastInsertId();
+}
+
+function update_phase_group(int $id, array $data): bool
+{
+    $fields = [];
+    $params = [];
+
+    if (array_key_exists('name', $data)) {
+        $fields[] = 'name = ?';
+        $params[] = $data['name'];
+    }
+    if (array_key_exists('color', $data)) {
+        $fields[] = 'color = ?';
+        $params[] = $data['color'];
+    }
+    if (array_key_exists('description', $data)) {
+        $fields[] = 'description = ?';
+        $params[] = $data['description'];
+    }
+    if (array_key_exists('sort_order', $data)) {
+        $fields[] = 'sort_order = ?';
+        $params[] = (int)$data['sort_order'];
+    }
+    if (empty($fields)) return false;
+
+    $params[] = $id;
+    $stmt = pdo()->prepare('UPDATE phase_groups SET ' . implode(', ', $fields) . ' WHERE id = ?');
+    $stmt->execute($params);
+    return $stmt->rowCount() > 0;
+}
+
+function delete_phase_group(int $id): bool
+{
+    // ON DELETE SET NULL on phases.group_id handles ungrouping member phases
+    $stmt = pdo()->prepare('DELETE FROM phase_groups WHERE id = ?');
+    $stmt->execute([$id]);
+    return $stmt->rowCount() > 0;
 }
 
 function shift_dependents(int $phase_id, int $delta_days): void

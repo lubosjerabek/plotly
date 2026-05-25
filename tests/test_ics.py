@@ -1,11 +1,12 @@
 """
 ICS / calendar subscription tests.
 """
+import json
 import re
 from datetime import datetime, timedelta
 
 import pytest
-from conftest import rand_date_range, rand_event_name, rand_future_date, rand_milestone_name
+from conftest import rand_date_range, rand_event_name, rand_future_date, rand_milestone_name, rand_group_name, rand_phase_name
 from pages import BASE_URL, ProjectPage
 from playwright.sync_api import Page, expect
 
@@ -419,3 +420,124 @@ class TestICSEventTiming:
             "All-day phase event should use DTSTART;VALUE=DATE: format"
         assert "DTSTART;TZID=" not in block, \
             "All-day phase event must not use a TZID datetime DTSTART"
+
+
+class TestICSGroupedPhases:
+    """ICS output for phases that belong to a phase group."""
+
+    H = {"Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest"}
+
+    def _create_phase(self, page: Page, project_id: int, name: str, start: str, end: str) -> int:
+        resp = page.request.post(
+            BASE_URL + f"/api/phases?project_id={project_id}",
+            data=json.dumps({"name": name, "start_date": start, "end_date": end, "color": "#6366f1"}),
+            headers=self.H,
+        )
+        assert resp.status == 201, f"Phase creation failed: {resp.text()}"
+        return resp.json()["id"]
+
+    def _assign(self, page: Page, phase_id: int, group_id: int) -> None:
+        resp = page.request.put(
+            BASE_URL + f"/api/phases/{phase_id}",
+            data=json.dumps({"group_id": group_id}),
+            headers=self.H,
+        )
+        assert resp.status == 200, f"Group assignment failed: {resp.text()}"
+
+    def test_grouped_phase_appears_in_ics_feed(
+        self, page: Page, make_project, make_group
+    ):
+        """A phase assigned to a group is present in the ICS feed."""
+        ref = make_project()
+        gid, _gname = make_group(ref)
+        phase_name = rand_phase_name()
+        start, end = rand_date_range()
+        self._assign(page, self._create_phase(page, ref.id, phase_name, start, end), gid)
+
+        project = ProjectPage(page)
+        project.navigate_by_id(ref.id)
+        assert phase_name in project.fetch_ics(), \
+            f"Grouped phase '{phase_name}' not found in ICS feed"
+
+    def test_grouped_phase_summary_includes_group_name(
+        self, page: Page, make_project, make_group
+    ):
+        """The SUMMARY of a grouped phase VEVENT is '📅 GroupName — PhaseName'."""
+        ref = make_project()
+        gid, group_name = make_group(ref)
+        phase_name = rand_phase_name()
+        start, end = rand_date_range()
+        self._assign(page, self._create_phase(page, ref.id, phase_name, start, end), gid)
+
+        project = ProjectPage(page)
+        project.navigate_by_id(ref.id)
+        body = project.fetch_ics()
+        block = _vevent_block(body, phase_name)
+        assert block, f"VEVENT for grouped phase '{phase_name}' not found"
+        assert f"SUMMARY:📅 {group_name} — {phase_name}" in block, (
+            f"Expected '📅 {group_name} — {phase_name}', got:\n{block}"
+        )
+
+    def test_standalone_phase_summary_unchanged_when_groups_exist(
+        self, page: Page, make_project, make_group, make_phase
+    ):
+        """A standalone phase still uses plain '📅 PhaseName' even when the project has groups."""
+        ref = make_project()
+        _gid, _gname = make_group(ref)
+        phase_name = make_phase(ref)
+
+        project = ProjectPage(page)
+        project.navigate_by_id(ref.id)
+        body = project.fetch_ics()
+        block = _vevent_block(body, phase_name)
+        assert block, f"VEVENT for standalone phase '{phase_name}' not found"
+        assert f"SUMMARY:📅 {phase_name}" in block, (
+            f"Standalone phase summary should have no group prefix, got:\n{block}"
+        )
+
+    def test_all_segments_of_group_appear_in_ics(
+        self, page: Page, make_project, make_group
+    ):
+        """Every phase segment in a group produces its own VEVENT with the group prefix."""
+        ref = make_project()
+        gid, group_name = make_group(ref)
+        segments = []
+        for _ in range(2):
+            name = rand_phase_name()
+            start, end = rand_date_range()
+            self._assign(page, self._create_phase(page, ref.id, name, start, end), gid)
+            segments.append(name)
+
+        project = ProjectPage(page)
+        project.navigate_by_id(ref.id)
+        body = project.fetch_ics()
+        for name in segments:
+            block = _vevent_block(body, name)
+            assert block, f"VEVENT for segment '{name}' not found in ICS"
+            assert f"SUMMARY:📅 {group_name} — {name}" in block, (
+                f"Segment '{name}' should carry the group prefix, got:\n{block}"
+            )
+
+    def test_grouped_phase_reverts_to_plain_summary_after_group_deletion(
+        self, page: Page, make_project, make_group
+    ):
+        """After deleting the group the phase becomes standalone and loses the group prefix."""
+        ref = make_project()
+        gid, group_name = make_group(ref)
+        phase_name = rand_phase_name()
+        start, end = rand_date_range()
+        self._assign(page, self._create_phase(page, ref.id, phase_name, start, end), gid)
+
+        page.request.delete(BASE_URL + f"/api/phase-groups/{gid}", headers=self.H)
+
+        project = ProjectPage(page)
+        project.navigate_by_id(ref.id)
+        body = project.fetch_ics()
+        block = _vevent_block(body, phase_name)
+        assert block, f"VEVENT for '{phase_name}' not found after group deletion"
+        assert f"SUMMARY:📅 {phase_name}" in block, (
+            f"After group deletion summary should be plain '📅 {phase_name}', got:\n{block}"
+        )
+        assert group_name not in block, (
+            f"Group name '{group_name}' must not appear in VEVENT after group deletion"
+        )

@@ -161,6 +161,25 @@ return [
     'gantt_week'            => 'Týden',
     'gantt_month'           => 'Měsíc',
 
+    // ── Phase Groups ───────────────────────────────────────────
+    'add_group'             => 'Přidat skupinu',
+    'group_label'           => 'Skupina',
+    'group_name'            => 'Název skupiny',
+    'group_empty'           => 'Tato skupina zatím nemá žádné fáze.',
+    'segment_singular'      => '1 segment',
+    'segments_plural'       => 'segmentů',
+    'modal_add_group'       => 'Přidat skupinu',
+    'modal_edit_group'      => 'Upravit skupinu',
+    'confirm_delete_group'  => 'Smazat skupinu „%s"? Fáze ve skupině se stanou samostatnými.',
+    'tooltip_edit_group'    => 'Upravit skupinu',
+    'tooltip_delete_group'  => 'Smazat skupinu',
+    'toast_group_added'          => 'Skupina přidána',
+    'toast_group_updated'        => 'Skupina aktualizována',
+    'toast_group_deleted'        => 'Skupina smazána',
+    'toast_group_add_failed'     => 'Nepodařilo se přidat skupinu',
+    'toast_group_update_failed'  => 'Nepodařilo se aktualizovat skupinu',
+    'toast_group_delete_failed'  => 'Nepodařilo se smazat skupinu',
+
     // ── Phase card / phases panel ──────────────────────────────
     'milestones'            => 'Milníky',
     'events'                => 'Události',

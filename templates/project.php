@@ -340,6 +340,110 @@ require __DIR__ . '/partials/head.php'; ?>
     }
     .gantt-today-label-bg { fill: var(--surface-3); }
 
+    /* ── Phase group card ── */
+    .phase-group-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin-bottom: 0.875rem;
+      overflow: hidden;
+      transition: border-color var(--t-base);
+    }
+    .phase-group-card:hover { border-color: rgba(255,255,255,0.14); }
+    .phase-group-card[data-status="active"]   { border-left: 3px solid var(--success); }
+    .phase-group-card[data-status="upcoming"] { border-left: 3px solid var(--warning); }
+    .phase-group-card[data-status="past"]     { border-left: 3px solid var(--status-past); opacity: 0.78; }
+
+    .phase-group-card__header {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 1.125rem 1.25rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .phase-group-card__chevron {
+      width: 16px; height: 16px;
+      fill: var(--text-subtle);
+      flex-shrink: 0;
+      margin-top: 3px;
+      transition: transform 0.2s ease;
+    }
+    .phase-group-card.is-collapsed .phase-group-card__chevron {
+      transform: rotate(-90deg);
+    }
+    .phase-group-card__title-area { flex: 1; min-width: 0; }
+    .phase-group-card__name {
+      margin: 0 0 0.3rem;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .phase-group-card__meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .phase-group-card__dates {
+      font-size: 12px;
+      color: var(--text-subtle);
+    }
+    .phase-group-card__actions {
+      display: flex;
+      gap: 0.2rem;
+      flex-shrink: 0;
+    }
+    /* Body — phases nested inside */
+    .phase-group-card__body {
+      overflow: hidden;
+      max-height: 4000px;
+      transition: max-height 0.3s ease, opacity 0.2s ease;
+      opacity: 1;
+      padding: 0 0.75rem 0.75rem;
+    }
+    .phase-group-card.is-collapsed .phase-group-card__body {
+      max-height: 0;
+      opacity: 0;
+      padding-bottom: 0;
+      pointer-events: none;
+    }
+    /* Slightly indent child phase cards inside a group */
+    .phase-group-card__body .phase-card {
+      margin-left: 0.5rem;
+      margin-right: 0;
+      border-top-left-radius: var(--radius-sm);
+      border-bottom-left-radius: var(--radius-sm);
+    }
+    .phase-group-card__body .phase-card:first-child { margin-top: 0; }
+    .phase-group-card__empty {
+      font-size: 12px;
+      color: var(--text-subtle);
+      padding: 0.5rem 0.5rem 0.25rem;
+      font-style: italic;
+    }
+    /* Segment count badge */
+    .badge-group {
+      background: var(--accent-muted);
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 0.15em 0.55em;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Gantt: group summary bar ── */
+    .gantt .gantt-group-bar .bar {
+      fill: rgba(99,102,241,0.2) !important;
+      stroke: var(--accent) !important;
+      stroke-width: 1px !important;
+    }
+    .gantt .gantt-group-bar .bar-progress { fill: rgba(99,102,241,0.3) !important; }
+    .gantt .gantt-group-bar .bar-label { fill: var(--accent) !important; font-weight: 700 !important; }
+    /* Prevent resize/drag on group summary bars */
+    .gantt .gantt-group-bar .bar-wrapper { pointer-events: none !important; }
+
     /* ── Subscribe modal ── */
     .subscribe-url-row {
       display: flex;
@@ -474,10 +578,16 @@ require __DIR__ . '/partials/head.php'; ?>
     <div class="panel-toolbar">
       <span class="panel-toolbar__label" id="phaseCount"></span>
       <?php if (can_write_project($project_id)): ?>
-      <button class="btn btn-primary" onclick="addPhase()">
-        <svg><use href="#icon-plus"/></svg>
-            <?= htmlspecialchars(t('add_phase')) ?>
-      </button>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn btn-ghost" id="addGroupBtn" onclick="addGroup()">
+          <svg><use href="#icon-plus"/></svg>
+          <?= htmlspecialchars(t('add_group')) ?>
+        </button>
+        <button class="btn btn-primary" onclick="addPhase()">
+          <svg><use href="#icon-plus"/></svg>
+          <?= htmlspecialchars(t('add_phase')) ?>
+        </button>
+      </div>
       <?php endif; ?>
     </div>
     <!-- Project-wide milestones & events (not tied to any phase) -->

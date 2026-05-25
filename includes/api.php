@@ -58,6 +58,67 @@ function api_delete_project(int $id): void
     json_out(['ok' => true]);
 }
 
+// ── Phase Groups API ──────────────────────────────────────────────────────────
+
+function api_create_phase_group(): void
+{
+    require_auth();
+    $b          = body();
+    $project_id = (int)($_GET['project_id'] ?? 0);
+    if (!$project_id) json_out(['detail' => 'project_id required'], 422);
+    assert_project_write($project_id);
+
+    $name = trim($b['name'] ?? '');
+    if ($name === '') json_out(['detail' => 'name required'], 422);
+
+    $new_id = create_phase_group($project_id, [
+        'name'        => $name,
+        'color'       => $b['color']       ?? '#cccccc',
+        'description' => $b['description'] ?? null,
+        'sort_order'  => $b['sort_order']  ?? 0,
+    ]);
+
+    $row = pdo()->prepare('SELECT id, project_id, name, color, description, sort_order FROM phase_groups WHERE id = ?');
+    $row->execute([$new_id]);
+    $group = $row->fetch();
+    $group['id']         = (int)$group['id'];
+    $group['project_id'] = (int)$group['project_id'];
+    $group['sort_order'] = (int)$group['sort_order'];
+    $group['phases']     = [];
+    json_out($group, 201);
+}
+
+function api_update_phase_group(int $id): void
+{
+    require_auth();
+    $pid = project_id_for_group($id);
+    if (!$pid) not_found();
+    assert_project_write($pid);
+
+    $b = body();
+    update_phase_group($id, $b);
+
+    $row = pdo()->prepare('SELECT id, project_id, name, color, description, sort_order FROM phase_groups WHERE id = ?');
+    $row->execute([$id]);
+    $group = $row->fetch();
+    if (!$group) not_found();
+    $group['id']         = (int)$group['id'];
+    $group['project_id'] = (int)$group['project_id'];
+    $group['sort_order'] = (int)$group['sort_order'];
+    json_out($group);
+}
+
+function api_delete_phase_group(int $id): void
+{
+    require_auth();
+    $pid = project_id_for_group($id);
+    if (!$pid) not_found();
+    assert_project_write($pid);
+
+    delete_phase_group($id);
+    json_out(['ok' => true]);
+}
+
 // ── Phases API ────────────────────────────────────────────────────────────────
 
 function api_create_phase(): void
@@ -68,17 +129,27 @@ function api_create_phase(): void
     if (!$project_id) json_out(['detail' => 'project_id required'], 422);
     assert_project_write($project_id);
 
+    // Validate group_id belongs to this project (if provided)
+    $group_id = null;
+    if (!empty($b['group_id'])) {
+        $group_id = (int)$b['group_id'];
+        if (project_id_for_group($group_id) !== $project_id) {
+            json_out(['detail' => 'Invalid group_id'], 422);
+        }
+    }
+
     $stmt = pdo()->prepare(
-        'INSERT INTO phases (project_id, name, start_date, end_date, color, description, depends_on_id) VALUES (?,?,?,?,?,?,?)'
+        'INSERT INTO phases (project_id, group_id, name, start_date, end_date, color, description, depends_on_id) VALUES (?,?,?,?,?,?,?,?)'
     );
     $stmt->execute([
         $project_id,
+        $group_id,
         $b['name']         ?? '',
         $b['start_date']   ?? '',
         $b['end_date']     ?? '',
         $b['color']        ?? '#cccccc',
         $b['description']  ?? null,
-        $b['depends_on_id'] ? (int)$b['depends_on_id'] : null,
+        !empty($b['depends_on_id']) ? (int)$b['depends_on_id'] : null,
     ]);
     $new_id = (int)pdo()->lastInsertId();
 
@@ -87,6 +158,7 @@ function api_create_phase(): void
     $phase = $row->fetch();
     $phase['id']            = (int)$phase['id'];
     $phase['project_id']    = (int)$phase['project_id'];
+    $phase['group_id']      = $phase['group_id'] !== null ? (int)$phase['group_id'] : null;
     $phase['depends_on_id'] = $phase['depends_on_id'] !== null ? (int)$phase['depends_on_id'] : null;
     $phase['milestones']    = [];
     $phase['events']        = [];
@@ -108,8 +180,22 @@ function api_update_phase(int $id): void
     $new_start  = $b['start_date'] ?? $old_start;
     $delta_days = (int)round((strtotime($new_start) - strtotime($old_start)) / 86400);
 
+    // Resolve group_id: explicit null clears it; absent key keeps existing
+    if (array_key_exists('group_id', $b)) {
+        if ($b['group_id'] === null || $b['group_id'] === '' || $b['group_id'] === 0) {
+            $group_id = null;
+        } else {
+            $group_id = (int)$b['group_id'];
+            if (project_id_for_group($group_id) !== (int)$existing['project_id']) {
+                json_out(['detail' => 'Invalid group_id'], 422);
+            }
+        }
+    } else {
+        $group_id = $existing['group_id'] !== null ? (int)$existing['group_id'] : null;
+    }
+
     $upd = pdo()->prepare(
-        'UPDATE phases SET name=?, start_date=?, end_date=?, color=?, description=?, depends_on_id=?, depends_on_milestone_id=? WHERE id=?'
+        'UPDATE phases SET name=?, start_date=?, end_date=?, color=?, description=?, group_id=?, depends_on_id=?, depends_on_milestone_id=? WHERE id=?'
     );
     $upd->execute([
         $b['name']          ?? $existing['name'],
@@ -117,6 +203,7 @@ function api_update_phase(int $id): void
         $b['end_date']      ?? $existing['end_date'],
         $b['color']         ?? $existing['color'],
         array_key_exists('description', $b) ? $b['description'] : $existing['description'],
+        $group_id,
         isset($b['depends_on_id']) && $b['depends_on_id'] ? (int)$b['depends_on_id'] : null,
         isset($b['depends_on_milestone_id']) && $b['depends_on_milestone_id'] ? (int)$b['depends_on_milestone_id'] : null,
         $id,
@@ -128,6 +215,7 @@ function api_update_phase(int $id): void
     $phase = $sel->fetch();
     $phase['id']                      = (int)$phase['id'];
     $phase['project_id']              = (int)$phase['project_id'];
+    $phase['group_id']                = $phase['group_id'] !== null ? (int)$phase['group_id'] : null;
     $phase['depends_on_id']           = $phase['depends_on_id'] !== null ? (int)$phase['depends_on_id'] : null;
     $phase['depends_on_milestone_id'] = $phase['depends_on_milestone_id'] !== null ? (int)$phase['depends_on_milestone_id'] : null;
 

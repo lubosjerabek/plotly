@@ -161,6 +161,25 @@ return [
     'gantt_week'            => 'Тиждень',
     'gantt_month'           => 'Місяць',
 
+    // ── Phase Groups ───────────────────────────────────────────
+    'add_group'             => 'Додати групу',
+    'group_label'           => 'Група',
+    'group_name'            => 'Назва групи',
+    'group_empty'           => 'У цій групі ще немає фаз.',
+    'segment_singular'      => '1 сегмент',
+    'segments_plural'       => 'сегментів',
+    'modal_add_group'       => 'Додати групу',
+    'modal_edit_group'      => 'Редагувати групу',
+    'confirm_delete_group'  => 'Видалити групу «%s»? Фази групи стануть самостійними.',
+    'tooltip_edit_group'    => 'Редагувати групу',
+    'tooltip_delete_group'  => 'Видалити групу',
+    'toast_group_added'          => 'Групу додано',
+    'toast_group_updated'        => 'Групу оновлено',
+    'toast_group_deleted'        => 'Групу видалено',
+    'toast_group_add_failed'     => 'Не вдалося додати групу',
+    'toast_group_update_failed'  => 'Не вдалося оновити групу',
+    'toast_group_delete_failed'  => 'Не вдалося видалити групу',
+
     // ── Phase card / phases panel ──────────────────────────────
     'milestones'            => 'Контрольні точки',
     'events'                => 'Події',

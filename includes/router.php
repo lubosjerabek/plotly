@@ -62,6 +62,11 @@ if ($method === 'POST'   && preg_match('#^/api/projects/(\d+)/collaborators$#', 
 if ($method === 'PATCH'  && preg_match('#^/api/projects/(\d+)/collaborators/(\d+)$#', $path, $m))            { api_update_collaborator((int)$m[1], (int)$m[2]); }
 if ($method === 'DELETE' && preg_match('#^/api/projects/(\d+)/collaborators/(\d+)$#', $path, $m))            { api_remove_collaborator((int)$m[1], (int)$m[2]); }
 
+// Phase Groups API
+if ($method === 'POST'   && $path === '/api/phase-groups')                                 { api_create_phase_group(); }
+if ($method === 'PUT'    && preg_match('#^/api/phase-groups/(\d+)$#', $path, $m))          { api_update_phase_group((int)$m[1]); }
+if ($method === 'DELETE' && preg_match('#^/api/phase-groups/(\d+)$#', $path, $m))          { api_delete_phase_group((int)$m[1]); }
+
 // Phases API
 if ($method === 'POST'   && $path === '/api/phases')                              { api_create_phase(); }
 if ($method === 'PUT'    && preg_match('#^/api/phases/(\d+)$#', $path, $m))      { api_update_phase((int)$m[1]); }

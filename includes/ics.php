@@ -57,12 +57,14 @@ function build_ics(array $items): string
 function collect_project_ics_items(array $project): array
 {
     $items = [];
-    foreach ($project['phases'] as $phase) {
+
+    // Helper: emit one phase's VEVENT + its milestones + its events.
+    $emit_phase = function (array $phase, string $prefix) use (&$items): void {
         $items[] = [
             'uid'         => 'phase-' . $phase['id'] . '@plotly',
             'start'       => $phase['start_date'],
             'end'         => $phase['end_date'],
-            'summary'     => '📅 ' . $phase['name'],
+            'summary'     => $prefix . $phase['name'],
             'description' => $phase['description'] ?? '',
         ];
         foreach ($phase['milestones'] as $ms) {
@@ -84,6 +86,18 @@ function collect_project_ics_items(array $project): array
                 'summary'     => $ev['name'],
                 'description' => '',
             ];
+        }
+    };
+
+    // Standalone phases — unchanged summary format.
+    foreach ($project['phases'] as $phase) {
+        $emit_phase($phase, '📅 ');
+    }
+
+    // Grouped phases — prefix each segment's summary with the group name.
+    foreach ($project['groups'] ?? [] as $group) {
+        foreach ($group['phases'] as $phase) {
+            $emit_phase($phase, '📅 ' . $group['name'] . ' — ');
         }
     }
     foreach ($project['milestones'] ?? [] as $ms) {
