@@ -4,6 +4,11 @@ defined('APP_BOOT') or die;
 
 // ── Auth pages ────────────────────────────────────────────────────────────────
 
+/**
+ * GET /login — render the login form.
+ * POST /login — authenticate the user with rate-limiting (max 10 attempts per IP per 15 min);
+ * on success regenerates the session, sets auth session vars, and redirects to /.
+ */
 function page_login(): void
 {
     $error = '';
@@ -45,6 +50,7 @@ function page_login(): void
     serve_template('login.php', ['error' => $error]);
 }
 
+/** GET /logout — destroy the session and redirect to /login */
 function page_logout(): void
 {
     session_destroy();
@@ -52,6 +58,10 @@ function page_logout(): void
     exit;
 }
 
+/**
+ * GET /register?token= — render the registration form if the invite token is valid and unused.
+ * POST — validate fields, create the user account, mark the invite consumed, and log in.
+ */
 function page_register(string $token): void
 {
     // Validate token
@@ -114,6 +124,10 @@ function page_register(string $token): void
     serve_template('register.php', ['error' => $error, 'invite' => $invite, 'token' => $token]);
 }
 
+/**
+ * GET /reset-password?token= — render the password-reset form if the token is valid and unused.
+ * POST — validate and update the password, then mark the reset token consumed.
+ */
 function page_reset_password(string $token): void
 {
     $stmt = pdo()->prepare(
@@ -153,12 +167,14 @@ function page_reset_password(string $token): void
 
 // ── Page handlers ─────────────────────────────────────────────────────────────
 
+/** GET / — render the main project dashboard (authentication required) */
 function page_index(): void
 {
     require_auth();
     serve_template('index.php');
 }
 
+/** GET /projects/{id} — render the project detail page; redirects to / if the user cannot read the project */
 function page_project(int $project_id): void
 {
     require_auth();
@@ -169,6 +185,7 @@ function page_project(int $project_id): void
     serve_template('project.php', ['project_id' => $project_id]);
 }
 
+/** GET /admin — render the admin user-management page (admin role required) */
 function page_admin_users(): void
 {
     require_admin();

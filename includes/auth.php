@@ -4,6 +4,7 @@ defined('APP_BOOT') or die;
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
+/** Abort or redirect if the request is not authenticated (401 JSON for API routes, redirect to /login otherwise) */
 function require_auth(): void
 {
     if (empty($_SESSION['authed']) || empty($_SESSION['user_id'])) {
@@ -15,6 +16,7 @@ function require_auth(): void
     }
 }
 
+/** Abort with 403 if the authenticated user is not an admin (extends require_auth) */
 function require_admin(): void
 {
     require_auth();

@@ -4,6 +4,8 @@ from .base_page import BasePage
 
 
 class LoginPage(BasePage):
+    """Page object for the /login route."""
+
     EMAIL    = "input[name='email']"
     PASSWORD = "input[name='password']"
     _SUBMIT  = "Sign In"  # used with get_by_role
@@ -13,6 +15,7 @@ class LoginPage(BasePage):
         return self
 
     def login(self, email: str, password: str):
+        """Fill credentials and submit the form; waits for networkidle before returning."""
         self.page.fill(self.EMAIL,    email)
         self.page.fill(self.PASSWORD, password)
         self.page.get_by_role("button", name=self._SUBMIT).click()

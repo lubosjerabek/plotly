@@ -1,4 +1,5 @@
 // ── Language dropdown ────────────────────────────────────────────────────────
+/** Toggle the language picker dropdown and keep its aria-expanded attribute in sync */
 function toggleLangDropdown(e) {
   e.stopPropagation();
   const dd = document.getElementById('langDropdown');
@@ -14,6 +15,7 @@ document.addEventListener('click', () => {
 });
 
 // ── User menu ────────────────────────────────────────────────────────────────
+/** Toggle the user account menu and keep its trigger aria-expanded attribute in sync */
 function toggleUserMenu(e) {
   e.stopPropagation();
   const m = document.getElementById('userMenu');
@@ -60,6 +62,7 @@ const api = {
 // ── Utilities ────────────────────────────────────────────────────────────────
 const todayStr = () => new Date().toISOString().split('T')[0];
 
+/** Escape a string for safe interpolation into HTML attribute values and text content */
 function escHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -68,6 +71,7 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+/** Format a YYYY-MM-DD string using the localised month names from window.T */
 function fmtDate(d) {
   if (!d) return '';
   const [y, m, day] = d.split('-');
@@ -75,12 +79,14 @@ function fmtDate(d) {
   return `${months[parseInt(m,10)-1]} ${parseInt(day,10)}, ${y}`;
 }
 
+/** Truncate a "HH:MM:SS" time string to "HH:MM"; returns empty string for null/undefined */
 function fmtTime(t) {
   // "HH:MM:SS" → "HH:MM"; handle null/undefined
   if (!t) return '';
   return t.slice(0, 5);
 }
 
+/** Format an event's date/time range as a compact string for display in phase cards and lists */
 function fmtEventMeta(e) {
   const s = fmtDate(e.start_date), en = fmtDate(e.end_date);
   const st = fmtTime(e.start_time), et = fmtTime(e.end_time);
@@ -92,10 +98,12 @@ function fmtEventMeta(e) {
   return s === en ? s : `${s} → ${en}`;
 }
 
+/** Convert a Date object to a YYYY-MM-DD string using local time (not UTC) */
 function dateToYMD(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
+/** Parse a YYYY-MM-DD string into a Date using local midnight (avoids UTC-offset day shifts) */
 function parseDateLocal(str) {
   const [y, m, d] = str.split('-').map(Number);
   return new Date(y, m - 1, d);
@@ -109,14 +117,20 @@ function allPhasesFlat(project) {
   return [...standalone, ...grouped];
 }
 
+/** Add or subtract days from a YYYY-MM-DD string and return the new date string */
 function shiftDateStr(str, days) {
   const d = parseDateLocal(str);
   d.setDate(d.getDate() + days);
   return dateToYMD(d);
 }
 
-// Recursively collect all phases that cascade from a moved phase.
-// `phases` should be the full flat list (use allPhasesFlat).
+/**
+ * Recursively collect all phases that cascade from a moved phase.
+ * @param {number} rootId  ID of the phase that was moved
+ * @param {number} delta   Day offset to apply
+ * @param {Array}  phases  Full flat phase list (use allPhasesFlat)
+ * @returns {Array} Each dependent with name, newStart, and newEnd
+ */
 function collectPhaseDependents(rootId, delta, phases) {
   const results = [];
   const visit = id => phases.forEach(p => {
@@ -129,6 +143,7 @@ function collectPhaseDependents(rootId, delta, phases) {
   return results;
 }
 
+/** Build an HTML summary of a drag-to-reschedule change, listing the moved item and any cascaded dependents */
 function buildImpactHTML(movedLabel, delta, dependents) {
   const sign   = delta > 0 ? `+${delta}` : `${delta}`;
   const dUnit  = Math.abs(delta) === 1 ? T.impact_day : T.impact_days;
@@ -143,6 +158,7 @@ function buildImpactHTML(movedLabel, delta, dependents) {
   return html;
 }
 
+/** Return 'past', 'active', or 'upcoming' based on how today falls relative to start/end dates */
 function getPhaseStatus(start, end) {
   const today = new Date(); today.setHours(0,0,0,0);
   const s = new Date(start), e = new Date(end);
@@ -151,12 +167,14 @@ function getPhaseStatus(start, end) {
   return 'active';
 }
 
+/** Render a coloured status badge span for a phase status string ('past', 'active', 'upcoming') */
 function statusBadge(status) {
   const labels = { past: T.status_past, active: T.status_active, upcoming: T.status_upcoming };
   return `<span class="badge badge-${status}">${labels[status]}</span>`;
 }
 
 // ── Render ───────────────────────────────────────────────────────────────────
+/** Update the page title, header fields, and all tab content from a full project object */
 function renderProject(p) {
   document.title = `${p.name} — Plotly`;
   document.getElementById('pName').textContent = p.name;
@@ -178,6 +196,7 @@ function renderProject(p) {
   if (state.activeTab === 'timeline') requestAnimationFrame(() => renderGantt(p));
 }
 
+/** Render the project-level milestones and events card (items not attached to any phase) */
 function renderProjectItems(milestones, events) {
   const card = document.getElementById('projectItemsCard');
   const container = document.getElementById('projectItemsBody');
@@ -330,6 +349,10 @@ function buildPhaseCard(phase, phaseMap, msMap, wasCollapsed, wasExpanded, hadSt
   return card;
 }
 
+/**
+ * Re-render the phase list, preserving each card's collapsed/expanded state across refreshes.
+ * Renders phase groups first (with member phases nested inside), then standalone phases.
+ */
 function renderPhases(phases, groups = []) {
   const list = document.getElementById('phasesList');
 
@@ -435,6 +458,7 @@ function renderPhases(phases, groups = []) {
 }
 
 // ── Collaborators ─────────────────────────────────────────────────────────────
+/** Fetch and render the collaborator list; hides the Add button for non-owners */
 async function renderCollaborators() {
   const list = document.getElementById('collaboratorsList');
   const addBtn = document.getElementById('addCollaboratorBtn');
@@ -477,11 +501,13 @@ async function renderCollaborators() {
   </table>`;
 }
 
+/** Update a collaborator's role via the API and show a toast on success */
 async function changeCollaboratorRole(userId, role) {
   await api.updateCollaborator(projectId, userId, { role });
   toast.success(T.toast_collaborator_updated);
 }
 
+/** Confirm and remove a collaborator from the project, then re-render the list */
 async function removeCollaborator(userId, name) {
   if (!confirm(T.confirm_remove_collaborator.replace('%s', name))) return;
   const res = await api.removeCollaborator(projectId, userId);
@@ -491,6 +517,7 @@ async function removeCollaborator(userId, name) {
   }
 }
 
+/** Open the generic modal to add a collaborator by email and role */
 function openAddCollaboratorModal() {
   showModal(T.add_collaborator, [
     { id: 'collab_email', label: T.collaborator_email, type: 'text', defaultValue: '' },
@@ -511,6 +538,12 @@ function openAddCollaboratorModal() {
   }, T.add_collaborator);
 }
 
+/**
+ * Render the Frappe Gantt chart for a project.
+ * Builds task rows for groups (summary bars), grouped phases, standalone phases,
+ * same-day-merged milestones, and events. Wires up drag-to-reschedule with an
+ * impact confirmation dialog and click-to-edit handlers.
+ */
 function renderGantt(project) {
   // Collect all phases: standalone + grouped
   const standalonePhases = (project && project.phases) ? project.phases : [];
@@ -766,6 +799,7 @@ function renderGantt(project) {
   }
 }
 
+/** Append SVG text labels showing the date range of each Gantt bar, positioned after the bar-label text */
 function addGanttDateLabels(tasks) {
   const svg = document.querySelector('#gantt');
   if (!svg) return;
@@ -824,6 +858,7 @@ function addGanttDateLabels(tasks) {
 }
 
 // ── Today line ────────────────────────────────────────────────────────────────
+/** Draw a vertical "Today" line and label on the Gantt SVG; falls back to gantt_start math when no today-highlight element is present */
 function addTodayLine() {
   const svg = document.querySelector('#gantt');
   if (!svg) return;
@@ -875,6 +910,7 @@ function addTodayLine() {
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
+/** Switch the active tab panel, update aria-selected on tab buttons, and lazy-render the Gantt or collaborator list if needed */
 function switchTab(tab) {
   state.activeTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => {
@@ -889,6 +925,7 @@ function switchTab(tab) {
   if (tab === 'collaborators') renderCollaborators();
 }
 
+/** Change the Gantt view mode (Day/Week/Month), update the active button, and refresh date labels */
 function setGanttView(view) {
   state.ganttView = view;
   document.querySelectorAll('#ganttViewBtns button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
@@ -899,16 +936,19 @@ function setGanttView(view) {
 }
 
 // ── Subscribe / ICS Modal ─────────────────────────────────────────────────────
+/** Open the ICS subscribe modal, pre-filling the per-project calendar URL for the current user's token */
 function openSubscribeModal() {
   const url = window.location.origin + '/project/' + projectId + '/calendar.ics?token=' + encodeURIComponent(icsToken);
   document.getElementById('icsUrl').value = url;
   document.getElementById('subscribeModal').classList.add('is-open');
 }
 
+/** Close the ICS subscribe modal */
 function closeSubscribeModal() {
   document.getElementById('subscribeModal').classList.remove('is-open');
 }
 
+/** Copy the ICS feed URL to the clipboard via the Clipboard API, falling back to select-and-notify */
 async function copyIcsUrl() {
   const url = document.getElementById('icsUrl').value;
   try {
@@ -923,11 +963,13 @@ async function copyIcsUrl() {
 // ── Generic Modal ─────────────────────────────────────────────────────────────
 let _modalCallback = null;
 
+/** Remove all is-invalid classes and inline error messages from the generic modal fields */
 function clearFieldErrors() {
   document.querySelectorAll('#genericModal .is-invalid').forEach(el => el.classList.remove('is-invalid'));
   document.querySelectorAll('#genericModal .field-error').forEach(el => el.remove());
 }
 
+/** Mark a modal field as invalid and append a visible error message below it */
 function setFieldError(id, msg) {
   const el = document.getElementById('modal_input_' + id);
   if (!el) return;
@@ -940,6 +982,14 @@ function setFieldError(id, msg) {
   }
 }
 
+/**
+ * Open the generic modal with dynamically generated fields.
+ * Supports text, date, time, color (with swatch palette), select, textarea, and checkbox field types.
+ * @param {string}   title        Modal heading
+ * @param {Array}    fields       Field descriptor objects
+ * @param {Function} callback     Called when the user clicks Submit
+ * @param {string}   [submitLabel] Label for the submit button (default: 'Save')
+ */
 function showModal(title, fields, callback, submitLabel = 'Save') {
   document.getElementById('modalTitle').textContent = title;
   document.getElementById('modalSubmitBtn').textContent = submitLabel;
@@ -976,6 +1026,7 @@ function showModal(title, fields, callback, submitLabel = 'Save') {
   }, 50);
 }
 
+/** Render the HTML for a single modal field descriptor; used by showModal to populate the fields container */
 function buildFieldHTML(f) {
   const label = `<label class="field-label" for="modal_input_${f.id}">${escHtml(f.label)}</label>`;
   if (f.type === 'color') {
@@ -1012,6 +1063,7 @@ function buildFieldHTML(f) {
   return `${label}<input type="${f.type || 'text'}" id="modal_input_${f.id}" value="${escHtml(f.defaultValue || '')}" autocomplete="off">`;
 }
 
+/** Close the generic modal and clear the pending submit callback */
 function closeModal() {
   document.getElementById('genericModal').classList.remove('is-open');
   _modalCallback = null;
@@ -1025,6 +1077,12 @@ document.getElementById('modalSubmitBtn').addEventListener('click', () => {
 let _confirmCallback       = null;
 let _confirmCancelCallback = null;
 
+/**
+ * Open the confirmation modal with a "Delete" OK button.
+ * @param {string}   message    Body text shown to the user
+ * @param {Function} onConfirm  Called when the user clicks Delete
+ * @param {string}   [title]    Modal heading; defaults to T.modal_confirm_deletion
+ */
 function showConfirm(message, onConfirm, title) {
   title = title || T.modal_confirm_deletion;
   const okBtn = document.getElementById('confirmOkBtn');
@@ -1037,6 +1095,10 @@ function showConfirm(message, onConfirm, title) {
   document.getElementById('confirmModal').classList.add('is-open');
 }
 
+/**
+ * Open the confirmation modal with an "Apply" OK button for Gantt drag-reschedule previews.
+ * onCancel is invoked when the modal is dismissed without confirming (reverts the drag).
+ */
 function showImpactConfirm(htmlMessage, onApply, onCancel, title) {
   title = title || T.modal_confirm_change;
   const okBtn = document.getElementById('confirmOkBtn');
@@ -1049,6 +1111,7 @@ function showImpactConfirm(htmlMessage, onApply, onCancel, title) {
   document.getElementById('confirmModal').classList.add('is-open');
 }
 
+/** Close the confirmation modal and invoke the cancel callback (if any) to revert tentative changes */
 function closeConfirm() {
   document.getElementById('confirmModal').classList.remove('is-open');
   const cancelCb = _confirmCancelCallback;
@@ -1090,6 +1153,7 @@ const toast = {
 };
 
 // ── Phase / group collapse / expand ──────────────────────────────────────────
+/** Toggle the collapsed/expanded state of a phase card and update its toggle-area title */
 function togglePhase(phaseId) {
   const card = document.querySelector(`.phase-card[data-phase-id="${phaseId}"]`);
   if (!card) return;
@@ -1099,6 +1163,7 @@ function togglePhase(phaseId) {
   if (toggleArea) toggleArea.title = collapsing ? T.expand_phase : T.collapse_phase;
 }
 
+/** Toggle the collapsed/expanded state of a phase group card */
 function toggleGroup(groupId) {
   const card = document.querySelector(`.phase-group-card[data-group-id="${groupId}"]`);
   if (!card) return;
@@ -1106,6 +1171,7 @@ function toggleGroup(groupId) {
 }
 
 // ── Phase Group Actions ───────────────────────────────────────────────────────
+/** Open the modal to create a new phase group for this project */
 function addGroup() {
   showModal(T.modal_add_group || 'Add Group', [
     { id: 'name',  label: T.group_name  || 'Group name',   type: 'text' },
@@ -1127,6 +1193,7 @@ function addGroup() {
   }, T.modal_add_group || 'Add Group');
 }
 
+/** Open the modal to edit an existing phase group's name, description, and colour */
 function editGroup(groupId) {
   const group = (state.project.groups || []).find(g => g.id === groupId);
   if (!group) return;
@@ -1150,6 +1217,7 @@ function editGroup(groupId) {
   }, T.save_changes);
 }
 
+/** Confirm and delete a phase group; member phases become standalone (not deleted) */
 function confirmDeleteGroup(groupId, name) {
   const msg = (T.confirm_delete_group || 'Delete group "%s"? Member phases will become standalone.')
     .replace('%s', name);
@@ -1161,6 +1229,7 @@ function confirmDeleteGroup(groupId, name) {
 }
 
 // ── Phase Actions ─────────────────────────────────────────────────────────────
+/** Open the modal to add a new phase to this project */
 function addPhase() {
   showModal(T.modal_add_phase, [
     { id: 'name',  label: T.phase_name,   type: 'text' },
@@ -1191,6 +1260,11 @@ function addPhase() {
   }, T.modal_add_phase);
 }
 
+/**
+ * Open the modal to edit an existing phase.
+ * Automatically shifts the end date whenever start date changes, preserving the original duration.
+ * If the project has groups, includes a group assignment select field.
+ */
 function editPhase(phaseId) {
   const phase = allPhasesFlat(state.project).find(p => p.id === phaseId);
   if (!phase) return;
@@ -1254,6 +1328,7 @@ function editPhase(phaseId) {
   }
 }
 
+/** Open a modal to set or clear the depends_on_id / depends_on_milestone_id for a phase */
 function setDependency(phaseId) {
   const allPhases = allPhasesFlat(state.project);
   const phaseOpts = allPhases
@@ -1289,6 +1364,7 @@ function setDependency(phaseId) {
   }, 'Save');
 }
 
+/** Confirm and delete a phase (and its milestones/events via server-side cascade) */
 function confirmDeletePhase(id, name) {
   showConfirm(
     T.confirm_delete_phase.replace('%s', name),
@@ -1301,6 +1377,7 @@ function confirmDeletePhase(id, name) {
 }
 
 // ── Project-level Actions ─────────────────────────────────────────────────────
+/** Open the modal to add a project-level milestone (not attached to any phase) */
 function addProjectMilestone() {
   showModal(T.modal_add_project_milestone, [
     { id: 'name',   label: T.milestone_name, type: 'text' },
@@ -1323,6 +1400,7 @@ function addProjectMilestone() {
   }, T.modal_add_milestone);
 }
 
+/** Open the modal to add a project-level event (not attached to any phase) */
 function addProjectEvent() {
   _openEventModal(T.modal_add_project_event, {}, async (data) => {
     const resp = await api.createProjectEvent(projectId, data);
@@ -1332,6 +1410,7 @@ function addProjectEvent() {
 }
 
 // ── Milestone Actions ─────────────────────────────────────────────────────────
+/** Open the modal to add a milestone attached to a specific phase */
 function addMilestone(phaseId) {
   showModal(T.modal_add_milestone, [
     { id: 'name',   label: T.milestone_name, type: 'text' },
@@ -1354,6 +1433,7 @@ function addMilestone(phaseId) {
   }, T.modal_add_milestone);
 }
 
+/** Open the modal to rename a milestone and/or change its target date */
 function editMilestone(id, name, currentDate) {
   showModal(`${T.modal_edit_milestone}: ${name}`, [
     { id: 'name',   label: T.milestone_name, type: 'text', defaultValue: name },
@@ -1372,6 +1452,7 @@ function editMilestone(id, name, currentDate) {
   }, T.save);
 }
 
+/** Confirm and delete a milestone */
 function confirmDeleteMilestone(id, name) {
   showConfirm(
     T.confirm_delete_milestone.replace('%s', name),
@@ -1385,7 +1466,7 @@ function confirmDeleteMilestone(id, name) {
 
 // ── Event Actions ─────────────────────────────────────────────────────────────
 
-/** Shared event modal builder with all-day / time toggle. */
+/** Shared event modal builder with all-day / time toggle. Also auto-shifts end date when start date changes. */
 function _openEventModal(title, defaults, onSave, submitLabel) {
   const isAllDay = !defaults.start_time;
   showModal(title, [
@@ -1445,6 +1526,7 @@ function _openEventModal(title, defaults, onSave, submitLabel) {
   }, 0);
 }
 
+/** Open the event modal to add a new event attached to a specific phase */
 function addEvent(phaseId) {
   _openEventModal(T.modal_add_event, {}, async (data) => {
     const resp = await api.createEvent(phaseId, data);
@@ -1453,6 +1535,7 @@ function addEvent(phaseId) {
   }, T.modal_add_event);
 }
 
+/** Open the event modal pre-filled with the existing event data for editing */
 function editEvent(evId) {
   const allEvents = [
     ...(state.project.events || []),
@@ -1467,6 +1550,7 @@ function editEvent(evId) {
   }, T.save_changes);
 }
 
+/** Confirm and delete an event */
 function confirmDeleteEvent(id, name) {
   showConfirm(
     T.confirm_delete_event.replace('%s', name),
@@ -1479,6 +1563,7 @@ function confirmDeleteEvent(id, name) {
 }
 
 // ── Project Actions ───────────────────────────────────────────────────────────
+/** Open the modal to edit this project's name and description */
 function editProject() {
   const p = state.project;
   showModal(T.modal_edit_project, [
@@ -1495,6 +1580,7 @@ function editProject() {
   }, T.save_changes);
 }
 
+/** Confirm and delete this project, then redirect to the dashboard */
 function confirmDeleteProject() {
   showConfirm(
     T.confirm_delete_project,
@@ -1531,6 +1617,7 @@ document.getElementById('subscribeModal').addEventListener('click', e => {
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+/** Fetch the current project from the API and re-render the entire page */
 async function refresh() {
   try {
     state.project = await api.getProject(projectId);

@@ -4,6 +4,7 @@ defined('APP_BOOT') or die;
 
 // ── ICS helpers ───────────────────────────────────────────────────────────────
 
+/** Escape backslashes, semicolons, commas, and newlines per RFC 5545 text escaping rules */
 function ics_escape(string $s): string
 {
     $s = str_replace(['\\', ';', ','], ['\\\\', '\\;', '\\,'], $s);
@@ -11,6 +12,12 @@ function ics_escape(string $s): string
     return $s;
 }
 
+/**
+ * Build a complete VCALENDAR string from an array of calendar items.
+ * Each item must have uid, start, end, and summary keys.
+ * Timed events additionally carry start_time/end_time and use TZID-qualified DTSTART/DTEND;
+ * all-day events use the DATE value type with DTEND set to the exclusive day after end.
+ */
 function build_ics(array $items): string
 {
     $now   = gmdate('Ymd\THis\Z');
@@ -54,6 +61,11 @@ function build_ics(array $items): string
     return implode("\r\n", $lines) . "\r\n";
 }
 
+/**
+ * Flatten a fully hydrated project tree into ICS item structs for build_ics().
+ * Emits VEVENTs for standalone phases, grouped phases (prefixed with group name),
+ * phase-level and project-level milestones, and timed or all-day events.
+ */
 function collect_project_ics_items(array $project): array
 {
     $items = [];
@@ -125,6 +137,7 @@ function collect_project_ics_items(array $project): array
 
 // ── ICS feed handlers ─────────────────────────────────────────────────────────
 
+/** GET /ics/all?token= — serve a single ICS feed covering all projects accessible to the token owner */
 function ics_all(): void
 {
     header('Referrer-Policy: no-referrer');
@@ -155,6 +168,7 @@ function ics_all(): void
     exit;
 }
 
+/** GET /ics/projects/{id}?token= — serve an ICS feed for a single project; returns 403 if token owner cannot read it */
 function ics_project(int $id): void
 {
     header('Referrer-Policy: no-referrer');

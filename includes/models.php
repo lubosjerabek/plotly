@@ -49,11 +49,13 @@ function is_project_owner(int $project_id): bool
     return (bool)$stmt->fetch();
 }
 
+/** Abort with 403 JSON if the current user cannot read this project */
 function assert_project_read(int $project_id): void
 {
     if (!can_read_project($project_id)) json_out(['detail' => 'Forbidden'], 403);
 }
 
+/** Abort with 403 JSON if the current user cannot write to this project */
 function assert_project_write(int $project_id): void
 {
     if (!can_write_project($project_id)) json_out(['detail' => 'Forbidden'], 403);
@@ -128,6 +130,7 @@ function current_user_ics_token(): string
     return $u['ics_token'];
 }
 
+/** Validate the ?token= query parameter as an ICS token; abort with 403 plain-text if invalid */
 function require_ics_token(): ?array
 {
     $token = $_GET['token'] ?? '';
@@ -143,6 +146,7 @@ function require_ics_token(): ?array
 
 // ── Database helpers ──────────────────────────────────────────────────────────
 
+/** Return all projects visible to the current user (admins see all; others see owned + collaborated) */
 function get_projects(): array
 {
     $user = current_user();
@@ -169,6 +173,11 @@ function get_projects(): array
     ], $rows);
 }
 
+/**
+ * Return the fully hydrated project tree for $id, or null if not found.
+ * Includes standalone phases and phase groups (each with their nested phases),
+ * milestones and events at both phase and project level, and collaborators.
+ */
 function get_full_project(int $id): ?array
 {
     $stmt = pdo()->prepare('SELECT id, user_id, name, description FROM projects WHERE id = ?');
@@ -274,6 +283,7 @@ function get_full_project(int $id): ?array
 
 // ── Phase group CRUD ──────────────────────────────────────────────────────────
 
+/** Insert a new phase group for $project_id and return the new row ID */
 function create_phase_group(int $project_id, array $data): int
 {
     $stmt = pdo()->prepare(
@@ -290,6 +300,7 @@ function create_phase_group(int $project_id, array $data): int
     return (int)pdo()->lastInsertId();
 }
 
+/** Update whichever fields are present in $data for phase group $id; returns false if nothing changed */
 function update_phase_group(int $id, array $data): bool
 {
     $fields = [];
@@ -319,6 +330,7 @@ function update_phase_group(int $id, array $data): bool
     return $stmt->rowCount() > 0;
 }
 
+/** Delete a phase group; member phases are ungrouped (not deleted) via ON DELETE SET NULL on group_id */
 function delete_phase_group(int $id): bool
 {
     // ON DELETE SET NULL on phases.group_id handles ungrouping member phases
@@ -327,6 +339,10 @@ function delete_phase_group(int $id): bool
     return $stmt->rowCount() > 0;
 }
 
+/**
+ * Recursively shift all phases that depend on $phase_id by $delta_days.
+ * Called after a phase date change to cascade the offset through the dependency chain.
+ */
 function shift_dependents(int $phase_id, int $delta_days): void
 {
     if ($delta_days === 0) return;

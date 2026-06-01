@@ -96,6 +96,8 @@ class GroupCard:
 
 
 class ProjectPage(BasePage):
+    """Page object for /project/{id}. Provides helpers for phases, milestones, events, groups, Gantt, and collaborators."""
+
     # Header
     PROJECT_NAME = "#pName"
     TOPBAR_TITLE = "#topbarTitle"
@@ -215,6 +217,7 @@ class ProjectPage(BasePage):
         return name
 
     def get_phase_card(self, name: str) -> PhaseCard:
+        """Return a PhaseCard component for the card matching the given phase name."""
         return PhaseCard(self.page.locator(self.PHASE_CARD, has_text=name))
 
     def delete_phase(self, phase_name: str) -> None:
@@ -363,6 +366,7 @@ class ProjectPage(BasePage):
         expect(self.page.locator(self.SUBSCRIBE_MODAL)).to_have_class(re.compile(r"is-open"))
 
     def get_ics_url(self) -> str:
+        """Return the current value of the ICS URL input in the subscribe modal."""
         return self.page.locator(self.ICS_URL).input_value()
 
     def fetch_ics(self) -> str:
@@ -377,6 +381,7 @@ class ProjectPage(BasePage):
     # ── Timeline / Gantt ───────────────────────────────────────────────────────
 
     def wait_for_gantt_bars(self, timeout: int = 8000):
+        """Wait until at least one Gantt bar is visible in the timeline tab."""
         self.page.wait_for_selector(self.GANTT_BARS, timeout=timeout)
 
     def switch_gantt_view(self, view: str):
@@ -394,6 +399,7 @@ class ProjectPage(BasePage):
         return name
 
     def get_group_card(self, name: str) -> "GroupCard":
+        """Return a GroupCard component for the group matching the given name."""
         return GroupCard(self.page.locator(self.GROUP_CARD, has_text=name))
 
     def delete_group(self, name: str) -> None:

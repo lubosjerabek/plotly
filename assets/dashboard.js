@@ -1,4 +1,5 @@
 // ── Language dropdown ────────────────────────────────────────────────────────
+/** Toggle the language picker dropdown and keep its aria-expanded attribute in sync */
 function toggleLangDropdown(e) {
   e.stopPropagation();
   const dd = document.getElementById('langDropdown');
@@ -14,6 +15,7 @@ document.addEventListener('click', () => {
 });
 
 // ── User menu ────────────────────────────────────────────────────────────────
+/** Toggle the user account menu and keep its trigger aria-expanded attribute in sync */
 function toggleUserMenu(e) {
   e.stopPropagation();
   const m = document.getElementById('userMenu');
@@ -43,6 +45,7 @@ const api = {
 };
 
 // ── Render ───────────────────────────────────────────────────────────────────
+/** Re-render all project cards from state.projects into the grid; shows an empty state when there are no projects */
 function renderProjects() {
   const grid = document.getElementById('projectsGrid');
   const subtitle = document.getElementById('pageSubtitle');
@@ -113,6 +116,7 @@ function renderProjects() {
 }
 
 // ── Project Modal ─────────────────────────────────────────────────────────────
+/** Open the project modal in "create" mode with empty fields */
 function openNewProjectModal() {
   _editingProjectId = null;
   document.getElementById('projectModalTitle').textContent = T.new_project;
@@ -123,6 +127,7 @@ function openNewProjectModal() {
   setTimeout(() => document.getElementById('pm_name').focus(), 50);
 }
 
+/** Open the project modal in "edit" mode, pre-filling fields from the matching project in state */
 function openEditProjectModal(id) {
   const p = state.projects.find(x => x.id === id);
   if (!p) return;
@@ -135,6 +140,7 @@ function openEditProjectModal(id) {
   setTimeout(() => document.getElementById('pm_name').focus(), 50);
 }
 
+/** Close the project modal and reset its validation state */
 function closeProjectModal() {
   document.getElementById('projectModal').classList.remove('is-open');
   _editingProjectId = null;
@@ -143,6 +149,10 @@ function closeProjectModal() {
   nameEl.parentElement.querySelector('.field-error')?.remove();
 }
 
+/**
+ * Submit the project modal form: validates the name field, then calls create or update
+ * depending on whether _editingProjectId is set, and refreshes the project list on success.
+ */
 async function submitProjectModal() {
   const name = document.getElementById('pm_name').value.trim();
   const description = document.getElementById('pm_desc').value.trim();
@@ -184,6 +194,12 @@ async function submitProjectModal() {
 // ── Confirm ───────────────────────────────────────────────────────────────────
 let _confirmCallback = null;
 
+/**
+ * Open the generic confirmation modal.
+ * @param {string} message   Body text shown to the user
+ * @param {Function} onConfirm  Called when the user clicks OK
+ * @param {string} [title]   Modal heading; defaults to T.confirm_deletion
+ */
 function showConfirm(message, onConfirm, title) {
   title = title || T.confirm_deletion;
   document.getElementById('confirmTitle').textContent = title;
@@ -192,6 +208,7 @@ function showConfirm(message, onConfirm, title) {
   document.getElementById('confirmModal').classList.add('is-open');
 }
 
+/** Close the confirmation modal and clear the pending callback */
 function closeConfirm() {
   document.getElementById('confirmModal').classList.remove('is-open');
   _confirmCallback = null;
@@ -202,6 +219,7 @@ document.getElementById('confirmOkBtn').addEventListener('click', () => {
   closeConfirm();
 });
 
+/** Show a confirmation dialog before deleting a project, then delete and refresh on confirm */
 function confirmDeleteProject(id, name) {
   showConfirm(
     T.confirm_delete_project_index.replace('%s', name),
@@ -232,16 +250,19 @@ const toast = {
 };
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
+/** Format a YYYY-MM-DD string using the localised month names from window.T */
 function fmtDate(d) {
   if (!d) return '';
   const [y, m, day] = d.split('-');
   return `${T.months[parseInt(m,10)-1]} ${parseInt(day,10)}, ${y}`;
 }
+/** Return a human-readable date label: "Today", a formatted date, or date + " · Overdue" for past milestones */
 function fmtRelative(days_until, target_date) {
   if (days_until === 0) return T.upcoming_today;
   if (days_until < 0)  return fmtDate(target_date) + ' · ' + T.upcoming_overdue;
   return fmtDate(target_date);
 }
+/** Escape a string for safe interpolation into HTML attribute values and text content */
 function escHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -262,16 +283,19 @@ document.getElementById('confirmModal').addEventListener('click', e => {
 });
 
 // ── Calendar Sync ─────────────────────────────────────────────────────────────
+/** Open the calendar sync modal and fetch the current ICS feed URL from the API */
 async function openCalSyncModal() {
   document.getElementById('calSyncModal').classList.add('is-open');
   const resp = await fetch('/api/settings/ics-token').then(r => r.json());
   document.getElementById('calSyncUrl').value = resp.url;
 }
 
+/** Close the calendar sync modal */
 function closeCalSyncModal() {
   document.getElementById('calSyncModal').classList.remove('is-open');
 }
 
+/** Copy the ICS feed URL to the clipboard via the Clipboard API, falling back to select-and-notify */
 function copyCalUrl() {
   const input = document.getElementById('calSyncUrl');
   const url = input.value;
@@ -283,6 +307,7 @@ function copyCalUrl() {
   }
 }
 
+/** Request a new ICS token from the API, update the displayed URL, and show a toast on completion */
 async function rotateCalToken() {
   const btn = document.getElementById('calRotateBtn');
   btn.disabled = true;
@@ -308,6 +333,7 @@ document.addEventListener('keydown', e => {
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+/** Render the upcoming milestones panel from state.upcomingMilestones; hides the panel when empty */
 function renderUpcomingMilestones() {
   const panel = document.getElementById('upcomingPanel');
   if (!panel) return;
@@ -332,6 +358,7 @@ function renderUpcomingMilestones() {
   });
 }
 
+/** Fetch projects and upcoming milestones in parallel from the API and re-render both panels */
 async function refresh() {
   [state.projects, state.upcomingMilestones] = await Promise.all([
     api.getProjects(),

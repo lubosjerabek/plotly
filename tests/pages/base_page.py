@@ -5,6 +5,8 @@ BASE_URL = "http://localhost:8000"
 
 
 class BasePage:
+    """Minimal base class shared by all page objects. Wraps a Playwright Page and provides goto()."""
+
     def __init__(self, page: Page):
         self.page = page
 

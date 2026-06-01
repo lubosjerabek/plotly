@@ -4,6 +4,7 @@ defined('APP_BOOT') or die;
 
 // ── i18n ─────────────────────────────────────────────────────────────────────
 
+/** Load and cache the translation strings for the current session language */
 function load_lang(): array
 {
     static $strings = null;
@@ -39,6 +40,7 @@ function current_lang(): string
 
 // ── Core helpers ──────────────────────────────────────────────────────────────
 
+/** Return the shared PDO connection, creating it on first call */
 function pdo(): PDO
 {
     static $pdo = null;
@@ -53,6 +55,7 @@ function pdo(): PDO
     return $pdo;
 }
 
+/** Send a JSON response with the given HTTP status code and halt execution */
 function json_out(mixed $data, int $code = 200): void
 {
     http_response_code($code);
@@ -61,6 +64,7 @@ function json_out(mixed $data, int $code = 200): void
     exit;
 }
 
+/** Parse and cache the JSON request body; returns an empty array for non-JSON or empty bodies */
 function body(): array
 {
     static $parsed = null;
@@ -71,11 +75,13 @@ function body(): array
     return $parsed;
 }
 
+/** Send a 404 JSON response and halt execution */
 function not_found(): void
 {
     json_out(['detail' => 'Not found'], 404);
 }
 
+/** Read a value from the settings table; returns $default if the key is absent or the table is missing */
 function setting_get(string $key, string $default = ''): string
 {
     try {
@@ -88,12 +94,14 @@ function setting_get(string $key, string $default = ''): string
     }
 }
 
+/** Upsert a key/value pair in the settings table */
 function setting_set(string $key, string $value): void
 {
     pdo()->prepare("INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?")
          ->execute([$key, $value, $value]);
 }
 
+/** Render a template file from the templates/ directory with the given variables and halt execution */
 function serve_template(string $name, array $vars = []): void
 {
     extract($vars, EXTR_SKIP);
@@ -103,6 +111,7 @@ function serve_template(string $name, array $vars = []): void
 
 // ── CSRF protection ───────────────────────────────────────────────────────────
 
+/** Return the session CSRF token, generating one if it does not yet exist */
 function csrf_token(): string
 {
     if (empty($_SESSION['csrf_token'])) {
@@ -111,11 +120,18 @@ function csrf_token(): string
     return $_SESSION['csrf_token'];
 }
 
+/** Render a hidden `<input>` carrying the CSRF token for inclusion in HTML forms */
 function csrf_field(): string
 {
     return '<input type="hidden" name="_csrf" value="' . htmlspecialchars(csrf_token()) . '">';
 }
 
+/**
+ * Verify the CSRF token for the current request and abort with 403 on failure.
+ * XHR requests (X-Requested-With: XMLHttpRequest) are trusted without a token
+ * because browsers enforce same-origin for custom headers via CORS preflight.
+ * Form POST requests must include the synchronizer token in _csrf or X-CSRF-Token.
+ */
 function verify_csrf(): void
 {
     // XHR requests: a custom header is sufficient (browsers block

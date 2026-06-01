@@ -51,6 +51,8 @@ class ProjectCard:
 
 
 class DashboardPage(BasePage):
+    """Page object for the / (dashboard) route. Provides helpers for project CRUD and the upcoming milestones panel."""
+
     # Project modal (create / edit from dashboard)
     NEW_PROJECT_BTN = "#btnNewProject"
     PROJECT_MODAL   = "#projectModal"
@@ -82,10 +84,12 @@ class DashboardPage(BasePage):
     UPCOMING_DATE_DANGER= "#upcomingPanel .upcoming__date--danger"
 
     def goto(self):
+        """Navigate to the dashboard and wait for the new-project button to be visible.
+
+        Waits beyond networkidle because under server load the JS-rendered button
+        can still be absent when networkidle fires.
+        """
         super().goto("/")
-        # Wait for the new-project button to be interactive, not just networkidle.
-        # Under server load the JS-rendered button can still be absent when
-        # networkidle fires, causing click() timeouts in long test runs.
         expect(self.page.locator(self.NEW_PROJECT_BTN)).to_be_visible()
         return self
 
@@ -101,6 +105,7 @@ class DashboardPage(BasePage):
         expect(self.page.locator(self.PROJECT_MODAL)).to_have_class(re.compile(r"is-open"))
 
     def create_project(self, name: str, desc: str = "") -> None:
+        """Navigate to the dashboard, open the new-project modal, fill it in, and submit."""
         self.goto()
         self.open_new_project_modal()
         self.page.locator(self.PM_NAME).fill(name)
@@ -113,6 +118,7 @@ class DashboardPage(BasePage):
     # ── Project cards ──────────────────────────────────────────────────────────
 
     def get_project_card(self, name: str) -> ProjectCard:
+        """Return a ProjectCard component for the card matching the given project name."""
         return ProjectCard(self.page.locator(self.PROJECT_CARD, has_text=name))
 
     def navigate_to_project(self, name: str):

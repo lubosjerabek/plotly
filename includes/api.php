@@ -4,12 +4,18 @@ defined('APP_BOOT') or die;
 
 // ── Projects API ──────────────────────────────────────────────────────────────
 
+/** GET /api/projects — return all projects visible to the current user */
 function api_get_projects(): void
 {
     require_auth();
     json_out(get_projects());
 }
 
+/**
+ * POST /api/projects — create a new project owned by the current user.
+ * Body: { name: string (required), description?: string }
+ * Returns 201 with the new project object.
+ */
 function api_create_project(): void
 {
     require_auth();
@@ -23,6 +29,7 @@ function api_create_project(): void
     json_out(['id' => $id, 'user_id' => $uid, 'name' => $name, 'description' => $b['description'] ?? null, 'phases' => []], 201);
 }
 
+/** GET /api/projects/{id} — return the fully hydrated project tree, annotated with can_edit for the current user */
 function api_get_project(int $id): void
 {
     require_auth();
@@ -34,6 +41,7 @@ function api_get_project(int $id): void
     json_out($project);
 }
 
+/** PUT /api/projects/{id} — update the project name and description; write access required */
 function api_update_project(int $id): void
 {
     require_auth();
@@ -49,6 +57,7 @@ function api_update_project(int $id): void
     json_out($project);
 }
 
+/** DELETE /api/projects/{id} — delete the project; only the project owner (or admin) may do this */
 function api_delete_project(int $id): void
 {
     require_auth();
@@ -60,6 +69,11 @@ function api_delete_project(int $id): void
 
 // ── Phase Groups API ──────────────────────────────────────────────────────────
 
+/**
+ * POST /api/phase-groups?project_id= — create a phase group for the given project.
+ * Body: { name: string (required), color?: string, description?: string, sort_order?: int }
+ * Returns 201 with the new group object (phases array is empty on creation).
+ */
 function api_create_phase_group(): void
 {
     require_auth();
@@ -88,6 +102,7 @@ function api_create_phase_group(): void
     json_out($group, 201);
 }
 
+/** PUT /api/phase-groups/{id} — update whichever fields are provided for the phase group */
 function api_update_phase_group(int $id): void
 {
     require_auth();
@@ -108,6 +123,7 @@ function api_update_phase_group(int $id): void
     json_out($group);
 }
 
+/** DELETE /api/phase-groups/{id} — delete the group; member phases are ungrouped, not deleted */
 function api_delete_phase_group(int $id): void
 {
     require_auth();
@@ -121,6 +137,12 @@ function api_delete_phase_group(int $id): void
 
 // ── Phases API ────────────────────────────────────────────────────────────────
 
+/**
+ * POST /api/phases?project_id= — create a new phase for the given project.
+ * Body: { name, start_date, end_date, color?, description?, group_id?, depends_on_id? }
+ * Validates that group_id, if provided, belongs to the same project.
+ * Returns 201 with the new phase object (milestones and events arrays are empty).
+ */
 function api_create_phase(): void
 {
     require_auth();
@@ -165,6 +187,11 @@ function api_create_phase(): void
     json_out($phase, 201);
 }
 
+/**
+ * PUT /api/phases/{id} — update a phase and cascade any start_date delta to dependent phases.
+ * Passing group_id: null ungrouped the phase; omitting group_id preserves the existing group.
+ * Date shift is propagated recursively through the depends_on_id chain via shift_dependents().
+ */
 function api_update_phase(int $id): void
 {
     require_auth();
@@ -230,6 +257,7 @@ function api_update_phase(int $id): void
     json_out($phase);
 }
 
+/** DELETE /api/phases/{id} — delete the phase along with its milestones and events (via DB cascade) */
 function api_delete_phase(int $id): void
 {
     require_auth();
@@ -242,6 +270,7 @@ function api_delete_phase(int $id): void
 
 // ── Milestones API ────────────────────────────────────────────────────────────
 
+/** POST /api/projects/{id}/milestones — create a project-level milestone not tied to any phase */
 function api_create_project_milestone(int $project_id): void
 {
     require_auth();
@@ -253,6 +282,7 @@ function api_create_project_milestone(int $project_id): void
     json_out(['id' => $new_id, 'project_id' => $project_id, 'phase_id' => null, 'name' => $b['name'] ?? '', 'target_date' => $b['target_date'] ?? '', 'google_event_id' => null], 201);
 }
 
+/** POST /api/phases/{id}/milestones — create a milestone attached to a specific phase */
 function api_create_milestone(int $phase_id): void
 {
     require_auth();
@@ -265,6 +295,11 @@ function api_create_milestone(int $phase_id): void
     json_out(['id' => $new_id, 'phase_id' => $phase_id, 'name' => $b['name'] ?? '', 'target_date' => $b['target_date'] ?? '', 'google_event_id' => null], 201);
 }
 
+/**
+ * PATCH /api/milestones/{id} — update a milestone's name and/or target_date.
+ * When target_date changes, shifts all phases that depend on this milestone
+ * via depends_on_milestone_id, then cascades further via shift_dependents().
+ */
 function api_update_milestone(int $id): void
 {
     require_auth();
@@ -308,6 +343,7 @@ function api_update_milestone(int $id): void
     json_out($ms);
 }
 
+/** DELETE /api/milestones/{id} — delete a milestone */
 function api_delete_milestone(int $id): void
 {
     require_auth();
@@ -318,6 +354,7 @@ function api_delete_milestone(int $id): void
     json_out(['ok' => true]);
 }
 
+/** GET /api/milestones/upcoming — return up to 15 milestones due from 7 days ago onwards, scoped to the current user's visible projects */
 function api_get_upcoming_milestones(): void
 {
     require_auth();
@@ -359,6 +396,7 @@ function api_get_upcoming_milestones(): void
 
 // ── Events API ────────────────────────────────────────────────────────────────
 
+/** POST /api/projects/{id}/events — create a project-level event not tied to any phase; all_day=true clears start/end times */
 function api_create_project_event(int $project_id): void
 {
     require_auth();
@@ -374,6 +412,7 @@ function api_create_project_event(int $project_id): void
               'start_time' => $start_time, 'end_time' => $end_time, 'google_event_id' => null], 201);
 }
 
+/** POST /api/phases/{id}/events — create an event attached to a specific phase; all_day=true clears start/end times */
 function api_create_event(int $phase_id): void
 {
     require_auth();
@@ -390,6 +429,11 @@ function api_create_event(int $phase_id): void
               'start_time' => $start_time, 'end_time' => $end_time, 'google_event_id' => null], 201);
 }
 
+/**
+ * PATCH /api/events/{id} — update an event's fields.
+ * Passing all_day: true clears start_time/end_time regardless of other time fields.
+ * Omitting all_day patches only the explicitly provided fields against the existing row.
+ */
 function api_update_event(int $id): void
 {
     require_auth();
@@ -426,6 +470,7 @@ function api_update_event(int $id): void
     json_out($ev);
 }
 
+/** DELETE /api/events/{id} — delete an event */
 function api_delete_event(int $id): void
 {
     require_auth();
@@ -438,6 +483,7 @@ function api_delete_event(int $id): void
 
 // ── Collaborators API ─────────────────────────────────────────────────────────
 
+/** GET /api/projects/{id}/collaborators — return the list of collaborators with their role; read access required */
 function api_get_collaborators(int $project_id): void
 {
     require_auth();
@@ -454,6 +500,11 @@ function api_get_collaborators(int $project_id): void
     json_out($rows);
 }
 
+/**
+ * POST /api/projects/{id}/collaborators — add a user as a collaborator; owner-only.
+ * Body: { email: string, role?: 'viewer'|'editor' } — defaults to 'viewer'.
+ * Returns 422 if the target user is the project owner; upserts if already a collaborator.
+ */
 function api_add_collaborator(int $project_id): void
 {
     require_auth();
@@ -489,6 +540,7 @@ function api_add_collaborator(int $project_id): void
     json_out($row, 201);
 }
 
+/** PATCH /api/projects/{id}/collaborators/{uid} — change a collaborator's role; owner-only */
 function api_update_collaborator(int $project_id, int $user_id): void
 {
     require_auth();
@@ -500,6 +552,7 @@ function api_update_collaborator(int $project_id, int $user_id): void
     json_out(['ok' => true]);
 }
 
+/** DELETE /api/projects/{id}/collaborators/{uid} — remove a collaborator from the project; owner-only */
 function api_remove_collaborator(int $project_id, int $user_id): void
 {
     require_auth();
@@ -511,6 +564,7 @@ function api_remove_collaborator(int $project_id, int $user_id): void
 
 // ── ICS / Settings API ────────────────────────────────────────────────────────
 
+/** GET /api/ics-token — return the current user's ICS token and the full calendar feed URL */
 function api_get_ics_token(): void
 {
     require_auth();
@@ -520,6 +574,7 @@ function api_get_ics_token(): void
     json_out(['token' => $token, 'url' => $base . '/calendar.ics?token=' . urlencode($token)]);
 }
 
+/** POST /api/ics-token/rotate — generate a new ICS token for the current user, invalidating the previous one */
 function api_rotate_ics_token(): void
 {
     require_auth();
@@ -531,12 +586,17 @@ function api_rotate_ics_token(): void
     json_out(['token' => $token, 'url' => $base . '/calendar.ics?token=' . urlencode($token)]);
 }
 
+/** GET /api/admin/settings — return global settings (currently session_timeout in seconds); admin-only */
 function api_get_admin_settings(): void
 {
     require_admin();
     json_out(['session_timeout' => (int)setting_get('session_timeout', '0')]);
 }
 
+/**
+ * PUT /api/admin/settings — update global settings; admin-only.
+ * session_timeout must be one of: 0 (browser session), 3600, 14400, 28800, 86400, 604800 seconds.
+ */
 function api_update_admin_settings(): void
 {
     require_admin();
@@ -550,6 +610,7 @@ function api_update_admin_settings(): void
 
 // ── Profile API ───────────────────────────────────────────────────────────────
 
+/** GET /api/profile — return the current user's id, name, email, and role */
 function api_get_profile(): void
 {
     require_auth();
@@ -557,6 +618,11 @@ function api_get_profile(): void
     json_out(['id' => $u['id'], 'name' => $u['name'], 'email' => $u['email'], 'role' => $u['role']]);
 }
 
+/**
+ * POST /api/profile/password — change the current user's password.
+ * Body: { current_password: string, new_password: string (min 8 chars) }
+ * Verifies the current password before updating; returns 422 if it is wrong or too short.
+ */
 function api_change_password(): void
 {
     require_auth();
@@ -580,6 +646,7 @@ function api_change_password(): void
 
 // ── Admin API ─────────────────────────────────────────────────────────────────
 
+/** GET /api/admin/users — return all users with id, email, name, role, is_active, and created_at; admin-only */
 function api_get_users(): void
 {
     require_admin();
@@ -589,6 +656,11 @@ function api_get_users(): void
     json_out(array_map(fn($r) => array_merge($r, ['id' => (int)$r['id']]), $rows));
 }
 
+/**
+ * POST /api/admin/invites — create a one-time invite link; admin-only.
+ * Body: { label?: string, expires_days?: int (1–365, default 7) }
+ * Returns 201 with the invite token and the full registration URL.
+ */
 function api_create_invite(): void
 {
     require_admin();
@@ -616,6 +688,7 @@ function api_create_invite(): void
     ], 201);
 }
 
+/** GET /api/admin/invites — return all invites ordered by creation date; includes used_by_email for redeemed ones; admin-only */
 function api_get_invites(): void
 {
     require_admin();
@@ -629,6 +702,7 @@ function api_get_invites(): void
     json_out(array_map(fn($r) => array_merge($r, ['id' => (int)$r['id']]), $rows));
 }
 
+/** DELETE /api/admin/invites/{id} — immediately expire an unused invite by setting expires_at to now; admin-only */
 function api_revoke_invite(int $id): void
 {
     require_admin();
@@ -638,6 +712,10 @@ function api_revoke_invite(int $id): void
     json_out(['ok' => true]);
 }
 
+/**
+ * POST /api/admin/users/{id}/password-reset — generate a 24-hour password reset link for any user; admin-only.
+ * Returns 201 with the reset URL and its expiry timestamp.
+ */
 function api_create_password_reset(int $user_id): void
 {
     require_admin();
@@ -655,6 +733,10 @@ function api_create_password_reset(int $user_id): void
     json_out(['url' => $base . '/reset-password/' . $token, 'expires_at' => $expires], 201);
 }
 
+/**
+ * PATCH /api/admin/users/{id} — update a user's is_active flag and/or role; admin-only.
+ * Returns 422 if the admin tries to modify their own account.
+ */
 function api_update_user(int $user_id): void
 {
     require_admin();
