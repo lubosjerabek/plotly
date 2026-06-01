@@ -1,4 +1,5 @@
 """Project detail page object, PhaseCard component."""
+
 import re
 
 from playwright.sync_api import Locator, Page, expect
@@ -9,13 +10,13 @@ from .base_page import BasePage
 class PhaseCard:
     """Wraps a single .phase-card locator."""
 
-    TOGGLE          = ".phase-card__toggle-area"
-    BADGE_UPCOMING  = ".badge-upcoming"
-    DESCRIPTION     = ".phase-description"
-    EDIT_BTN        = "button[title='Edit phase']"
-    DELETE_BTN      = "button[title='Delete phase']"
-    SECTION         = ".phase-section"
-    ITEM_LIST       = ".item-list"
+    TOGGLE = ".phase-card__toggle-area"
+    BADGE_UPCOMING = ".badge-upcoming"
+    DESCRIPTION = ".phase-description"
+    EDIT_BTN = "button[title='Edit phase']"
+    DELETE_BTN = "button[title='Delete phase']"
+    SECTION = ".phase-section"
+    ITEM_LIST = ".item-list"
 
     def __init__(self, locator: Locator):
         self._loc = locator
@@ -62,10 +63,10 @@ class PhaseCard:
 class GroupCard:
     """Wraps a single .phase-group-card locator."""
 
-    HEADER      = ".phase-group-card__header"
-    NAME_SEL    = ".phase-group-card__name"
-    EDIT_BTN    = "button[title='Edit group']"
-    DELETE_BTN  = "button[title='Delete group']"
+    HEADER = ".phase-group-card__header"
+    NAME_SEL = ".phase-group-card__name"
+    EDIT_BTN = "button[title='Edit group']"
+    DELETE_BTN = "button[title='Delete group']"
     PHASE_CARDS = ".phase-card"
 
     def __init__(self, locator: Locator):
@@ -101,85 +102,87 @@ class ProjectPage(BasePage):
     # Header
     PROJECT_NAME = "#pName"
     TOPBAR_TITLE = "#topbarTitle"
-    BACK_LINK    = "a.back-link"
+    BACK_LINK = "a.back-link"
 
     # Tab buttons
-    PHASES_TAB       = ".tab-btn[data-tab='phases']"
+    PHASES_TAB = ".tab-btn[data-tab='phases']"
     COLLABORATORS_TAB = ".tab-btn[data-tab='collaborators']"
 
     # Tab panels
-    TAB_PHASES        = "#tab-phases"
+    TAB_PHASES = "#tab-phases"
     TAB_COLLABORATORS = "#tab-collaborators"
-    TAB_TIMELINE      = "#tab-timeline"
+    TAB_TIMELINE = "#tab-timeline"
 
     # Phase cards
-    PHASE_CARD       = ".phase-card"
-    ADD_PHASE_BTN    = "Add Phase"  # used with has_text
-    ITEM_LIST        = ".item-list"
+    PHASE_CARD = ".phase-card"
+    ADD_PHASE_BTN = "Add Phase"  # used with has_text
+    ITEM_LIST = ".item-list"
 
     # Generic modal (phases / milestones / events)
     GENERIC_MODAL = "#genericModal"
-    MODAL_TITLE   = "#modalTitle"
-    MODAL_NAME    = "#modal_input_name"
-    MODAL_DESC    = "#modal_input_desc"
-    MODAL_START   = "#modal_input_start"
-    MODAL_END     = "#modal_input_end"
-    MODAL_TARGET  = "#modal_input_target"
-    MODAL_SUBMIT  = "#modalSubmitBtn"
+    MODAL_TITLE = "#modalTitle"
+    MODAL_NAME = "#modal_input_name"
+    MODAL_DESC = "#modal_input_desc"
+    MODAL_START = "#modal_input_start"
+    MODAL_END = "#modal_input_end"
+    MODAL_TARGET = "#modal_input_target"
+    MODAL_SUBMIT = "#modalSubmitBtn"
 
     # Edit-project modal (uses the same generic modal)
     EDIT_PROJECT_BTN = "Edit"  # has_text, first button
 
     # Confirm modal
     CONFIRM_MODAL = "#confirmModal"
-    CONFIRM_OK    = "#confirmOkBtn"
+    CONFIRM_OK = "#confirmOkBtn"
 
     # Success toast
     TOAST_SUCCESS = ".toast--success"
 
     # ICS subscription
-    SUBSCRIBE_BTN   = "#subscribeBtn"
+    SUBSCRIBE_BTN = "#subscribeBtn"
     SUBSCRIBE_MODAL = "#subscribeModal"
-    ICS_URL         = "#icsUrl"
+    ICS_URL = "#icsUrl"
 
     # Edit / Delete buttons (used inside item rows)
-    EDIT_MILESTONE_BTN   = "button[title='Edit milestone']"
-    EDIT_EVENT_BTN       = "button[title='Edit event']"
+    EDIT_MILESTONE_BTN = "button[title='Edit milestone']"
+    EDIT_EVENT_BTN = "button[title='Edit event']"
     DELETE_MILESTONE_BTN = "button[title='Delete milestone']"
-    DELETE_EVENT_BTN     = "button[title='Delete event']"
+    DELETE_EVENT_BTN = "button[title='Delete event']"
 
     # Project-level milestones and events
     ADD_MILESTONES_BTN = "+ Milestones"  # has_text
-    ADD_EVENTS_BTN     = "+ Events"      # has_text
-    ALL_DAY         = "#modal_input_all_day"
-    TIME_FIELD      = ".event-time-field"
-    START_TIME      = "#modal_input_start_time"
-    END_TIME        = "#modal_input_end_time"
-    ITEMS_BODY      = "#projectItemsBody"
+    ADD_EVENTS_BTN = "+ Events"  # has_text
+    ALL_DAY = "#modal_input_all_day"
+    TIME_FIELD = ".event-time-field"
+    START_TIME = "#modal_input_start_time"
+    END_TIME = "#modal_input_end_time"
+    ITEMS_BODY = "#projectItemsBody"
 
     # Phase group cards
-    GROUP_CARD    = ".phase-group-card"
+    GROUP_CARD = ".phase-group-card"
     ADD_GROUP_BTN = "#addGroupBtn"
 
     # Timeline / Gantt
-    GANTT_BARS    = ".gantt .bar"
-    DATE_LABELS   = ".gantt .gantt-date-label"
+    GANTT_BARS = ".gantt .bar"
+    DATE_LABELS = ".gantt .gantt-date-label"
     GANTT_VIEW_BTNS = "#ganttViewBtns"
-    TIMELINE_EMPTY  = "#tab-timeline .item-empty"
-    GANTT_ERROR     = ".gantt-container .item-empty"
-    BAR_WRAPPER     = ".bar-wrapper"
+    TIMELINE_EMPTY = "#tab-timeline .item-empty"
+    GANTT_ERROR = ".gantt-container .item-empty"
+    BAR_WRAPPER = ".bar-wrapper"
 
     # ── Navigation ─────────────────────────────────────────────────────────────
 
     def navigate_to(self, name: str):
         """Navigate to the dashboard and open the named project."""
         from .dashboard_page import DashboardPage
+
         DashboardPage(self.page).navigate_to_project(name)
         expect(self.page.locator(self.PROJECT_NAME)).to_contain_text(name)
 
     def navigate_by_id(self, project_id: int) -> None:
         """Navigate directly to a project by ID, bypassing the dashboard."""
         from .base_page import BASE_URL
+
         self.page.goto(BASE_URL + f"/project/{project_id}")
         self.page.wait_for_load_state("networkidle")
 
@@ -199,10 +202,10 @@ class ProjectPage(BasePage):
 
     def add_phase(
         self,
-        name:  str,
+        name: str,
         start: str = "2027-01-01",
-        end:   str = "2027-06-30",
-        desc:  str = "",
+        end: str = "2027-06-30",
+        desc: str = "",
     ) -> str:
         self.page.locator("button", has_text=self.ADD_PHASE_BTN).click()
         expect(self.page.locator(self.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
@@ -232,8 +235,8 @@ class ProjectPage(BasePage):
     def add_milestone(
         self,
         phase_name: str,
-        name:       str,
-        target:     str = "2027-03-01",
+        name: str,
+        target: str = "2027-03-01",
     ) -> str:
         phase = self.get_phase_card(phase_name)
         phase.expand(self.page)
@@ -249,9 +252,7 @@ class ProjectPage(BasePage):
     def edit_milestone(self, phase_name: str, old_name: str, new_name: str, new_target: str | None = None) -> None:
         phase = self.get_phase_card(phase_name)
         phase.expand(self.page)
-        phase.milestones_section() \
-             .locator(".item-list li", has_text=old_name) \
-             .locator(self.EDIT_MILESTONE_BTN).click()
+        phase.milestones_section().locator(".item-list li", has_text=old_name).locator(self.EDIT_MILESTONE_BTN).click()
         expect(self.page.locator(self.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
         self.page.locator(self.MODAL_NAME).fill(new_name)
         if new_target:
@@ -263,9 +264,7 @@ class ProjectPage(BasePage):
     def delete_milestone(self, phase_name: str, name: str) -> None:
         phase = self.get_phase_card(phase_name)
         phase.expand(self.page)
-        phase.milestones_section() \
-             .locator(".item-list li", has_text=name) \
-             .locator(self.DELETE_MILESTONE_BTN).click()
+        phase.milestones_section().locator(".item-list li", has_text=name).locator(self.DELETE_MILESTONE_BTN).click()
         expect(self.page.locator(self.CONFIRM_MODAL)).to_have_class(re.compile(r"is-open"))
         self.page.locator(self.CONFIRM_OK).click()
         expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
@@ -276,12 +275,12 @@ class ProjectPage(BasePage):
     def add_phase_event(
         self,
         phase_name: str,
-        name:       str,
-        start:      str,
-        end:        str,
-        all_day:    bool        = True,
-        start_time: str | None  = None,
-        end_time:   str | None  = None,
+        name: str,
+        start: str,
+        end: str,
+        all_day: bool = True,
+        start_time: str | None = None,
+        end_time: str | None = None,
     ) -> str:
         phase = self.get_phase_card(phase_name)
         phase.expand(self.page)
@@ -304,9 +303,7 @@ class ProjectPage(BasePage):
     def delete_phase_event(self, phase_name: str, name: str) -> None:
         phase = self.get_phase_card(phase_name)
         phase.expand(self.page)
-        phase.events_section() \
-             .locator(".item-list li", has_text=name) \
-             .locator(self.DELETE_EVENT_BTN).click()
+        phase.events_section().locator(".item-list li", has_text=name).locator(self.DELETE_EVENT_BTN).click()
         expect(self.page.locator(self.CONFIRM_MODAL)).to_have_class(re.compile(r"is-open"))
         self.page.locator(self.CONFIRM_OK).click()
         expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
@@ -328,12 +325,12 @@ class ProjectPage(BasePage):
 
     def add_project_event(
         self,
-        name:       str,
-        start:      str,
-        end:        str,
-        all_day:    bool         = True,
-        start_time: str | None   = None,
-        end_time:   str | None   = None,
+        name: str,
+        start: str,
+        end: str,
+        all_day: bool = True,
+        start_time: str | None = None,
+        end_time: str | None = None,
     ) -> str:
         self.page.locator("button", has_text=self.ADD_EVENTS_BTN).click()
         expect(self.page.locator(self.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
@@ -352,8 +349,7 @@ class ProjectPage(BasePage):
         return name
 
     def delete_project_event(self, name: str) -> None:
-        self.page.locator(self.ITEMS_BODY + " li", has_text=name) \
-                 .locator(self.DELETE_EVENT_BTN).click()
+        self.page.locator(self.ITEMS_BODY + " li", has_text=name).locator(self.DELETE_EVENT_BTN).click()
         expect(self.page.locator(self.CONFIRM_MODAL)).to_have_class(re.compile(r"is-open"))
         self.page.locator(self.CONFIRM_OK).click()
         expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
@@ -417,9 +413,7 @@ class ProjectPage(BasePage):
         expands the parent group before attempting to click the edit button.
         """
         # Expand any parent group card that contains this phase
-        parent_group = self.page.locator(
-            f"{self.GROUP_CARD}:has({self.PHASE_CARD}:has-text('{phase_name}'))"
-        )
+        parent_group = self.page.locator(f"{self.GROUP_CARD}:has({self.PHASE_CARD}:has-text('{phase_name}'))")
         if parent_group.count() > 0:
             GroupCard(parent_group.first).expand(self.page)
 

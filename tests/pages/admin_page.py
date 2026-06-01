@@ -1,4 +1,5 @@
 """Admin page object."""
+
 from playwright.sync_api import Locator
 
 from .base_page import BasePage
@@ -7,7 +8,7 @@ from .base_page import BasePage
 class AdminPage(BasePage):
     """Page object for /admin/users. Provides locators for the user list and invite tabs."""
 
-    ADMIN_NAV   = "a[href='/admin/users']"
+    ADMIN_NAV = "a[href='/admin/users']"
     INVITES_TAB = "Invites"  # used with has_text on .tab-btn
 
     def goto(self):

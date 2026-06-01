@@ -6,6 +6,7 @@ Covers:
 - End-date-before-start-date error on phase and event modals
 - End-date auto-advance when start is set to a date after the current end
 """
+
 import re
 from datetime import date, timedelta
 
@@ -15,16 +16,17 @@ from pages import DashboardPage, ProjectPage
 from playwright.sync_api import Page, expect
 
 # ── Selectors for validation feedback ──────────────────────────────────────────
-FIELD_ERROR      = ".field-error"
-GENERIC_MODAL    = ProjectPage.GENERIC_MODAL
-PROJECT_MODAL    = DashboardPage.PROJECT_MODAL
-MODAL_START      = ProjectPage.MODAL_START
-MODAL_END        = ProjectPage.MODAL_END
-MODAL_NAME       = ProjectPage.MODAL_NAME
-MODAL_SUBMIT     = ProjectPage.MODAL_SUBMIT
+FIELD_ERROR = ".field-error"
+GENERIC_MODAL = ProjectPage.GENERIC_MODAL
+PROJECT_MODAL = DashboardPage.PROJECT_MODAL
+MODAL_START = ProjectPage.MODAL_START
+MODAL_END = ProjectPage.MODAL_END
+MODAL_NAME = ProjectPage.MODAL_NAME
+MODAL_SUBMIT = ProjectPage.MODAL_SUBMIT
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _fill_start_trigger_change(page: Page, value: str):
     """Fill the start-date field and dispatch a change event explicitly."""
@@ -33,11 +35,11 @@ def _fill_start_trigger_change(page: Page, value: str):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Dashboard – project creation modal
+# Dashboard - project creation modal
 # ══════════════════════════════════════════════════════════════════════════════
 
-class TestDashboardValidation:
 
+class TestDashboardValidation:
     def test_create_project_requires_name(self, page: Page):
         """Submitting the project modal with an empty name shows an error."""
         dashboard = DashboardPage(page)
@@ -54,6 +56,7 @@ class TestDashboardValidation:
         """After a failed submission, a valid name clears the error and saves."""
         from conftest import rand_project_name
         from pages import BASE_URL
+
         dashboard = DashboardPage(page)
         dashboard.goto()
         dashboard.open_new_project_modal()
@@ -85,11 +88,11 @@ class TestDashboardValidation:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Project page modals – required name
+# Project page modals - required name
 # ══════════════════════════════════════════════════════════════════════════════
 
-class TestProjectModalValidation:
 
+class TestProjectModalValidation:
     @pytest.fixture(autouse=True)
     def _setup(self, page: Page, project):
         self.project = ProjectPage(page)
@@ -171,8 +174,8 @@ class TestProjectModalValidation:
 # Date-range validation: end before start
 # ══════════════════════════════════════════════════════════════════════════════
 
-class TestDateValidation:
 
+class TestDateValidation:
     @pytest.fixture(autouse=True)
     def _setup(self, page: Page, project):
         self.project = ProjectPage(page)
@@ -229,9 +232,7 @@ class TestDateValidation:
         _fill_start_trigger_change(self.page, future_start)
 
         end_value = self.page.locator(MODAL_END).input_value()
-        assert end_value >= future_start, (
-            f"End date should have advanced to at least {future_start}, got '{end_value}'"
-        )
+        assert end_value >= future_start, f"End date should have advanced to at least {future_start}, got '{end_value}'"
 
     def test_event_end_advances_when_start_set_later(self):
         """Same auto-advance behaviour on the event modal."""
@@ -243,9 +244,7 @@ class TestDateValidation:
         _fill_start_trigger_change(self.page, future_start)
 
         end_value = self.page.locator(MODAL_END).input_value()
-        assert end_value >= future_start, (
-            f"End date should have advanced to at least {future_start}, got '{end_value}'"
-        )
+        assert end_value >= future_start, f"End date should have advanced to at least {future_start}, got '{end_value}'"
 
     def test_end_not_changed_when_start_is_before_end(self):
         """If start is still before current end, end must not be touched."""
@@ -260,6 +259,4 @@ class TestDateValidation:
         _fill_start_trigger_change(self.page, near_start)
 
         end_value = self.page.locator(MODAL_END).input_value()
-        assert end_value == far_end, (
-            f"End date should be unchanged at {far_end}, got '{end_value}'"
-        )
+        assert end_value == far_end, f"End date should be unchanged at {far_end}, got '{end_value}'"

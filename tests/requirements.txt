@@ -4,3 +4,4 @@ pytest-playwright
 pytest-xdist
 faker
 ruff
+pre-commit

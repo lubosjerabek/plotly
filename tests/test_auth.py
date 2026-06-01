@@ -1,12 +1,14 @@
 """
 Auth tests: login page, bad credentials, logout, unauthenticated redirects.
 """
+
+from conftest import TEST_AUTH_EMAIL, TEST_AUTH_PASS
+from faker import Faker
 from pages import BASE_URL, LoginPage
 from playwright.sync_api import Browser, expect
 
 
 class TestLogin:
-
     def test_login_page_renders(self, browser: Browser):
         ctx = browser.new_context()
         pg = ctx.new_page()
@@ -18,8 +20,6 @@ class TestLogin:
         ctx.close()
 
     def test_wrong_password_stays_on_login(self, browser: Browser):
-        from conftest import TEST_AUTH_EMAIL
-        from faker import Faker
         ctx = browser.new_context()
         pg = ctx.new_page()
         login = LoginPage(pg)
@@ -63,7 +63,6 @@ class TestLogout:
 
     def _login_fresh(self, browser: Browser):
         """Return a new authenticated page (independent session)."""
-        from conftest import TEST_AUTH_EMAIL, TEST_AUTH_PASS
         ctx = browser.new_context()
         pg = ctx.new_page()
         login = LoginPage(pg)

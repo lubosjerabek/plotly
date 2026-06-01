@@ -4,13 +4,15 @@ Gantt / Timeline tab tests: bar rendering, view mode switches, date labels.
 Each test creates its own project+phase via fixtures so tests are fully
 self-contained and independent of execution order.
 """
+
+import re
+
 from conftest import rand_event_name, rand_future_date
 from pages import ProjectPage
 from playwright.sync_api import Page, expect
 
 
 class TestGantt:
-
     def test_timeline_tab_renders_svg_bars(self, page: Page, make_project, make_phase):
         name = make_project()
         make_phase(name)
@@ -43,7 +45,7 @@ class TestGantt:
         project.switch_to_timeline()
         project.switch_gantt_view("Week")
         expect(page.locator(ProjectPage.GANTT_VIEW_BTNS + " button", has_text="Week")).to_have_class(
-            __import__("re").compile(r"active")
+            re.compile(r"active")
         )
 
     def test_switch_to_day_view(self, page: Page, make_project, make_phase):
@@ -53,7 +55,7 @@ class TestGantt:
         project.switch_to_timeline()
         project.switch_gantt_view("Day")
         expect(page.locator(ProjectPage.GANTT_VIEW_BTNS + " button", has_text="Day")).to_have_class(
-            __import__("re").compile(r"active")
+            re.compile(r"active")
         )
 
     def test_date_labels_appear_on_gantt_bars(self, page: Page, make_project, make_phase):
@@ -63,8 +65,9 @@ class TestGantt:
         project.switch_to_timeline()
         project.wait_for_gantt_bars()
         page.wait_for_timeout(300)  # allow requestAnimationFrame to inject labels
-        assert page.locator(ProjectPage.DATE_LABELS).count() >= 1, \
+        assert page.locator(ProjectPage.DATE_LABELS).count() >= 1, (
             "Expected at least one .gantt-date-label text element"
+        )
 
     def test_date_labels_survive_view_switch(self, page: Page, make_project, make_phase):
         name = make_project()
@@ -77,8 +80,9 @@ class TestGantt:
         for view in ("Week", "Month"):
             project.switch_gantt_view(view)
             page.wait_for_timeout(300)
-            assert page.locator(ProjectPage.DATE_LABELS).count() >= 1, \
+            assert page.locator(ProjectPage.DATE_LABELS).count() >= 1, (
                 f"Date labels missing after switching to {view} view"
+            )
 
     def test_date_labels_not_overlapping_bar_labels(self, page: Page, make_project, make_phase):
         """Date label x must not overlap the bar-label text."""
@@ -122,8 +126,9 @@ class TestGantt:
         project = ProjectPage(page)
         project.switch_to_timeline()
         project.wait_for_gantt_bars()
-        assert page.locator(ProjectPage.GANTT_ERROR).count() == 0, \
+        assert page.locator(ProjectPage.GANTT_ERROR).count() == 0, (
             "Gantt rendered an error fallback — check browser console for the exception"
+        )
 
     def test_timed_event_shows_time_in_date_label(self, page: Page, make_project, make_phase):
         """A timed (non-all-day) event should display start/end times in its Gantt date label."""
@@ -133,9 +138,13 @@ class TestGantt:
         event_name = rand_event_name()
         event_date = rand_future_date()
         project.add_phase_event(
-            phase_name, event_name,
-            start=event_date, end=event_date,
-            all_day=False, start_time="09:00", end_time="17:30",
+            phase_name,
+            event_name,
+            start=event_date,
+            end=event_date,
+            all_day=False,
+            start_time="09:00",
+            end_time="17:30",
         )
         project.switch_to_timeline()
         project.wait_for_gantt_bars()
@@ -152,10 +161,8 @@ class TestGantt:
             }
             return '';
         }""")
-        assert "09:00" in label_text, \
-            f"Expected start time '09:00' in date label, got: '{label_text}'"
-        assert "17:30" in label_text, \
-            f"Expected end time '17:30' in date label, got: '{label_text}'"
+        assert "09:00" in label_text, f"Expected start time '09:00' in date label, got: '{label_text}'"
+        assert "17:30" in label_text, f"Expected end time '17:30' in date label, got: '{label_text}'"
 
     def test_all_day_event_shows_no_time_in_date_label(self, page: Page, make_project, make_phase):
         """An all-day event should display only dates, no times, in its Gantt date label."""
@@ -165,8 +172,10 @@ class TestGantt:
         event_name = rand_event_name()
         event_date = rand_future_date()
         project.add_phase_event(
-            phase_name, event_name,
-            start=event_date, end=event_date,
+            phase_name,
+            event_name,
+            start=event_date,
+            end=event_date,
             all_day=True,
         )
         project.switch_to_timeline()
@@ -184,8 +193,7 @@ class TestGantt:
             return '';
         }""")
         assert label_text, "Expected a date label on the event bar"
-        assert ":" not in label_text, \
-            f"All-day event should not show a time, got: '{label_text}'"
+        assert ":" not in label_text, f"All-day event should not show a time, got: '{label_text}'"
 
     def test_timeline_renders_after_direct_navigation(self, page: Page, make_project, make_phase):
         """Timeline must render on a fresh direct page load, not only after SPA navigation."""
@@ -195,5 +203,6 @@ class TestGantt:
         project.navigate_to(name)
         project.switch_to_timeline()
         project.wait_for_gantt_bars()
-        assert page.locator(ProjectPage.GANTT_BARS).count() >= 1, \
+        assert page.locator(ProjectPage.GANTT_BARS).count() >= 1, (
             "Timeline bars missing after fresh navigation to project page"
+        )

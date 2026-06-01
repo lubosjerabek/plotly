@@ -1,10 +1,17 @@
 line-length = 120
 
 [lint]
-# E/W: pycodestyle errors and warnings
-# F:   Pyflakes (undefined names, unused imports, etc.)
-# I:   isort (import ordering)
-select = ["E", "W", "F", "I"]
+select = [
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "F",   # Pyflakes — undefined names, unused imports
+  "I",   # isort — import ordering
+  "UP",  # pyupgrade — modernise syntax for target Python version
+  "B",   # flake8-bugbear — likely bugs and design problems
+  "C4",  # flake8-comprehensions — unnecessary comprehension constructs
+  "SIM", # flake8-simplify — simplifiable code patterns
+  "RUF", # Ruff-specific rules
+]
 
 # E501 line-too-long — tests have long assertion strings; exempt test files
 [lint.per-file-ignores]

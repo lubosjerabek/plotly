@@ -2,6 +2,7 @@
 Project detail tests: phases, milestones, events, modals, navigation.
 Depends on the ``project`` fixture providing a pre-created, isolated project.
 """
+
 import re
 from datetime import datetime, timedelta
 
@@ -12,7 +13,6 @@ from playwright.sync_api import Page, expect
 
 
 class TestProjectDetail:
-
     @pytest.fixture(autouse=True)
     def _setup(self, page: Page, project):
         self.project = ProjectPage(page)
@@ -160,7 +160,7 @@ class TestProjectDetail:
         ref = make_project()
         phase_name = make_phase(ref)
         original_name = rand_milestone_name()
-        updated_name  = rand_milestone_name()
+        updated_name = rand_milestone_name()
         target = rand_future_date()
         project = ProjectPage(page)
         project.add_milestone(phase_name, original_name, target)
@@ -238,8 +238,12 @@ class TestProjectDetail:
         event_name = rand_event_name()
         event_date = rand_future_date()
         project.add_project_event(
-            event_name, event_date, event_date,
-            all_day=False, start_time="10:00", end_time="11:30",
+            event_name,
+            event_date,
+            event_date,
+            all_day=False,
+            start_time="10:00",
+            end_time="11:30",
         )
         expect(page.locator(ProjectPage.ITEMS_BODY)).to_contain_text(event_name)
         expect(page.locator(ProjectPage.ITEMS_BODY)).to_contain_text("10:00")
@@ -300,8 +304,7 @@ class TestProjectDetail:
         project.add_phase_event(phase_name, event_name, ev_start, ev_end)
         phase = project.get_phase_card(phase_name)
         phase.expand(page)
-        phase.events_section().locator(".item-list li", has_text=event_name) \
-             .locator(ProjectPage.EDIT_EVENT_BTN).click()
+        phase.events_section().locator(".item-list li", has_text=event_name).locator(ProjectPage.EDIT_EVENT_BTN).click()
         expect(page.locator(ProjectPage.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
         # Shift start +7 days; end should follow
         new_ev_start = (ev_start_dt + timedelta(days=7)).strftime("%Y-%m-%d")
@@ -325,8 +328,7 @@ class TestProjectDetail:
         project.add_phase_event(phase_name, event_name, ev_start, ev_end)
         phase = project.get_phase_card(phase_name)
         phase.expand(page)
-        phase.events_section().locator(".item-list li", has_text=event_name) \
-             .locator(ProjectPage.EDIT_EVENT_BTN).click()
+        phase.events_section().locator(".item-list li", has_text=event_name).locator(ProjectPage.EDIT_EVENT_BTN).click()
         expect(page.locator(ProjectPage.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
         new_ev_start = (ev_start_dt + timedelta(days=7)).strftime("%Y-%m-%d")
         new_ev_end = (ev_end_dt + timedelta(days=7)).strftime("%Y-%m-%d")

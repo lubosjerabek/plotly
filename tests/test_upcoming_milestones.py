@@ -4,6 +4,7 @@ Upcoming Milestones dashboard panel tests.
 Each test uses project-level milestones (POST /api/projects/{id}/milestones) so
 only a project ID is required — no phase setup needed.
 """
+
 import json
 from datetime import date, timedelta
 
@@ -11,8 +12,8 @@ from conftest import rand_milestone_name
 from pages import BASE_URL, DashboardPage
 from playwright.sync_api import Page, expect
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _today() -> str:
     return date.today().strftime("%Y-%m-%d")
@@ -34,8 +35,8 @@ def _post_milestone(page: Page, project_id: int, name: str, target: str) -> int:
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
-class TestUpcomingMilestonesPanel:
 
+class TestUpcomingMilestonesPanel:
     def test_future_milestone_appears_with_name_and_project(self, page: Page, make_project):
         ref = make_project()
         ms_name = rand_milestone_name()

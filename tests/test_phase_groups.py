@@ -7,15 +7,14 @@ Tests are grouped into four classes:
   TestPhaseGroupGantt       — group summary bar in the Gantt / Timeline view
   TestPhaseGroupAPI         — raw REST API contract (status codes, payloads)
 """
+
 import json
 import re
 
-import pytest
+from conftest import rand_date_range, rand_group_name, rand_phase_name
 from pages import BASE_URL
 from pages.project_page import ProjectPage
 from playwright.sync_api import Page, expect
-
-from conftest import rand_date_range, rand_group_name, rand_phase_name
 
 # ── Shared headers for raw API calls ─────────────────────────────────────────
 H = {"Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest"}
@@ -69,26 +68,18 @@ class TestPhaseGroupCRUD:
         project.delete_group(name)
         expect(project.get_group_card(name)._loc).not_to_be_visible()
 
-    def test_delete_group_preserves_member_phases_as_standalone(
-        self, page: Page, make_project, make_group, make_phase
-    ):
+    def test_delete_group_preserves_member_phases_as_standalone(self, page: Page, make_project, make_group, make_phase):
         """After group deletion, phases that were members appear as standalone cards."""
         ref = make_project()
         _gid, group_name = make_group(ref)
         # Create a standalone phase then assign it to the group via API
         phase_name = make_phase(ref)
         # Use API to assign the phase to the group
-        proj_data = page.request.get(
-            BASE_URL + f"/api/projects/{ref.id}", headers=H
-        ).json()
-        all_phases = proj_data.get("phases", []) + [
-            p for g in proj_data.get("groups", []) for p in g.get("phases", [])
-        ]
+        proj_data = page.request.get(BASE_URL + f"/api/projects/{ref.id}", headers=H).json()
+        all_phases = proj_data.get("phases", []) + [p for g in proj_data.get("groups", []) for p in g.get("phases", [])]
         phase = next((p for p in all_phases if p["name"] == phase_name), None)
         assert phase is not None, "Phase not found in project"
-        grp_id = next(
-            g["id"] for g in proj_data.get("groups", []) if g["name"] == group_name
-        )
+        grp_id = next(g["id"] for g in proj_data.get("groups", []) if g["name"] == group_name)
         page.request.put(
             BASE_URL + f"/api/phases/{phase['id']}",
             data=json.dumps({"group_id": grp_id}),
@@ -114,9 +105,7 @@ class TestPhaseGroupMembership:
         )
         assert resp.status == 200, f"Assign failed: {resp.text()}"
 
-    def test_assign_phase_to_group_moves_it_inside_group_card(
-        self, page: Page, make_project, make_group, make_phase
-    ):
+    def test_assign_phase_to_group_moves_it_inside_group_card(self, page: Page, make_project, make_group, make_phase):
         """After assigning a phase to a group, the phase card appears inside the group card."""
         ref = make_project()
         gid, group_name = make_group(ref)
@@ -131,9 +120,7 @@ class TestPhaseGroupMembership:
         card.expand(page)
         expect(card.child_phases().filter(has_text=phase_name)).to_be_visible()
 
-    def test_remove_phase_from_group_makes_it_standalone(
-        self, page: Page, make_project, make_group, make_phase
-    ):
+    def test_remove_phase_from_group_makes_it_standalone(self, page: Page, make_project, make_group, make_phase):
         """Setting group to 'none' in Edit Phase returns the phase to the top-level list."""
         ref = make_project()
         gid, group_name = make_group(ref)
@@ -154,9 +141,7 @@ class TestPhaseGroupMembership:
         group_card = project.get_group_card(group_name)
         expect(group_card.child_phases().filter(has_text=phase_name)).not_to_be_visible()
 
-    def test_group_span_reflects_member_dates(
-        self, page: Page, make_project, make_group
-    ):
+    def test_group_span_reflects_member_dates(self, page: Page, make_project, make_group):
         """Group date span = min(start) → max(end) across member phases."""
         ref = make_project()
         gid, group_name = make_group(ref)
@@ -181,9 +166,7 @@ class TestPhaseGroupMembership:
         # Should show the span from p1_start to p2_end
         expect(dates_el).to_contain_text("2027")
 
-    def test_group_segment_count_badge_shown(
-        self, page: Page, make_project, make_group
-    ):
+    def test_group_segment_count_badge_shown(self, page: Page, make_project, make_group):
         """The group card shows a segment count badge."""
         ref = make_project()
         gid, group_name = make_group(ref)
@@ -191,7 +174,13 @@ class TestPhaseGroupMembership:
         name = rand_phase_name()
         resp = page.request.post(
             BASE_URL + f"/api/phases?project_id={ref.id}",
-            data=json.dumps({"name": name, **dict(zip(["start_date", "end_date"], rand_date_range())), "color": "#6366f1"}),
+            data=json.dumps(
+                {
+                    "name": name,
+                    **dict(zip(["start_date", "end_date"], rand_date_range(), strict=True)),
+                    "color": "#6366f1",
+                }
+            ),
             headers=H,
         )
         assert resp.status == 201
@@ -202,9 +191,7 @@ class TestPhaseGroupMembership:
         card = project.get_group_card(group_name)
         expect(card._loc.locator(".badge-group")).to_be_visible()
 
-    def test_phase_outside_group_unaffected_by_group_deletion(
-        self, page: Page, make_project, make_group, make_phase
-    ):
+    def test_phase_outside_group_unaffected_by_group_deletion(self, page: Page, make_project, make_group, make_phase):
         """A standalone phase is unaffected when a different group is deleted."""
         ref = make_project()
         _gid, group_name = make_group(ref)
@@ -226,16 +213,20 @@ class TestPhaseGroupGantt:
             headers=H,
         )
 
-    def test_group_summary_bar_appears_in_gantt(
-        self, page: Page, make_project, make_group
-    ):
+    def test_group_summary_bar_appears_in_gantt(self, page: Page, make_project, make_group):
         """A group with member phases renders a .gantt-group-bar in the SVG."""
         ref = make_project()
         gid, _gname = make_group(ref)
         name = rand_phase_name()
         resp = page.request.post(
             BASE_URL + f"/api/phases?project_id={ref.id}",
-            data=json.dumps({"name": name, **dict(zip(["start_date", "end_date"], rand_date_range())), "color": "#6366f1"}),
+            data=json.dumps(
+                {
+                    "name": name,
+                    **dict(zip(["start_date", "end_date"], rand_date_range(), strict=True)),
+                    "color": "#6366f1",
+                }
+            ),
             headers=H,
         )
         assert resp.status == 201
@@ -247,9 +238,7 @@ class TestPhaseGroupGantt:
         project.wait_for_gantt_bars()
         expect(page.locator(".gantt .gantt-group-bar")).to_be_visible()
 
-    def test_ungrouped_project_gantt_unchanged(
-        self, page: Page, make_project, make_phase
-    ):
+    def test_ungrouped_project_gantt_unchanged(self, page: Page, make_project, make_phase):
         """A project with no groups renders the Gantt with regular phase bars only."""
         ref = make_project()
         make_phase(ref)
@@ -306,16 +295,20 @@ class TestPhaseGroupAPI:
         assert resp.status == 200
         assert resp.json()["name"] == new_name
 
-    def test_delete_group_returns_200_phases_survive(
-        self, page: Page, make_project, make_group
-    ):
+    def test_delete_group_returns_200_phases_survive(self, page: Page, make_project, make_group):
         """DELETE /api/phase-groups/{id} returns 200; member phases are NOT deleted."""
         ref = make_project()
         gid, _gname = make_group(ref)
         # Create and assign a phase
         phase_resp = page.request.post(
             BASE_URL + f"/api/phases?project_id={ref.id}",
-            data=json.dumps({"name": rand_phase_name(), **dict(zip(["start_date", "end_date"], rand_date_range())), "color": "#6366f1"}),
+            data=json.dumps(
+                {
+                    "name": rand_phase_name(),
+                    **dict(zip(["start_date", "end_date"], rand_date_range(), strict=True)),
+                    "color": "#6366f1",
+                }
+            ),
             headers=H,
         )
         assert phase_resp.status == 201
@@ -326,23 +319,25 @@ class TestPhaseGroupAPI:
         assert del_resp.status == 200
         # Phase should still exist in project data, now ungrouped
         proj = page.request.get(BASE_URL + f"/api/projects/{ref.id}", headers=H).json()
-        all_phases = proj.get("phases", []) + [
-            p for g in proj.get("groups", []) for p in g.get("phases", [])
-        ]
+        all_phases = proj.get("phases", []) + [p for g in proj.get("groups", []) for p in g.get("phases", [])]
         assert any(p["id"] == phase_id for p in all_phases), "Phase was incorrectly deleted with the group"
         # Verify phase has no group_id
         phase_after = next(p for p in all_phases if p["id"] == phase_id)
         assert phase_after["group_id"] is None
 
-    def test_assign_phase_to_group_via_put_phases(
-        self, page: Page, make_project, make_group
-    ):
+    def test_assign_phase_to_group_via_put_phases(self, page: Page, make_project, make_group):
         """PUT /api/phases/{id} with group_id moves phase into group in API response."""
         ref = make_project()
         gid, _gname = make_group(ref)
         phase_resp = page.request.post(
             BASE_URL + f"/api/phases?project_id={ref.id}",
-            data=json.dumps({"name": rand_phase_name(), **dict(zip(["start_date", "end_date"], rand_date_range())), "color": "#6366f1"}),
+            data=json.dumps(
+                {
+                    "name": rand_phase_name(),
+                    **dict(zip(["start_date", "end_date"], rand_date_range(), strict=True)),
+                    "color": "#6366f1",
+                }
+            ),
             headers=H,
         )
         assert phase_resp.status == 201
@@ -360,9 +355,7 @@ class TestPhaseGroupAPI:
         assert grp is not None
         assert any(p["id"] == phase_id for p in grp.get("phases", []))
 
-    def test_viewer_cannot_create_group(
-        self, page: Page, second_user_page: Page, make_project
-    ):
+    def test_viewer_cannot_create_group(self, page: Page, second_user_page: Page, make_project):
         """A viewer collaborator gets 403 when calling POST /api/phase-groups."""
         ref = make_project()
         # Add second user as viewer collaborator

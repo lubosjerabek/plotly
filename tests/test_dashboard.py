@@ -1,6 +1,7 @@
 """
 Dashboard tests: project list, create, edit, delete, modals.
 """
+
 import re
 
 from conftest import fake
@@ -9,7 +10,6 @@ from playwright.sync_api import Page, expect
 
 
 class TestDashboard:
-
     def test_page_loads_with_correct_title(self, page: Page):
         dashboard = DashboardPage(page)
         dashboard.goto()
@@ -37,6 +37,7 @@ class TestDashboard:
     def test_create_project_shows_toast_and_card(self, page: Page):
         from conftest import rand_project_name
         from pages import BASE_URL
+
         name = rand_project_name()
         dashboard = DashboardPage(page)
         dashboard.create_project(name)
@@ -47,7 +48,9 @@ class TestDashboard:
         if resp.status == 200:
             for p in resp.json():
                 if p["name"] == name:
-                    page.request.delete(BASE_URL + f"/api/projects/{p['id']}", headers={"X-Requested-With": "XMLHttpRequest"})
+                    page.request.delete(
+                        BASE_URL + f"/api/projects/{p['id']}", headers={"X-Requested-With": "XMLHttpRequest"}
+                    )
                     break
 
     def test_project_card_shows_description(self, page: Page, make_project):

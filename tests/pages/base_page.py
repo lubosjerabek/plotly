@@ -1,4 +1,5 @@
 """Base page object shared by all page objects."""
+
 from playwright.sync_api import Page
 
 BASE_URL = "http://localhost:8000"

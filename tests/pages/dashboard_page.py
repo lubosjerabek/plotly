@@ -1,4 +1,5 @@
 """Dashboard page object and ProjectCard component."""
+
 import re
 
 from playwright.sync_api import Locator, expect
@@ -9,10 +10,10 @@ from .base_page import BasePage
 class ProjectCard:
     """Wraps a single .project-card locator."""
 
-    OPEN_LINK  = "a.btn"
-    EDIT_BTN   = "button[title='Edit project']"
+    OPEN_LINK = "a.btn"
+    EDIT_BTN = "button[title='Edit project']"
     DELETE_BTN = "button[title='Delete project']"
-    DESC       = ".project-card__desc"
+    DESC = ".project-card__desc"
 
     def __init__(self, locator: Locator):
         self._loc = locator
@@ -55,10 +56,10 @@ class DashboardPage(BasePage):
 
     # Project modal (create / edit from dashboard)
     NEW_PROJECT_BTN = "#btnNewProject"
-    PROJECT_MODAL   = "#projectModal"
-    PM_NAME         = "#pm_name"
-    PM_DESC         = "#pm_desc"
-    PM_SUBMIT       = "#projectModalSubmit"
+    PROJECT_MODAL = "#projectModal"
+    PM_NAME = "#pm_name"
+    PM_DESC = "#pm_desc"
+    PM_SUBMIT = "#projectModalSubmit"
 
     # Project cards
     PROJECT_CARD = ".project-card"
@@ -66,22 +67,22 @@ class DashboardPage(BasePage):
     # Shared UI
     TOAST_SUCCESS = ".toast--success"
     CONFIRM_MODAL = "#confirmModal"
-    CONFIRM_OK    = "#confirmOkBtn"
+    CONFIRM_OK = "#confirmOkBtn"
 
     # Page chrome
-    BRAND   = ".topbar__brand"
+    BRAND = ".topbar__brand"
     HEADING = "h1"
 
     # Admin nav link (inside user menu dropdown)
-    ADMIN_NAV         = "a[href='/admin/users']"
+    ADMIN_NAV = "a[href='/admin/users']"
     USER_MENU_TRIGGER = ".user-menu__trigger"
 
     # Upcoming milestones panel
-    UPCOMING_PANEL      = "#upcomingPanel"
-    UPCOMING_LIST       = "#upcomingPanel .upcoming__list"
-    UPCOMING_DOT_TODAY  = "#upcomingPanel .upcoming__dot--today"
+    UPCOMING_PANEL = "#upcomingPanel"
+    UPCOMING_LIST = "#upcomingPanel .upcoming__list"
+    UPCOMING_DOT_TODAY = "#upcomingPanel .upcoming__dot--today"
     UPCOMING_DOT_DANGER = "#upcomingPanel .upcoming__dot--danger"
-    UPCOMING_DATE_DANGER= "#upcomingPanel .upcoming__date--danger"
+    UPCOMING_DATE_DANGER = "#upcomingPanel .upcoming__date--danger"
 
     def goto(self):
         """Navigate to the dashboard and wait for the new-project button to be visible.

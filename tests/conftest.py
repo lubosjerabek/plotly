@@ -18,14 +18,16 @@ Authentication:
   Example:
       TEST_AUTH_EMAIL=admin@example.com TEST_AUTH_PASS=plotly_admin_pass pytest tests/ -v
 """
+
+import contextlib
 import json
 import os
 import random
 import socket
 import subprocess
 import time
+from collections.abc import Generator
 from datetime import date, timedelta
-from typing import Generator
 
 import pytest
 from faker import Faker
@@ -34,7 +36,7 @@ from pages.login_page import LoginPage
 from playwright.sync_api import Browser, Page
 
 TEST_AUTH_EMAIL = os.getenv("TEST_AUTH_EMAIL", os.getenv("TEST_AUTH_USER", "admin@example.com"))
-TEST_AUTH_PASS  = os.getenv("TEST_AUTH_PASS", "plotly_admin_pass")
+TEST_AUTH_PASS = os.getenv("TEST_AUTH_PASS", "plotly_admin_pass")
 
 _started_stack = False
 
@@ -87,6 +89,7 @@ def rand_date_range(
 
 # ── ProjectRef ────────────────────────────────────────────────────────────────
 
+
 class ProjectRef(str):
     """
     A string subclass that also carries the project's database id.
@@ -95,6 +98,7 @@ class ProjectRef(str):
     so existing test code that treats it as a name requires no changes.
     Use ref.id for direct URL navigation or API calls.
     """
+
     def __new__(cls, name: str, pid: int):
         obj = super().__new__(cls, name)
         obj.id = pid
@@ -102,6 +106,7 @@ class ProjectRef(str):
 
 
 # ── Docker / server bootstrap ─────────────────────────────────────────────────
+
 
 def wait_for_port(host: str, port: int, timeout: float = 60.0) -> bool:
     deadline = time.time() + timeout
@@ -147,6 +152,7 @@ def pytest_unconfigure(config):
 
 # ── Auth fixtures ─────────────────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="session")
 def base_url():
     return BASE_URL
@@ -162,8 +168,7 @@ def auth_state(browser: Browser):
     login.login(TEST_AUTH_EMAIL, TEST_AUTH_PASS)
     if login.is_on_login_page():
         raise RuntimeError(
-            f"Login failed for '{TEST_AUTH_EMAIL}'. "
-            "Check TEST_AUTH_PASS matches the DB user's password_hash."
+            f"Login failed for '{TEST_AUTH_EMAIL}'. Check TEST_AUTH_PASS matches the DB user's password_hash."
         )
     state = context.storage_state()
     context.close()
@@ -185,12 +190,12 @@ def second_user_auth_state(browser: Browser, auth_state):
     Create a non-admin test user via the invite flow (once per session).
     Yields (storage_state, email, password).
     """
-    email    = rand_email()
+    email = rand_email()
     password = fake.password(length=16, special_chars=True, digits=True, upper_case=True)
-    name     = fake.name()
+    name = fake.name()
 
     ctx = browser.new_context(storage_state=auth_state)
-    pg  = ctx.new_page()
+    pg = ctx.new_page()
     resp = pg.request.post(
         BASE_URL + "/api/admin/invites",
         data=json.dumps({"label": "Playwright CI", "expires_days": 1}),
@@ -201,12 +206,12 @@ def second_user_auth_state(browser: Browser, auth_state):
     ctx.close()
 
     ctx2 = browser.new_context()
-    pg2  = ctx2.new_page()
+    pg2 = ctx2.new_page()
     pg2.goto(BASE_URL + f"/register/{token}")
     pg2.wait_for_load_state("networkidle")
-    pg2.fill("input[name='name']",             name)
-    pg2.fill("input[name='email']",            email)
-    pg2.fill("input[name='password']",         password)
+    pg2.fill("input[name='name']", name)
+    pg2.fill("input[name='email']", email)
+    pg2.fill("input[name='password']", password)
     pg2.fill("input[name='password_confirm']", password)
     pg2.click("button[type='submit']")
     pg2.wait_for_load_state("networkidle")
@@ -228,6 +233,7 @@ def second_user_page(browser: Browser, second_user_auth_state):
 
 
 # ── Resource factory fixtures ─────────────────────────────────────────────────
+
 
 @pytest.fixture
 def project(page: Page) -> Generator[ProjectRef, None, None]:
@@ -281,13 +287,11 @@ def make_project(page: Page):
     yield _make
 
     for pid in created:
-        try:
+        with contextlib.suppress(Exception):
             page.request.delete(
                 BASE_URL + f"/api/projects/{pid}",
                 headers={"X-Requested-With": "XMLHttpRequest"},
             )
-        except Exception:
-            pass  # best-effort cleanup
 
 
 @pytest.fixture
@@ -304,10 +308,10 @@ def make_phase(page: Page):
 
     def _make(
         project_ref: "ProjectRef | str",
-        name:  str | None = None,
+        name: str | None = None,
         start: str | None = None,
-        end:   str | None = None,
-        desc:  str        = "",
+        end: str | None = None,
+        desc: str = "",
     ) -> str:
         if start is None or end is None:
             _start, _end = rand_date_range()
@@ -334,10 +338,10 @@ def make_group(page: Page):
 
     def _make(
         project_ref: "ProjectRef | str",
-        name:  str | None = None,
-        color: str        = "#6366f1",
+        name: str | None = None,
+        color: str = "#6366f1",
     ) -> tuple[int, str]:
-        n   = name or rand_group_name()
+        n = name or rand_group_name()
         pid = project_ref.id if hasattr(project_ref, "id") else int(str(project_ref))
         resp = page.request.post(
             BASE_URL + f"/api/phase-groups?project_id={pid}",
@@ -352,13 +356,11 @@ def make_group(page: Page):
     yield _make
 
     for _pid, gid in created:
-        try:
+        with contextlib.suppress(Exception):
             page.request.delete(
                 BASE_URL + f"/api/phase-groups/{gid}",
                 headers={"X-Requested-With": "XMLHttpRequest"},
             )
-        except Exception:
-            pass  # best-effort; project deletion cascades anyway
 
 
 @pytest.fixture
@@ -375,10 +377,10 @@ def make_milestone(page: Page):
     project = ProjectPage(page)
 
     def _make(
-        project_ref:  "ProjectRef | str",
-        phase_name:   str,
-        name:         str | None = None,
-        target:       str | None = None,
+        project_ref: "ProjectRef | str",
+        phase_name: str,
+        name: str | None = None,
+        target: str | None = None,
     ) -> str:
         if target is None:
             target = rand_future_date()
