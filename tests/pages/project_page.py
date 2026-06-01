@@ -206,6 +206,7 @@ class ProjectPage(BasePage):
         start: str = "2027-01-01",
         end: str = "2027-06-30",
         desc: str = "",
+        group: str | None = None,
     ) -> str:
         self.page.locator("button", has_text=self.ADD_PHASE_BTN).click()
         expect(self.page.locator(self.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
@@ -214,6 +215,8 @@ class ProjectPage(BasePage):
             self.page.locator(self.MODAL_DESC).fill(desc)
         self.page.locator(self.MODAL_START).fill(start)
         self.page.locator(self.MODAL_END).fill(end)
+        if group is not None:
+            self.page.locator("#modal_input_group").select_option(label=group)
         self.page.locator(self.MODAL_SUBMIT).click()
         expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
         self.page.wait_for_load_state("networkidle")

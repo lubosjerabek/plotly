@@ -201,6 +201,18 @@ class TestPhaseGroupMembership:
         project.delete_group(group_name)
         expect(project.get_phase_card(standalone_phase)._loc).to_be_visible()
 
+    def test_add_phase_with_group_selected_places_it_in_group(self, page: Page, make_project, make_group):
+        """Selecting a group in the Add Phase modal places the new phase inside that group card."""
+        ref = make_project()
+        _gid, group_name = make_group(ref)
+        phase_name = rand_phase_name()
+        project = ProjectPage(page)
+        project.navigate_by_id(ref.id)
+        project.add_phase(phase_name, group=group_name)
+        card = project.get_group_card(group_name)
+        card.expand(page)
+        expect(card.child_phases().filter(has_text=phase_name)).to_be_visible()
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 class TestPhaseGroupGantt:

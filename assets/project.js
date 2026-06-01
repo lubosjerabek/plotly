@@ -1231,18 +1231,26 @@ function confirmDeleteGroup(groupId, name) {
 // ── Phase Actions ─────────────────────────────────────────────────────────────
 /** Open the modal to add a new phase to this project */
 function addPhase() {
+  const groups = state.project.groups || [];
+  const groupFields = groups.length > 0 ? [
+    { id: 'group', label: T.group_label || 'Group', type: 'select',
+      options: groups.map(g => ({ value: String(g.id), text: g.name })) },
+  ] : [];
   showModal(T.modal_add_phase, [
     { id: 'name',  label: T.phase_name,   type: 'text' },
     { id: 'desc',  label: T.description,  type: 'textarea' },
     { id: 'start', label: T.start_date,   type: 'date', defaultValue: todayStr() },
     { id: 'end',   label: T.end_date,     type: 'date', defaultValue: todayStr() },
     { id: 'color', label: T.color,        type: 'color', defaultValue: '#6366f1' },
+    ...groupFields,
   ], async () => {
     const name  = document.getElementById('modal_input_name').value.trim();
     const desc  = document.getElementById('modal_input_desc').value.trim();
     const start = document.getElementById('modal_input_start').value;
     const end   = document.getElementById('modal_input_end').value;
     const color = document.getElementById('modal_input_color').value;
+    const groupEl = document.getElementById('modal_input_group');
+    const group_id = groupEl && groupEl.value ? parseInt(groupEl.value) : null;
     clearFieldErrors();
     { let ok = true;
       if (!name)  { setFieldError('name',  T.error_name_required);    ok = false; }
@@ -1253,7 +1261,7 @@ function addPhase() {
     const btn = document.getElementById('modalSubmitBtn');
     btn.disabled = true;
     try {
-      const resp = await api.createPhase(projectId, { name, description: desc || null, start_date: start, end_date: end, color });
+      const resp = await api.createPhase(projectId, { name, description: desc || null, start_date: start, end_date: end, color, group_id });
       if (resp.ok) { toast.success(T.toast_phase_added); closeModal(); await refresh(); }
       else toast.error(T.toast_phase_add_failed);
     } finally { btn.disabled = false; }
