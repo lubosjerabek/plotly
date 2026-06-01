@@ -1,4 +1,4 @@
-.PHONY: up build down reset deploy check test test-file lint lint-py lint-php logs shell hooks help
+.PHONY: up build down reset deploy check test test-file lint lint-py lint-php fmt logs shell hooks help
 
 COMPOSE  = docker-compose
 APP      = plotly-app
@@ -62,6 +62,10 @@ lint: lint-py lint-php ## Run all linters (Python + PHP)
 lint-fix: ## Auto-fix all lintable issues (ruff + phpcbf)
 	$(RUFF) check $(TESTS) --fix
 	./vendor/bin/phpcbf --standard=phpcs.xml
+
+fmt: ## Lint and auto-format Python test files (ruff check --fix + ruff format)
+	$(RUFF) check $(TESTS) --fix
+	$(RUFF) format $(TESTS)
 
 hooks: ## Install the pre-commit hook (run once after cloning)
 	./venv/bin/pre-commit install
