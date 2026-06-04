@@ -1352,8 +1352,8 @@ function setDependency(phaseId) {
   const currentVal = phase.depends_on_milestone_id
     ? 'ms:' + phase.depends_on_milestone_id
     : (phase.depends_on_id ? 'phase:' + phase.depends_on_id : '');
-  showModal('Set Phase Dependency', [
-    { id: 'target', label: 'This phase starts after…', type: 'select', options: opts, defaultValue: currentVal },
+  showModal(T.modal_set_dependency, [
+    { id: 'target', label: T.dependency_label, type: 'select', options: opts, defaultValue: currentVal },
   ], async () => {
     const raw = document.getElementById('modal_input_target').value;
     let depends_on_id = null, depends_on_milestone_id = null;
@@ -1367,8 +1367,8 @@ function setDependency(phaseId) {
       depends_on_id,
       depends_on_milestone_id,
     });
-    if (resp.ok) { toast.success('Dependency updated'); closeModal(); await refresh(); }
-    else toast.error('Failed to update dependency');
+    if (resp.ok) { toast.success(T.toast_dep_updated); closeModal(); await refresh(); }
+    else toast.error(T.toast_dep_update_failed);
   }, 'Save');
 }
 
