@@ -166,6 +166,7 @@ return [
     'group_label'           => 'Група',
     'group_name'            => 'Назва групи',
     'group_empty'           => 'У цій групі ще немає фаз.',
+    'group_standalone'      => 'Окремі',
     'segment_singular'      => '1 сегмент',
     'segments_plural'       => 'сегментів',
     'modal_add_group'       => 'Додати групу',

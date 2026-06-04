@@ -166,6 +166,7 @@ return [
     'group_label'           => 'Skupina',
     'group_name'            => 'Název skupiny',
     'group_empty'           => 'Tato skupina zatím nemá žádné fáze.',
+    'group_standalone'      => 'Samostatné',
     'segment_singular'      => '1 segment',
     'segments_plural'       => 'segmentů',
     'modal_add_group'       => 'Přidat skupinu',

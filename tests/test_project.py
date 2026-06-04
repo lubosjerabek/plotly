@@ -69,7 +69,7 @@ class TestProjectDetail:
         desc_text = "A detailed description for this phase."
         project.add_phase(phase_name, start, end, desc=desc_text)
         phase = project.get_phase_card(phase_name)
-        phase.expand(page)
+        phase.expand()
         expect(phase.description_el).to_contain_text("A detailed description")
 
     def test_upcoming_phase_collapsed_by_default(self, page: Page, make_project, make_phase):
@@ -115,7 +115,7 @@ class TestProjectDetail:
         project = ProjectPage(page)
         project.add_milestone(phase_name, ms_name, target)
         phase = project.get_phase_card(phase_name)
-        phase.expand(page)
+        phase.expand()
         expect(phase.milestones_section().locator(ProjectPage.ITEM_LIST)).to_contain_text(ms_name)
 
     def test_add_event_to_phase(self, page: Page, make_project, make_phase):
@@ -125,7 +125,7 @@ class TestProjectDetail:
         start, _ = rand_date_range(min_dur=0, max_dur=0)
         project = ProjectPage(page)
         phase = project.get_phase_card(phase_name)
-        phase.expand(page)
+        phase.expand()
         phase.events_section().locator("button", has_text="Add").click()
         expect(page.locator(ProjectPage.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
         expect(page.locator(ProjectPage.MODAL_TITLE)).to_contain_text("Event")
@@ -135,7 +135,7 @@ class TestProjectDetail:
         page.locator(ProjectPage.MODAL_SUBMIT).click()
         expect(page.locator(ProjectPage.TOAST_SUCCESS).last).to_be_visible()
         page.wait_for_load_state("networkidle")
-        phase.expand(page)
+        phase.expand()
         expect(phase.events_section().locator(ProjectPage.ITEM_LIST)).to_contain_text(event_name)
 
     def test_delete_milestone(self, page: Page, make_project, make_phase):
@@ -146,14 +146,14 @@ class TestProjectDetail:
         project = ProjectPage(page)
         project.add_milestone(phase_name, ms_name, target)
         phase = project.get_phase_card(phase_name)
-        phase.expand(page)
+        phase.expand()
         ms = phase.milestones_section().locator(".item-list li", has_text=ms_name)
         ms.locator("button[title='Delete milestone']").click()
         expect(page.locator(ProjectPage.CONFIRM_MODAL)).to_have_class(re.compile(r"is-open"))
         page.locator(ProjectPage.CONFIRM_OK).click()
         expect(page.locator(ProjectPage.TOAST_SUCCESS).last).to_be_visible()
         page.wait_for_load_state("networkidle")
-        phase.expand(page)
+        phase.expand()
         expect(phase.milestones_section().locator(ProjectPage.ITEM_LIST)).not_to_contain_text(ms_name)
 
     def test_edit_milestone_name(self, page: Page, make_project, make_phase):
@@ -166,7 +166,7 @@ class TestProjectDetail:
         project.add_milestone(phase_name, original_name, target)
         project.edit_milestone(phase_name, original_name, updated_name)
         phase = project.get_phase_card(phase_name)
-        phase.expand(page)
+        phase.expand()
         expect(phase.milestones_section().locator(ProjectPage.ITEM_LIST)).to_contain_text(updated_name)
         expect(phase.milestones_section().locator(ProjectPage.ITEM_LIST)).not_to_contain_text(original_name)
 
@@ -177,7 +177,7 @@ class TestProjectDetail:
         start, _ = rand_date_range(min_dur=0, max_dur=0)
         project = ProjectPage(page)
         phase = project.get_phase_card(phase_name)
-        phase.expand(page)
+        phase.expand()
         phase.events_section().locator("button", has_text="Add").click()
         page.locator(ProjectPage.MODAL_NAME).fill(event_name)
         page.locator(ProjectPage.MODAL_START).fill(start)
@@ -186,14 +186,14 @@ class TestProjectDetail:
         expect(page.locator(ProjectPage.TOAST_SUCCESS).last).to_be_visible()
         page.wait_for_load_state("networkidle")
         # Now delete it
-        phase.expand(page)
+        phase.expand()
         ev = phase.events_section().locator(".item-list li", has_text=event_name)
         ev.locator("button[title='Delete event']").click()
         expect(page.locator(ProjectPage.CONFIRM_MODAL)).to_have_class(re.compile(r"is-open"))
         page.locator(ProjectPage.CONFIRM_OK).click()
         expect(page.locator(ProjectPage.TOAST_SUCCESS).last).to_be_visible()
         page.wait_for_load_state("networkidle")
-        phase.expand(page)
+        phase.expand()
         expect(phase.events_section().locator(ProjectPage.ITEM_LIST)).not_to_contain_text(event_name)
 
     def test_delete_phase(self, page: Page, make_project, make_phase):
@@ -303,7 +303,7 @@ class TestProjectDetail:
         project = ProjectPage(page)
         project.add_phase_event(phase_name, event_name, ev_start, ev_end)
         phase = project.get_phase_card(phase_name)
-        phase.expand(page)
+        phase.expand()
         phase.events_section().locator(".item-list li", has_text=event_name).locator(ProjectPage.EDIT_EVENT_BTN).click()
         expect(page.locator(ProjectPage.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
         # Shift start +7 days; end should follow
@@ -327,7 +327,7 @@ class TestProjectDetail:
         project = ProjectPage(page)
         project.add_phase_event(phase_name, event_name, ev_start, ev_end)
         phase = project.get_phase_card(phase_name)
-        phase.expand(page)
+        phase.expand()
         phase.events_section().locator(".item-list li", has_text=event_name).locator(ProjectPage.EDIT_EVENT_BTN).click()
         expect(page.locator(ProjectPage.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
         new_ev_start = (ev_start_dt + timedelta(days=7)).strftime("%Y-%m-%d")

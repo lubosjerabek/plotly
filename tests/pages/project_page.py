@@ -15,6 +15,7 @@ class PhaseCard:
     DESCRIPTION = ".phase-description"
     EDIT_BTN = "button[title='Edit phase']"
     DELETE_BTN = "button[title='Delete phase']"
+    DEPENDENCY_BTN = "button[title='Set dependency']"
     SECTION = ".phase-section"
     ITEM_LIST = ".item-list"
 
@@ -24,15 +25,15 @@ class PhaseCard:
     def is_collapsed(self) -> bool:
         return "is-collapsed" in (self._loc.get_attribute("class") or "")
 
-    def expand(self, page: Page):
+    def expand(self):
         if self.is_collapsed():
             self._loc.locator(self.TOGGLE).click()
-            page.wait_for_timeout(300)
+            expect(self._loc).not_to_have_class(re.compile(r"is-collapsed"))
 
-    def collapse(self, page: Page):
+    def collapse(self):
         if not self.is_collapsed():
             self._loc.locator(self.TOGGLE).click()
-            page.wait_for_timeout(300)
+            expect(self._loc).to_have_class(re.compile(r"is-collapsed"))
 
     def toggle(self):
         self._loc.locator(self.TOGGLE).click()
@@ -115,7 +116,7 @@ class ProjectPage(BasePage):
 
     # Phase cards
     PHASE_CARD = ".phase-card"
-    ADD_PHASE_BTN = "Add Phase"  # used with has_text
+    ADD_PHASE_BTN = "Add Phase"  # used with has_text by external tests
     ITEM_LIST = ".item-list"
 
     # Generic modal (phases / milestones / events)
@@ -208,7 +209,7 @@ class ProjectPage(BasePage):
         desc: str = "",
         group: str | None = None,
     ) -> str:
-        self.page.locator("button", has_text=self.ADD_PHASE_BTN).click()
+        self.page.locator("button[onclick='addPhase()']").click()
         expect(self.page.locator(self.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
         self.page.locator(self.MODAL_NAME).fill(name)
         if desc:
@@ -219,6 +220,7 @@ class ProjectPage(BasePage):
             self.page.locator("#modal_input_group").select_option(label=group)
         self.page.locator(self.MODAL_SUBMIT).click()
         expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
+        expect(self.page.locator(self.GENERIC_MODAL)).not_to_have_class(re.compile(r"is-open"))
         self.page.wait_for_load_state("networkidle")
         return name
 
@@ -242,7 +244,7 @@ class ProjectPage(BasePage):
         target: str = "2027-03-01",
     ) -> str:
         phase = self.get_phase_card(phase_name)
-        phase.expand(self.page)
+        phase.expand()
         phase.milestones_section().locator("button", has_text="Add").click()
         expect(self.page.locator(self.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
         self.page.locator(self.MODAL_NAME).fill(name)
@@ -254,7 +256,7 @@ class ProjectPage(BasePage):
 
     def edit_milestone(self, phase_name: str, old_name: str, new_name: str, new_target: str | None = None) -> None:
         phase = self.get_phase_card(phase_name)
-        phase.expand(self.page)
+        phase.expand()
         phase.milestones_section().locator(".item-list li", has_text=old_name).locator(self.EDIT_MILESTONE_BTN).click()
         expect(self.page.locator(self.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
         self.page.locator(self.MODAL_NAME).fill(new_name)
@@ -266,7 +268,7 @@ class ProjectPage(BasePage):
 
     def delete_milestone(self, phase_name: str, name: str) -> None:
         phase = self.get_phase_card(phase_name)
-        phase.expand(self.page)
+        phase.expand()
         phase.milestones_section().locator(".item-list li", has_text=name).locator(self.DELETE_MILESTONE_BTN).click()
         expect(self.page.locator(self.CONFIRM_MODAL)).to_have_class(re.compile(r"is-open"))
         self.page.locator(self.CONFIRM_OK).click()
@@ -286,7 +288,7 @@ class ProjectPage(BasePage):
         end_time: str | None = None,
     ) -> str:
         phase = self.get_phase_card(phase_name)
-        phase.expand(self.page)
+        phase.expand()
         phase.events_section().locator("button", has_text="Add").click()
         expect(self.page.locator(self.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
         self.page.locator(self.MODAL_NAME).fill(name)
@@ -305,7 +307,7 @@ class ProjectPage(BasePage):
 
     def delete_phase_event(self, phase_name: str, name: str) -> None:
         phase = self.get_phase_card(phase_name)
-        phase.expand(self.page)
+        phase.expand()
         phase.events_section().locator(".item-list li", has_text=name).locator(self.DELETE_EVENT_BTN).click()
         expect(self.page.locator(self.CONFIRM_MODAL)).to_have_class(re.compile(r"is-open"))
         self.page.locator(self.CONFIRM_OK).click()
@@ -428,6 +430,28 @@ class ProjectPage(BasePage):
             group_select.select_option("")
         else:
             group_select.select_option(label=group_name)
+        self.page.locator(self.MODAL_SUBMIT).click()
+        expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
+        self.page.wait_for_load_state("networkidle")
+
+    def set_dependency(self, phase_name: str, target_label: str | None) -> None:
+        """Open the dependency modal for a phase and pick a target (or clear it).
+
+        ``target_label`` is the visible text of the option to pick, or ``None``
+        to clear the dependency (selects the blank "— None —" option).
+        Expands any parent group card so the dependency button is reachable.
+        """
+        parent_group = self.page.locator(f"{self.GROUP_CARD}:has({self.PHASE_CARD}:has-text('{phase_name}'))")
+        if parent_group.count() > 0:
+            GroupCard(parent_group.first).expand(self.page)
+
+        self.get_phase_card(phase_name)._loc.locator(PhaseCard.DEPENDENCY_BTN).click()
+        expect(self.page.locator(self.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
+        sel = self.page.locator(self.MODAL_TARGET)
+        if target_label is None:
+            sel.select_option("")
+        else:
+            sel.select_option(label=target_label)
         self.page.locator(self.MODAL_SUBMIT).click()
         expect(self.page.locator(self.TOAST_SUCCESS).last).to_be_visible()
         self.page.wait_for_load_state("networkidle")

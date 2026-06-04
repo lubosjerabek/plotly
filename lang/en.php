@@ -166,6 +166,7 @@ return [
     'group_label'           => 'Group',
     'group_name'            => 'Group Name',
     'group_empty'           => 'No phases in this group yet.',
+    'group_standalone'      => 'Standalone',
     'segment_singular'      => '1 segment',
     'segments_plural'       => 'segments',
     'modal_add_group'       => 'Add Group',

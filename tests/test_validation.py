@@ -122,7 +122,7 @@ class TestProjectModalValidation:
     def test_add_milestone_requires_name(self, make_phase):
         phase_name = make_phase(self.project_name)
         phase = self.project.get_phase_card(phase_name)
-        phase.expand(self.page)
+        phase.expand()
         phase.milestones_section().locator("button", has_text="Add").click()
         expect(self.page.locator(GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
 
@@ -138,7 +138,7 @@ class TestProjectModalValidation:
     def test_add_phase_event_requires_name(self, make_phase):
         phase_name = make_phase(self.project_name)
         phase = self.project.get_phase_card(phase_name)
-        phase.expand(self.page)
+        phase.expand()
         phase.events_section().locator("button", has_text="Add").click()
         expect(self.page.locator(GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
 

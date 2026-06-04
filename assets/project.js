@@ -1046,9 +1046,14 @@ function buildFieldHTML(f) {
       <div class="color-swatches">${swatchHTML}</div>`;
   }
   if (f.type === 'select') {
-    const opts = (f.options || []).map(o =>
-      `<option value="${escHtml(String(o.value))}"${String(o.value) === (f.defaultValue ?? '') ? ' selected' : ''}>${escHtml(o.text)}</option>`
-    ).join('');
+    const renderOpt = o =>
+      `<option value="${escHtml(String(o.value))}"${String(o.value) === (f.defaultValue ?? '') ? ' selected' : ''}>${escHtml(o.text)}</option>`;
+    const isGrouped = (f.options || []).length > 0 && f.options[0].options !== undefined;
+    const opts = isGrouped
+      ? f.options.map(g =>
+          `<optgroup label="${escHtml(g.label)}">${g.options.map(renderOpt).join('')}</optgroup>`
+        ).join('')
+      : (f.options || []).map(renderOpt).join('');
     return `${label}<select id="modal_input_${f.id}"><option value=""${!f.defaultValue ? ' selected' : ''}>— None —</option>${opts}</select>`;
   }
   if (f.type === 'textarea') {
@@ -1338,17 +1343,27 @@ function editPhase(phaseId) {
 
 /** Open a modal to set or clear the depends_on_id / depends_on_milestone_id for a phase */
 function setDependency(phaseId) {
-  const allPhases = allPhasesFlat(state.project);
-  const phaseOpts = allPhases
-    .filter(p => p.id !== phaseId)
-    .map(p => ({ value: 'phase:' + p.id, text: '📋 ' + p.name }));
-  const allMilestones = [
-    ...(state.project.milestones || []),
-    ...allPhases.flatMap(p => p.milestones || []),
-  ];
-  const msOpts = allMilestones.map(m => ({ value: 'ms:' + m.id, text: '◆ ' + m.name + ' (' + fmtDate(m.target_date) + ')' }));
-  const opts = [...phaseOpts, ...msOpts];
-  const phase = allPhases.find(p => p.id === phaseId);
+  const groups     = state.project.groups || [];
+  const standalone = (state.project.phases || []).filter(p => p.id !== phaseId);
+  const toPhaseOpt = p => ({ value: 'phase:' + p.id, text: p.name });
+  const toMsOpt    = m => ({ value: 'ms:' + m.id, text: m.name + ' (' + fmtDate(m.target_date) + ')' });
+
+  const opts = [];
+  if (standalone.length) {
+    const pOpts = standalone.map(toPhaseOpt);
+    const mOpts = standalone.flatMap(p => (p.milestones || []).map(toMsOpt));
+    const projectMs = (state.project.milestones || []).map(toMsOpt);
+    opts.push({ label: T.group_standalone || 'Standalone', options: [...pOpts, ...mOpts, ...projectMs] });
+  } else {
+    const projectMs = (state.project.milestones || []).map(toMsOpt);
+    if (projectMs.length) opts.push({ label: T.group_standalone || 'Standalone', options: projectMs });
+  }
+  for (const g of groups) {
+    const pOpts = (g.phases || []).filter(p => p.id !== phaseId).map(toPhaseOpt);
+    const mOpts = (g.phases || []).flatMap(p => (p.milestones || []).map(toMsOpt));
+    if (pOpts.length || mOpts.length) opts.push({ label: g.name, options: [...pOpts, ...mOpts] });
+  }
+  const phase = allPhasesFlat(state.project).find(p => p.id === phaseId);
   const currentVal = phase.depends_on_milestone_id
     ? 'ms:' + phase.depends_on_milestone_id
     : (phase.depends_on_id ? 'phase:' + phase.depends_on_id : '');
