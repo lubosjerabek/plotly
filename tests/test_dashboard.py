@@ -100,3 +100,39 @@ class TestDashboard:
         ref = make_project()
         DashboardPage(second_user_page).goto()
         expect(second_user_page.locator(DashboardPage.PROJECT_CARD, has_text=str(ref))).not_to_be_attached()
+
+    def test_project_card_shows_standalone_phase_count(self, page: Page, make_project):
+        """Standalone phases are counted in the project card meta."""
+        from conftest import rand_date_range, rand_phase_name
+        from pages.project_page import ProjectPage
+
+        ref = make_project()
+        project = ProjectPage(page)
+        project.navigate_by_id(ref.id)
+        s, e = rand_date_range()
+        project.add_phase(rand_phase_name(), s, e)
+        s2, e2 = rand_date_range()
+        project.add_phase(rand_phase_name(), s2, e2)
+
+        DashboardPage(page).goto()
+        meta = page.locator(DashboardPage.PROJECT_CARD, has_text=str(ref)).locator(".project-card__meta")
+        expect(meta).to_contain_text("2")
+
+    def test_project_card_counts_grouped_phases(self, page: Page, make_project):
+        """Phases inside a group are included in the project card phase count."""
+        from conftest import rand_date_range, rand_group_name, rand_phase_name
+        from pages.project_page import ProjectPage
+
+        ref = make_project()
+        project = ProjectPage(page)
+        project.navigate_by_id(ref.id)
+        group_name = rand_group_name()
+        project.add_group(group_name)
+        s, e = rand_date_range()
+        project.add_phase(rand_phase_name(), s, e, group=group_name)
+        s2, e2 = rand_date_range()
+        project.add_phase(rand_phase_name(), s2, e2, group=group_name)
+
+        DashboardPage(page).goto()
+        meta = page.locator(DashboardPage.PROJECT_CARD, has_text=str(ref)).locator(".project-card__meta")
+        expect(meta).to_contain_text("2")

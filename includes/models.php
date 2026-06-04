@@ -150,16 +150,17 @@ function require_ics_token(): ?array
 function get_projects(): array
 {
     $user = current_user();
+    $phase_count_sql = '(SELECT COUNT(*) FROM phases ph WHERE ph.project_id = p.id)';
     if ($user['role'] === 'admin') {
-        $rows = pdo()->query('SELECT id, user_id, name, description FROM projects ORDER BY id')->fetchAll();
+        $rows = pdo()->query("SELECT id, user_id, name, description, $phase_count_sql AS phase_count FROM projects p ORDER BY id")->fetchAll();
     } else {
         $uid  = $user['id'];
         $stmt = pdo()->prepare(
-            'SELECT DISTINCT p.id, p.user_id, p.name, p.description
+            "SELECT DISTINCT p.id, p.user_id, p.name, p.description, $phase_count_sql AS phase_count
              FROM projects p
              LEFT JOIN project_collaborators pc ON pc.project_id = p.id AND pc.user_id = ?
              WHERE p.user_id = ? OR pc.user_id = ?
-             ORDER BY p.id'
+             ORDER BY p.id"
         );
         $stmt->execute([$uid, $uid, $uid]);
         $rows = $stmt->fetchAll();
@@ -169,7 +170,7 @@ function get_projects(): array
         'user_id'     => $r['user_id'] !== null ? (int)$r['user_id'] : null,
         'name'        => $r['name'],
         'description' => $r['description'],
-        'phases'      => [],
+        'phase_count' => (int)$r['phase_count'],
     ], $rows);
 }
 

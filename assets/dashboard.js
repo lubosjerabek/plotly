@@ -81,7 +81,7 @@ function renderProjects() {
   }
 
   state.projects.forEach(p => {
-    const phaseCount = (p.phases || []).length;
+    const phaseCount = p.phase_count || 0;
     let phasesLabel;
     if (phaseCount === 1) {
       phasesLabel = (T.n_phases || '%d phase').replace('%d', phaseCount);
