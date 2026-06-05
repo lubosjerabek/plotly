@@ -8,26 +8,22 @@ Built with pure PHP + MySQL + vanilla JS. Runs on a Raspberry Pi, a VPS, a Proxm
 
 ## Why I built this
 
-I was managing a house renovation. Tradespeople, suppliers, an architect — a small army of people who all needed to know what was happening and when. Every time a phase shifted, I was texting updates, forwarding PDFs, and fielding calls from a confused builder who showed up on the wrong day.
-
-What I really wanted was simple: one place to define the plan, and a way for everyone involved to see it in the calendar app they already use — without accounts, without apps, without me having to push updates manually.
-
-Plotly is that tool. You define your project structure once, invite collaborators if you want them to edit, and share an ICS feed URL with anyone who needs read-only visibility. Their calendar updates automatically. When a phase slips, you move it, and everyone's calendar catches up on its own.
-
-It turned out to be useful for more than house renovations — but that's where it started.
+I was managing a house renovation and needed one place to define the plan with a way for everyone involved to see it in their existing calendar app — without accounts, without apps, without me pushing updates manually. Plotly is that tool: define the structure once, invite collaborators to edit, share an ICS feed URL with anyone who needs read-only visibility. When a phase shifts, everyone's calendar catches up automatically.
 
 ---
 
 ## Features
 
-- **Hierarchical structure** — Projects → Phases → Milestones & Events, plus project-wide milestones & events that don't belong to any phase
+- **Hierarchical structure** — Projects → Phase Groups → Phases → Milestones & Events, plus project-wide milestones & events
 - **Phase dependencies** — shift one phase and all dependent phases cascade automatically
-- **Phase descriptions** — rich context notes on each phase
+- **Phase groups** — organise related phases into collapsible groups
+- **Upcoming milestones** — dashboard panel showing the next milestones across all projects
 - **Expand / collapse phases** — active phases open by default; past & upcoming collapse to keep the screen tidy
 - **Status badges** — Past / Active / Upcoming, auto-calculated from today's date
-- **Google Calendar sync** — subscribe to the ICS feed; timed events export with full datetime, all-day events export as date-only; no API keys, no OAuth, no fuss
+- **Google Calendar sync** — subscribe to the ICS feed; no API keys, no OAuth, no fuss
 - **Gantt chart** — visual timeline with Day / Week / Month view modes and a "today" marker
-- **Multi-user** — invite-based registration; collaborators can be added per project with viewer or editor roles
+- **Multi-user** — invite-based registration; collaborators added per project with viewer or editor roles
+- **Localisation** — English and Ukrainian UI
 - **Password-protected** — bcrypt session auth; per-user ICS tokens
 - **Self-hosted** — pure PHP + MySQL, zero Composer dependencies, FTP-deployable
 
@@ -51,7 +47,7 @@ ADMIN_NAME:  "Admin"
 ADMIN_PASS:  "your-password-here"
 ```
 
-The database schema is applied automatically on first start. The entrypoint seeds the admin user on first start if the `users` table is empty. Additional users are added via the invite flow (`/admin/users`).
+The database schema is applied automatically on first start. Additional users are added via the invite flow (`/admin/users`).
 
 ---
 
@@ -63,38 +59,24 @@ The database schema is applied automatically on first start. The entrypoint seed
 2. Run `schema.sql` once via phpMyAdmin / hosting panel SQL console
 3. Open `setup.php` in your browser → enter a password → copy the generated hash
 4. Edit `config.php`: paste the hash as `LEGACY_AUTH_PASS_HASH`, fill in DB credentials
-5. Visit `https://yoursite.com/migrate.php` — this creates your first admin user from the legacy values and upgrades the schema
+5. Visit `https://yoursite.com/migrate.php` — creates your first admin user and upgrades the schema
 6. **Delete `setup.php` and `migrate.php` via FTP**
-7. Done
 
 **Upgrading from a single-admin install:**
 
-Run `migrate.php` once. It will create the `users` table and convert the existing `LEGACY_AUTH_PASS_HASH` credentials into the first admin user entry. Then delete `migrate.php`.
-
----
-
-## Database
-
-| Deployment | How the schema is applied |
-|------------|--------------------------|
-| Docker | Automatically on first `docker-compose up` via `docker-entrypoint-initdb.d` |
-| Wedos / shared hosting | Run `schema.sql` once in phpMyAdmin |
-
-`CREATE TABLE IF NOT EXISTS` keeps restarts idempotent — no migration scripts needed.
+Run `migrate.php` once — it creates the `users` table and converts the existing `LEGACY_AUTH_PASS_HASH` credentials into the first admin user. Then delete `migrate.php`.
 
 ---
 
 ## Google Calendar Sync
 
-No OAuth. No API keys. No token refresh drama. Just an ICS feed.
+No OAuth. No API keys. Just an ICS feed.
 
 1. Open a project page → click **Subscribe** in the topbar
-2. Copy the URL shown (it includes a secret `?token=...` parameter)
+2. Copy the URL (it includes a secret `?token=...` parameter)
 3. In Google Calendar → **Other calendars → From URL** → paste → **Add calendar**
 
-Google polls the feed on its own schedule (typically every few hours). Phases and milestones appear as all-day events. Events with a specific time export as timed calendar entries. To revoke access, regenerate the token via account settings.
-
-There's also a global feed at `/calendar.ics?token=...` that includes all projects.
+Google polls the feed on its own schedule (typically every few hours). To revoke access, regenerate the token via account settings. There's also a global feed at `/calendar.ics?token=...` that includes all projects.
 
 ---
 
@@ -108,9 +90,12 @@ Run `make` with no arguments to see all available targets:
   down          Stop the stack
   reset         Stop the stack and delete all data volumes (clean slate)
   deploy        Copy PHP source into the running container (fast, no rebuild)
+  check         Deploy current source then run the full test suite
   test          Run the full test suite (stack must be running)
   test-file     Run one test file: make test-file FILE=tests/test_ics.py
-  check         Deploy current source then run the full test suite
+  lint          Run all linters (Python + PHP)
+  fmt           Lint and auto-format Python test files
+  hooks         Install the pre-commit hook (run once after cloning)
   logs          Tail the app container logs
   shell         Open a shell inside the app container
 ```
@@ -126,7 +111,6 @@ make build        # full image rebuild + start
 **Iterating on PHP / templates / lang files** (no rebuild needed):
 
 ```bash
-# edit index.php, templates/project.php, lang/en.php, …
 make deploy       # docker cp changed files into the running container (~1 s)
 ```
 
@@ -136,23 +120,23 @@ make deploy       # docker cp changed files into the running container (~1 s)
 make check        # deploy + run full test suite
 ```
 
-**Run just the tests you care about:**
+### Tests
+
+The suite uses Playwright (Python) and runs against the live Docker stack.
 
 ```bash
-make test-file FILE=tests/test_ics.py
+# Set up once after cloning
+python3 -m venv venv
+pip install -r tests/requirements.txt
+playwright install chromium
+make hooks        # install pre-commit hook
+
+# Run tests
+make test
+make test-file FILE=tests/test_validation.py
 ```
 
-### VS Code tasks
-
-All of the above are also available via **Cmd+Shift+P → Tasks: Run Task**:
-
-| Task | Shortcut |
-|------|---------|
-| Build & Start | Cmd+Shift+B (default build task) |
-| Test: Run all | Cmd+Shift+P → Tasks: Run Test Task |
-| Test: Run current file | Open any `test_*.py`, then run this task |
-| Deploy (fast) | Tasks menu |
-| Logs | Tasks menu (opens a dedicated terminal panel) |
+`conftest.py` starts the stack automatically if port 8000 isn't reachable, so you can also run `pytest tests/ -v` directly.
 
 ---
 
@@ -175,31 +159,6 @@ git push origin main
 | `FTP_USERNAME` | FTP username |
 | `FTP_PASSWORD` | FTP password |
 | `FTP_SERVER_DIR` | Document root on the server, e.g. `/web/` |
-
----
-
-## Tests
-
-The test suite uses Playwright (Python) and runs against the live Docker stack.
-
-```bash
-# Install test dependencies once
-pip install -r tests/requirements.txt
-playwright install chromium
-
-# Start the stack if it isn't already running
-make up
-
-# Run all tests
-make test
-
-# Run a specific file
-make test-file FILE=tests/test_validation.py
-```
-
-`conftest.py` spins up `docker-compose` automatically if port 8000 isn't reachable, so you can also just run `pytest tests/ -v` directly and it will start the stack for you.
-
-The session logs in once and reuses the cookie across all tests. Every test that creates data cleans up after itself.
 
 ---
 
