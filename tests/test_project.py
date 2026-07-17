@@ -7,7 +7,14 @@ import re
 from datetime import datetime, timedelta
 
 import pytest
-from conftest import rand_date_range, rand_event_name, rand_future_date, rand_milestone_name, rand_phase_name
+from conftest import (
+    rand_date_range,
+    rand_event_name,
+    rand_future_date,
+    rand_group_name,
+    rand_milestone_name,
+    rand_phase_name,
+)
 from pages import BASE_URL, ProjectPage
 from playwright.sync_api import Page, expect
 
@@ -356,3 +363,52 @@ class TestProjectDetail:
         expect(page.locator(ProjectPage.TOAST_SUCCESS).last).to_be_visible()
         page.wait_for_load_state("networkidle")
         expect(page.locator(ProjectPage.ITEMS_BODY)).to_contain_text(renamed_name)
+
+    def test_phases_view_toggle(self, page: Page):
+        """Toggle buttons correctly switch phases view modes and persist active class on reload."""
+        self.project.navigate_by_id(self.project_id)
+        # Defaults to grouped view
+        expect(page.locator(ProjectPage.VIEW_GROUPED_BTN)).to_have_class(re.compile(r"active"))
+        expect(page.locator(ProjectPage.VIEW_FLOW_BTN)).not_to_have_class(re.compile(r"active"))
+
+        # Switch to flow view
+        self.project.switch_to_flow_view()
+
+        # Reload page and verify view mode preference is stored/persisted
+        page.reload()
+        page.wait_for_load_state("networkidle")
+        expect(page.locator(ProjectPage.VIEW_FLOW_BTN)).to_have_class(re.compile(r"active"))
+        expect(page.locator(ProjectPage.VIEW_GROUPED_BTN)).not_to_have_class(re.compile(r"active"))
+
+        # Switch back
+        self.project.switch_to_grouped_view()
+
+    def test_phases_view_chronological_flow(self, page: Page, make_project):
+        """Chronological Flow view displays phases sorted by start date with their group badges."""
+        ref = make_project()
+        project = ProjectPage(page)
+        project.navigate_by_id(ref.id)
+
+        # Create a group and add phases to it
+        group_name = rand_group_name()
+        project.add_group(group_name, color="#4f46e5")
+
+        # Phase 1: later date, inside group
+        phase_later = rand_phase_name() + " Later"
+        project.add_phase(phase_later, start="2027-02-01", end="2027-02-28", group=group_name)
+
+        # Phase 2: earlier date, standalone (no group)
+        phase_earlier = rand_phase_name() + " Earlier"
+        project.add_phase(phase_earlier, start="2027-01-01", end="2027-01-31")
+
+        # Switch to flow view
+        project.switch_to_flow_view()
+
+        # Check sorting: Earlier Phase (2027-01-01) should appear before Later Phase (2027-02-01) in DOM
+        phases = page.locator(ProjectPage.LIST_PHASE_CARD)
+        expect(phases.nth(0)).to_contain_text(phase_earlier)
+        expect(phases.nth(1)).to_contain_text(phase_later)
+
+        # Standalone phase should not have group badge, grouped phase should have it
+        expect(phases.nth(0).locator(".badge", has_text=group_name)).not_to_be_visible()
+        expect(phases.nth(1).locator(".badge", has_text=group_name)).to_be_visible()

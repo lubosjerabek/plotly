@@ -151,6 +151,8 @@ return [
     // ── Project page ───────────────────────────────────────────
     'dashboard'             => '← Dashboard',
     'phases_tab'            => 'Phases',
+    'view_grouped'          => 'Grouped',
+    'view_flow'             => 'Chronological Flow',
     'timeline_tab'          => 'Timeline',
     'add_phase'             => 'Add Phase',
     'project_wide'          => 'Project-wide',

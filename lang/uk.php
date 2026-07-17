@@ -151,6 +151,8 @@ return [
     // ── Project page ───────────────────────────────────────────
     'dashboard'             => '← Огляд',
     'phases_tab'            => 'Фази',
+    'view_grouped'          => 'Згруповані',
+    'view_flow'             => 'Хронологічний потік',
     'timeline_tab'          => 'Часова шкала',
     'add_phase'             => 'Додати фазу',
     'project_wide'          => 'Весь проєкт',

@@ -576,16 +576,22 @@ require __DIR__ . '/partials/head.php'; ?>
   <!-- Phases tab -->
   <div id="tab-phases" role="tabpanel">
     <div class="panel-toolbar">
-      <span class="panel-toolbar__label" id="phaseCount"></span>
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <span class="panel-toolbar__label" id="phaseCount"></span>
+        <div class="gantt-view-btns" id="phasesViewBtns">
+          <button class="active" data-view="grouped" onclick="setPhasesView('grouped')"><?= htmlspecialchars(t('view_grouped')) ?></button>
+          <button data-view="flow" onclick="setPhasesView('flow')"><?= htmlspecialchars(t('view_flow')) ?></button>
+        </div>
+      </div>
       <?php if (can_write_project($project_id)): ?>
       <div style="display:flex;gap:0.5rem;">
         <button class="btn btn-ghost" id="addGroupBtn" onclick="addGroup()">
           <svg><use href="#icon-plus"/></svg>
-          <?= htmlspecialchars(t('add_group')) ?>
+            <?= htmlspecialchars(t('add_group')) ?>
         </button>
         <button class="btn btn-primary" onclick="addPhase()">
           <svg><use href="#icon-plus"/></svg>
-          <?= htmlspecialchars(t('add_phase')) ?>
+            <?= htmlspecialchars(t('add_phase')) ?>
         </button>
       </div>
       <?php endif; ?>

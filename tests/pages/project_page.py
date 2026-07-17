@@ -108,6 +108,8 @@ class ProjectPage(BasePage):
     # Tab buttons
     PHASES_TAB = ".tab-btn[data-tab='phases']"
     COLLABORATORS_TAB = ".tab-btn[data-tab='collaborators']"
+    VIEW_GROUPED_BTN = "#phasesViewBtns button[data-view='grouped']"
+    VIEW_FLOW_BTN = "#phasesViewBtns button[data-view='flow']"
 
     # Tab panels
     TAB_PHASES = "#tab-phases"
@@ -116,6 +118,7 @@ class ProjectPage(BasePage):
 
     # Phase cards
     PHASE_CARD = ".phase-card"
+    LIST_PHASE_CARD = "#phasesList .phase-card"
     ADD_PHASE_BTN = "Add Phase"  # used with has_text by external tests
     ITEM_LIST = ".item-list"
 
@@ -198,6 +201,16 @@ class ProjectPage(BasePage):
 
     def switch_to_phases(self):
         self.page.locator(self.PHASES_TAB).click()
+
+    # ── Phase View Mode Switcher ───────────────────────────────────────────────
+
+    def switch_to_grouped_view(self):
+        self.page.locator(self.VIEW_GROUPED_BTN).click()
+        expect(self.page.locator(self.VIEW_GROUPED_BTN)).to_have_class(re.compile(r"active"))
+
+    def switch_to_flow_view(self):
+        self.page.locator(self.VIEW_FLOW_BTN).click()
+        expect(self.page.locator(self.VIEW_FLOW_BTN)).to_have_class(re.compile(r"active"))
 
     # ── Phase operations ───────────────────────────────────────────────────────
 

@@ -151,6 +151,8 @@ return [
     // ── Project page ───────────────────────────────────────────
     'dashboard'             => '← Přehled',
     'phases_tab'            => 'Fáze',
+    'view_grouped'          => 'Seskupené',
+    'view_flow'             => 'Chronologický přehled',
     'timeline_tab'          => 'Časová osa',
     'add_phase'             => 'Přidat fázi',
     'project_wide'          => 'Celý projekt',
