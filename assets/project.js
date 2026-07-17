@@ -272,7 +272,7 @@ function buildPhaseCard(phase, phaseMap, msMap, wasCollapsed, wasExpanded, hadSt
     ? state.project.groups.find(g => g.id === phase.group_id)
     : null;
   const groupBadge = group
-    ? `<span class="badge" style="background:${group.color || '#6366f1'}15;color:${group.color || '#6366f1'};border:1px solid ${group.color || '#6366f1'}30;text-transform:none;font-weight:600;display:inline-flex;align-items:center;gap:0.25rem;">📁 ${escHtml(group.name)}</span>`
+    ? `<span class="badge" style="background:${group.color || '#6366f1'}15;color:${group.color || '#6366f1'};border:1px solid ${group.color || '#6366f1'}30;">⌗ ${escHtml(group.name)}</span>`
     : '';
 
   const card = document.createElement('div');
