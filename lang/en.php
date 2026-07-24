@@ -103,6 +103,7 @@ return [
     'add_collaborator'              => 'Add Collaborator',
     'collaborator_email'            => 'Email address',
     'collaborator_role'             => 'Role',
+    'role_owner'                    => 'Owner',
     'role_viewer'                   => 'Viewer',
     'role_editor'                   => 'Editor',
     'no_collaborators'              => 'No collaborators yet.',

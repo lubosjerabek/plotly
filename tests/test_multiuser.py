@@ -163,3 +163,26 @@ class TestCollaborators:
             headers={"X-Requested-With": "XMLHttpRequest"},
         )
         assert del_resp.status == 200
+
+    def test_owner_included_in_collaborators_api(self, page: Page):
+        """Verify project owner is returned with role='owner' in collaborators API."""
+        resp = page.request.get(BASE_URL + f"/api/projects/{self.project_id}/collaborators")
+        assert resp.status == 200
+        collabs = resp.json()
+        assert len(collabs) >= 1
+        owner = collabs[0]
+        assert owner["role"] == "owner"
+
+    def test_cannot_add_owner_as_collaborator(self, page: Page):
+        """Verify attempting to add the owner as a collaborator returns 422 error."""
+        profile_resp = page.request.get(BASE_URL + "/api/profile")
+        assert profile_resp.status == 200
+        owner_email = profile_resp.json()["email"]
+
+        resp = page.request.post(
+            BASE_URL + f"/api/projects/{self.project_id}/collaborators",
+            data=json.dumps({"email": owner_email, "role": "editor"}),
+            headers={"Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest"},
+        )
+        assert resp.status == 422
+        assert "owner" in resp.text().lower()

@@ -489,6 +489,22 @@ function api_get_collaborators(int $project_id): void
 {
     require_auth();
     assert_project_read($project_id);
+
+    $rows = [];
+
+    // Include project owner first if present
+    $pstmt = pdo()->prepare('SELECT u.id, u.name, u.email FROM projects p JOIN users u ON u.id = p.user_id WHERE p.id = ?');
+    $pstmt->execute([$project_id]);
+    $owner = $pstmt->fetch();
+    if ($owner) {
+        $rows[] = [
+            'id'    => (int)$owner['id'],
+            'name'  => $owner['name'],
+            'email' => $owner['email'],
+            'role'  => 'owner',
+        ];
+    }
+
     $stmt = pdo()->prepare(
         'SELECT u.id, u.name, u.email, pc.role
          FROM project_collaborators pc
@@ -497,8 +513,9 @@ function api_get_collaborators(int $project_id): void
          ORDER BY pc.added_at'
     );
     $stmt->execute([$project_id]);
-    $rows = array_map(fn($r) => array_merge($r, ['id' => (int)$r['id']]), $stmt->fetchAll());
-    json_out($rows);
+    $collabs = array_map(fn($r) => array_merge($r, ['id' => (int)$r['id']]), $stmt->fetchAll());
+
+    json_out(array_merge($rows, $collabs));
 }
 
 /**

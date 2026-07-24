@@ -103,6 +103,7 @@ return [
     'add_collaborator'              => 'Додати учасника',
     'collaborator_email'            => 'Адреса ел. пошти',
     'collaborator_role'             => 'Роль',
+    'role_owner'                    => 'Власник',
     'role_viewer'                   => 'Глядач',
     'role_editor'                   => 'Редактор',
     'no_collaborators'              => 'Учасників ще немає.',

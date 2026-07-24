@@ -516,17 +516,20 @@ async function renderCollaborators() {
           <td style="padding:.65rem .75rem;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04)">${escHtml(c.name)}</td>
           <td style="padding:.65rem .75rem;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text-muted)">${escHtml(c.email)}</td>
           <td style="padding:.65rem .75rem;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04)">
-            ${isOwner ? `
+            ${c.role === 'owner' ? `
+              <span style="font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-muted);padding:.2rem .55rem;border-radius:20px;text-transform:uppercase;letter-spacing:.04em">${T.role_owner || 'Owner'}</span>
+            ` : (isOwner ? `
               <select onchange="changeCollaboratorRole(${c.id}, this.value)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:.2rem .5rem;font-size:12px">
                 <option value="viewer" ${c.role==='viewer'?'selected':''}>${T.role_viewer}</option>
                 <option value="editor" ${c.role==='editor'?'selected':''}>${T.role_editor}</option>
-              </select>` : `<span style="font-size:12px;color:var(--text-muted)">${c.role === 'editor' ? T.role_editor : T.role_viewer}</span>`}
+              </select>` : `<span style="font-size:12px;color:var(--text-muted)">${c.role === 'editor' ? T.role_editor : T.role_viewer}</span>`)}
           </td>
           ${isOwner ? `
           <td style="padding:.65rem .75rem;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04)">
+            ${c.role !== 'owner' ? `
             <button class="btn btn-ghost" style="font-size:12px;padding:.25rem .6rem" onclick="removeCollaborator(${c.id}, '${escHtml(c.name).replace(/'/g,"\\'")}')">
               ${T.revoke}
-            </button>
+            </button>` : ''}
           </td>` : ''}
         </tr>
       `).join('')}

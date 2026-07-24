@@ -103,6 +103,7 @@ return [
     'add_collaborator'              => 'Přidat spolupracovníka',
     'collaborator_email'            => 'E-mailová adresa',
     'collaborator_role'             => 'Role',
+    'role_owner'                    => 'Vlastník',
     'role_viewer'                   => 'Čtenář',
     'role_editor'                   => 'Editor',
     'no_collaborators'              => 'Zatím žádní spolupracovníci.',
