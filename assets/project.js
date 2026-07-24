@@ -1465,13 +1465,72 @@ function confirmDeletePhase(id, name) {
   );
 }
 
-// ── Project-level Actions ─────────────────────────────────────────────────────
+/** Get smart default date for a milestone (latest milestone/event date in phase/project, or phase start_date, or today) */
+function getMilestoneDefaultDate(phaseId = null) {
+  if (phaseId && state.project) {
+    const phase = allPhasesFlat(state.project).find(p => p.id === phaseId);
+    if (phase) {
+      let latest = null;
+      (phase.milestones || []).forEach(m => {
+        if (m.target_date && (!latest || m.target_date > latest)) latest = m.target_date;
+      });
+      (phase.events || []).forEach(e => {
+        const d = e.end_date || e.start_date;
+        if (d && (!latest || d > latest)) latest = d;
+      });
+      if (latest) return latest;
+      if (phase.start_date) return phase.start_date;
+    }
+  } else if (state.project) {
+    let latest = null;
+    (state.project.milestones || []).forEach(m => {
+      if (m.target_date && (!latest || m.target_date > latest)) latest = m.target_date;
+    });
+    (state.project.events || []).forEach(e => {
+      const d = e.end_date || e.start_date;
+      if (d && (!latest || d > latest)) latest = d;
+    });
+    if (latest) return latest;
+  }
+  return todayStr();
+}
+
+/** Get smart default date for an event (latest event/milestone date in phase/project, or phase start_date, or today) */
+function getEventDefaultDate(phaseId = null) {
+  if (phaseId && state.project) {
+    const phase = allPhasesFlat(state.project).find(p => p.id === phaseId);
+    if (phase) {
+      let latest = null;
+      (phase.events || []).forEach(e => {
+        const d = e.end_date || e.start_date;
+        if (d && (!latest || d > latest)) latest = d;
+      });
+      (phase.milestones || []).forEach(m => {
+        if (m.target_date && (!latest || m.target_date > latest)) latest = m.target_date;
+      });
+      if (latest) return latest;
+      if (phase.start_date) return phase.start_date;
+    }
+  } else if (state.project) {
+    let latest = null;
+    (state.project.events || []).forEach(e => {
+      const d = e.end_date || e.start_date;
+      if (d && (!latest || d > latest)) latest = d;
+    });
+    (state.project.milestones || []).forEach(m => {
+      if (m.target_date && (!latest || m.target_date > latest)) latest = m.target_date;
+    });
+    if (latest) return latest;
+  }
+  return todayStr();
+}
+
 // ── Project-level Actions ─────────────────────────────────────────────────────
 /** Open the modal to add a project-level milestone (not attached to any phase) */
 function addProjectMilestone() {
   showModal(T.modal_add_project_milestone, [
     { id: 'name',   label: T.milestone_name, type: 'text' },
-    { id: 'target', label: T.target_date,    type: 'date', defaultValue: todayStr() },
+    { id: 'target', label: T.target_date,    type: 'date', defaultValue: getMilestoneDefaultDate(null) },
   ], async () => {
     const name = document.getElementById('modal_input_name').value.trim();
     const date = document.getElementById('modal_input_target').value;
@@ -1492,7 +1551,8 @@ function addProjectMilestone() {
 
 /** Open the modal to add a project-level event (not attached to any phase) */
 function addProjectEvent() {
-  _openEventModal(T.modal_add_project_event, {}, async (data) => {
+  const defDate = getEventDefaultDate(null);
+  _openEventModal(T.modal_add_project_event, { start_date: defDate, end_date: defDate }, async (data) => {
     const resp = await api.createProjectEvent(projectId, data);
     if (resp.ok) { toast.success(T.toast_event_added); closeModal(); await refresh(); }
     else toast.error(T.toast_event_add_failed);
@@ -1504,7 +1564,7 @@ function addProjectEvent() {
 function addMilestone(phaseId) {
   showModal(T.modal_add_milestone, [
     { id: 'name',   label: T.milestone_name, type: 'text' },
-    { id: 'target', label: T.target_date,    type: 'date', defaultValue: todayStr() },
+    { id: 'target', label: T.target_date,    type: 'date', defaultValue: getMilestoneDefaultDate(phaseId) },
   ], async () => {
     const name = document.getElementById('modal_input_name').value.trim();
     const date = document.getElementById('modal_input_target').value;
@@ -1618,7 +1678,8 @@ function _openEventModal(title, defaults, onSave, submitLabel, subtitle = '') {
 
 /** Open the event modal to add a new event attached to a specific phase */
 function addEvent(phaseId) {
-  _openEventModal(T.modal_add_event, {}, async (data) => {
+  const defDate = getEventDefaultDate(phaseId);
+  _openEventModal(T.modal_add_event, { start_date: defDate, end_date: defDate }, async (data) => {
     const resp = await api.createEvent(phaseId, data);
     if (resp.ok) { toast.success(T.toast_event_added); closeModal(); await refresh(); }
     else toast.error(T.toast_event_add_failed);

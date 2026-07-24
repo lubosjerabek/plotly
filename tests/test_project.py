@@ -393,18 +393,21 @@ class TestProjectDetail:
         group_name = rand_group_name()
         project.add_group(group_name, color="#4f46e5")
 
+        earlier_start, earlier_end = rand_date_range(min_start=30, max_start=60, min_dur=30, max_dur=60)
+        later_start, later_end = rand_date_range(min_start=90, max_start=120, min_dur=30, max_dur=60)
+
         # Phase 1: later date, inside group
         phase_later = rand_phase_name() + " Later"
-        project.add_phase(phase_later, start="2027-02-01", end="2027-02-28", group=group_name)
+        project.add_phase(phase_later, start=later_start, end=later_end, group=group_name)
 
         # Phase 2: earlier date, standalone (no group)
         phase_earlier = rand_phase_name() + " Earlier"
-        project.add_phase(phase_earlier, start="2027-01-01", end="2027-01-31")
+        project.add_phase(phase_earlier, start=earlier_start, end=earlier_end)
 
         # Switch to flow view
         project.switch_to_flow_view()
 
-        # Check sorting: Earlier Phase (2027-01-01) should appear before Later Phase (2027-02-01) in DOM
+        # Check sorting: Earlier Phase should appear before Later Phase in DOM
         phases = page.locator(ProjectPage.LIST_PHASE_CARD)
         expect(phases.nth(0)).to_contain_text(phase_earlier)
         expect(phases.nth(1)).to_contain_text(phase_later)
@@ -422,3 +425,37 @@ class TestProjectDetail:
         expect(page.locator(ProjectPage.HELP_MODAL)).to_have_class(re.compile(r"is-open"))
         page.keyboard.press("Escape")
         expect(page.locator(ProjectPage.HELP_MODAL)).not_to_have_class(re.compile(r"is-open"))
+
+    def test_event_default_date_uses_latest_or_phase_start(self, page: Page, make_project, make_phase):
+        """When creating a new event in a phase, default date uses phase start date or latest event date."""
+        ref = make_project()
+        phase_start, phase_end = rand_date_range(min_start=60, max_start=120, min_dur=60, max_dur=120)
+        phase_start_dt = datetime.strptime(phase_start, "%Y-%m-%d")
+        ev1_start_dt = phase_start_dt + timedelta(days=5)
+        ev1_end_dt = ev1_start_dt + timedelta(days=5)
+        ev1_start = ev1_start_dt.strftime("%Y-%m-%d")
+        ev1_end = ev1_end_dt.strftime("%Y-%m-%d")
+
+        phase_name = make_phase(ref, start=phase_start, end=phase_end)
+        project = ProjectPage(page)
+        project.navigate_by_id(ref.id)
+        phase = project.get_phase_card(phase_name)
+        phase.expand()
+
+        # 1. First event in phase should default start date to phase_start instead of today's date
+        phase.events_section().locator("button", has_text="Add").click()
+        expect(page.locator(ProjectPage.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
+        expect(page.locator(ProjectPage.MODAL_START)).to_have_value(phase_start)
+        ev1_name = rand_event_name()
+        page.locator(ProjectPage.MODAL_NAME).fill(ev1_name)
+        page.locator(ProjectPage.MODAL_START).fill(ev1_start)
+        page.locator(ProjectPage.MODAL_END).fill(ev1_end)
+        page.locator(ProjectPage.MODAL_SUBMIT).click()
+        expect(page.locator(ProjectPage.TOAST_SUCCESS).last).to_be_visible()
+        page.wait_for_load_state("networkidle")
+
+        # 2. Second event in phase should default start date to latest event date (ev1_end)
+        phase.events_section().locator("button", has_text="Add").click()
+        expect(page.locator(ProjectPage.GENERIC_MODAL)).to_have_class(re.compile(r"is-open"))
+        expect(page.locator(ProjectPage.MODAL_START)).to_have_value(ev1_end)
+        page.keyboard.press("Escape")
