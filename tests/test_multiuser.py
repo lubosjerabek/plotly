@@ -82,6 +82,23 @@ class TestProjectIsolation:
 
         second_dashboard.delete_project(project_name)
 
+    def test_invited_user_can_create_and_view_own_project(self, second_user_page: Page):
+        """Invited non-admin user creates a project and can view it rendered on their dashboard."""
+        project_name = rand_project_name()
+        second_dashboard = DashboardPage(second_user_page)
+        second_dashboard.goto()
+        second_dashboard.create_project(project_name)
+
+        expect(second_dashboard.get_project_card(project_name)._loc.first).to_be_visible()
+
+        second_dashboard.delete_project(project_name)
+
+    def test_invited_user_upcoming_milestones_api_success(self, second_user_page: Page):
+        """Verify GET /api/upcoming-milestones succeeds for a non-admin session."""
+        resp = second_user_page.request.get(BASE_URL + "/api/upcoming-milestones")
+        assert resp.status == 200, f"Upcoming milestones API failed for non-admin user: {resp.text()}"
+        assert isinstance(resp.json(), list)
+
 
 class TestCollaborators:
     @pytest.fixture(autouse=True)

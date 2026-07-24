@@ -71,5 +71,11 @@ class TestUpcomingMilestonesPanel:
         ref = make_project()
         ms_name = rand_milestone_name()
         _post_milestone(page, ref.id, ms_name, _days(30))
+
+        resp = second_user_page.request.get(BASE_URL + "/api/upcoming-milestones")
+        assert resp.status == 200, f"Upcoming milestones API failed: {resp.text()}"
+        milestones = resp.json()
+        assert not any(m["name"] == ms_name for m in milestones)
+
         DashboardPage(second_user_page).goto()
-        expect(second_user_page.locator(DashboardPage.UPCOMING_LIST)).not_to_contain_text(ms_name)
+        expect(second_user_page.locator(DashboardPage.UPCOMING_PANEL)).to_be_hidden()

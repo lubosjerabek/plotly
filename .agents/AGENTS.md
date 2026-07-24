@@ -19,3 +19,11 @@ These rules enforce development and testing standards for the Plotly codebase. A
 - Define all DOM selectors as class constants or attributes within the page object helper classes in [tests/pages/](file:///Users/lubosjerabek/Documents/git/plotly/tests/pages/).
 - Reference these class attributes (e.g. `ProjectPage.VIEW_GROUPED_BTN`) within both page helper methods and assertions in test files.
 - Ensure helper methods are defined on page object models for all common interactions (e.g. switching views, filling modals).
+
+### 3. Ensure Non-Admin Role Test Coverage
+- Validate feature workflows, access control, and user interface components using regular non-admin user accounts (`role = 'user'`), rather than relying solely on admin sessions.
+
+
+### 4. Avoid Blind Negative Assertions
+- Before asserting that an element does not contain forbidden text (`not_to_contain_text`), verify that the container element itself is attached and visible, and that the underlying API call returned HTTP 200 without JavaScript/API errors.
+
