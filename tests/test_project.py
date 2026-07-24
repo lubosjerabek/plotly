@@ -412,3 +412,13 @@ class TestProjectDetail:
         # Standalone phase should not have group badge, grouped phase should have it
         expect(phases.nth(0).locator(".badge", has_text=group_name)).not_to_be_visible()
         expect(phases.nth(1).locator(".badge", has_text=group_name)).to_be_visible()
+
+    def test_structure_guide_modal(self, page: Page, make_project):
+        """Clicking Structure Guide opens the concept help modal."""
+        ref = make_project()
+        project = ProjectPage(page)
+        project.navigate_by_id(ref.id)
+        page.locator(ProjectPage.STRUCTURE_GUIDE_BTN).first.click()
+        expect(page.locator(ProjectPage.HELP_MODAL)).to_have_class(re.compile(r"is-open"))
+        page.keyboard.press("Escape")
+        expect(page.locator(ProjectPage.HELP_MODAL)).not_to_have_class(re.compile(r"is-open"))

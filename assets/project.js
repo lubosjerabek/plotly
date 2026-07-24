@@ -1067,16 +1067,6 @@ function showModal(title, fields, callback, submitLabel = 'Save', subtitle = '')
   });
   _modalCallback = callback;
   document.getElementById('genericModal').classList.add('is-open');
-
-/** Open the Structure Guide modal */
-function openHelpModal() {
-  document.getElementById('helpModal').classList.add('is-open');
-}
-
-/** Close the Structure Guide modal */
-function closeHelpModal() {
-  document.getElementById('helpModal').classList.remove('is-open');
-}
   const _startEl = document.getElementById('modal_input_start');
   const _endEl   = document.getElementById('modal_input_end');
   if (_startEl && _endEl) {
@@ -1090,6 +1080,16 @@ function closeHelpModal() {
     clearFieldErrors();
     container.querySelector('input, select')?.focus();
   }, 50);
+}
+
+/** Open the Structure Guide modal */
+function openHelpModal() {
+  document.getElementById('helpModal').classList.add('is-open');
+}
+
+/** Close the Structure Guide modal */
+function closeHelpModal() {
+  document.getElementById('helpModal').classList.remove('is-open');
 }
 
 /** Render the HTML for a single modal field descriptor; used by showModal to populate the fields container */
@@ -1688,7 +1688,7 @@ function confirmDeleteProject() {
 
 // ── Keyboard Shortcuts ────────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeModal(); closeConfirm(); closeSubscribeModal(); }
+  if (e.key === 'Escape') { closeModal(); closeConfirm(); closeSubscribeModal(); closeHelpModal(); }
 });
 document.getElementById('genericModal').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey && e.target.tagName !== 'SELECT' && e.target.tagName !== 'TEXTAREA') {
@@ -1704,6 +1704,9 @@ document.getElementById('confirmModal').addEventListener('click', e => {
 });
 document.getElementById('subscribeModal').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeSubscribeModal();
+});
+document.getElementById('helpModal')?.addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeHelpModal();
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────

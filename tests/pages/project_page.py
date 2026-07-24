@@ -166,6 +166,10 @@ class ProjectPage(BasePage):
     GROUP_CARD = ".phase-group-card"
     ADD_GROUP_BTN = "#addGroupBtn"
 
+    # Structure guide modal
+    STRUCTURE_GUIDE_BTN = "button:has-text('Structure Guide')"
+    HELP_MODAL = "#helpModal"
+
     # Timeline / Gantt
     GANTT_BARS = ".gantt .bar"
     DATE_LABELS = ".gantt .gantt-date-label"
