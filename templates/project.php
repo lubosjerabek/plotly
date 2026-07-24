@@ -504,6 +504,9 @@ require __DIR__ . '/partials/head.php'; ?>
   <symbol id="icon-copy" viewBox="0 0 16 16">
     <path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25v-7.5z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25v-7.5zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25h-7.5z"/>
   </symbol>
+  <symbol id="icon-help" viewBox="0 0 16 16">
+    <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm6.5-.25A1.75 1.75 0 0 1 8.25 6h.5a1.75 1.75 0 0 1 0 3.5h-.25A.75.75 0 0 0 7.75 10.25v.25a.75.75 0 0 0 1.5 0v-.031a3.25 3.25 0 1 0-2.456-3.14.75.75 0 0 0 1.498.171zM9 12a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+  </symbol>
 </svg>
 
 <!-- Topbar -->
@@ -576,12 +579,16 @@ require __DIR__ . '/partials/head.php'; ?>
   <!-- Phases tab -->
   <div id="tab-phases" role="tabpanel">
     <div class="panel-toolbar">
-      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
         <span class="panel-toolbar__label" id="phaseCount"></span>
         <div class="gantt-view-btns" id="phasesViewBtns">
           <button class="active" data-view="grouped" onclick="setPhasesView('grouped')"><?= htmlspecialchars(t('view_grouped')) ?></button>
           <button data-view="flow" onclick="setPhasesView('flow')"><?= htmlspecialchars(t('view_flow')) ?></button>
         </div>
+        <button class="btn btn-ghost btn-xs" onclick="openHelpModal()" style="display:inline-flex;align-items:center;gap:0.3rem;" title="<?= htmlspecialchars(t('help_concepts_title')) ?>">
+          <svg style="width:13px;height:13px;fill:currentColor;"><use href="#icon-help"/></svg>
+          <span><?= htmlspecialchars(t('help_concepts_btn')) ?></span>
+        </button>
       </div>
       <?php if (can_write_project($project_id)): ?>
       <div style="display:flex;gap:0.5rem;">
@@ -621,12 +628,18 @@ require __DIR__ . '/partials/head.php'; ?>
   <!-- Timeline tab -->
   <div id="tab-timeline" role="tabpanel" style="display:none">
     <div class="gantt-toolbar">
-      <span><?= htmlspecialchars(t('gantt_view_label')) ?></span>
-      <div class="gantt-view-btns" id="ganttViewBtns">
-        <button data-view="Day"   onclick="setGanttView('Day')"><?= htmlspecialchars(t('gantt_day')) ?></button>
-        <button data-view="Week"  onclick="setGanttView('Week')"><?= htmlspecialchars(t('gantt_week')) ?></button>
-        <button class="active" data-view="Month" onclick="setGanttView('Month')"><?= htmlspecialchars(t('gantt_month')) ?></button>
+      <div style="display:flex;align-items:center;gap:1rem;">
+        <span><?= htmlspecialchars(t('gantt_view_label')) ?></span>
+        <div class="gantt-view-btns" id="ganttViewBtns">
+          <button data-view="Day"   onclick="setGanttView('Day')"><?= htmlspecialchars(t('gantt_day')) ?></button>
+          <button data-view="Week"  onclick="setGanttView('Week')"><?= htmlspecialchars(t('gantt_week')) ?></button>
+          <button class="active" data-view="Month" onclick="setGanttView('Month')"><?= htmlspecialchars(t('gantt_month')) ?></button>
+        </div>
       </div>
+      <button class="btn btn-ghost btn-xs" onclick="openHelpModal()" style="display:inline-flex;align-items:center;gap:0.3rem;" title="<?= htmlspecialchars(t('help_concepts_title')) ?>">
+        <svg style="width:13px;height:13px;fill:currentColor;"><use href="#icon-help"/></svg>
+        <span><?= htmlspecialchars(t('help_concepts_btn')) ?></span>
+      </button>
     </div>
     <div class="gantt-container">
       <svg id="gantt"></svg>
@@ -650,13 +663,58 @@ require __DIR__ . '/partials/head.php'; ?>
 <div class="modal-overlay" id="genericModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <div class="modal">
     <div class="modal__header">
-      <h2 class="modal__title" id="modalTitle"></h2>
+      <div>
+        <h2 class="modal__title" id="modalTitle"></h2>
+        <p class="modal__subtitle" id="modalSubtitle" style="color:var(--text-muted);font-size:13px;margin:0.25rem 0 0;display:none;"></p>
+      </div>
       <button class="modal__close" onclick="closeModal()" aria-label="Close">✕</button>
     </div>
     <div class="modal__body" id="modalFields"></div>
     <div class="modal__footer">
       <button class="btn btn-ghost" onclick="closeModal()"><?= htmlspecialchars(t('cancel')) ?></button>
       <button class="btn btn-primary" id="modalSubmitBtn"><?= htmlspecialchars(t('submit')) ?></button>
+    </div>
+  </div>
+</div>
+
+<!-- Structure Guide Modal -->
+<div class="modal-overlay" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="modal" style="max-width:540px;">
+    <div class="modal__header">
+      <div>
+        <h2 class="modal__title" id="helpTitle"><?= htmlspecialchars(t('help_concepts_title')) ?></h2>
+        <p style="color:var(--text-muted);font-size:13px;margin:0.25rem 0 0;"><?= htmlspecialchars(t('help_concepts_subtitle')) ?></p>
+      </div>
+      <button class="modal__close" onclick="closeHelpModal()" aria-label="<?= htmlspecialchars(t('close')) ?>">✕</button>
+    </div>
+    <div class="modal__body" style="padding-top:0.5rem;padding-bottom:1rem;display:flex;flex-direction:column;gap:0.75rem;">
+      <div style="background:var(--surface-2);border-radius:var(--radius-md);padding:0.875rem 1rem;border-left:4px solid #6366f1;">
+        <div style="display:flex;align-items:center;gap:0.5rem;font-weight:600;font-size:14px;color:var(--text);margin-bottom:0.25rem;">
+          <span style="font-size:15px;">🗂️</span> <?= htmlspecialchars(t('help_group_title')) ?>
+        </div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.4;"><?= htmlspecialchars(t('help_group_desc')) ?></div>
+      </div>
+      <div style="background:var(--surface-2);border-radius:var(--radius-md);padding:0.875rem 1rem;border-left:4px solid #22c55e;">
+        <div style="display:flex;align-items:center;gap:0.5rem;font-weight:600;font-size:14px;color:var(--text);margin-bottom:0.25rem;">
+          <span style="font-size:15px;">📊</span> <?= htmlspecialchars(t('help_phase_title')) ?>
+        </div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.4;"><?= htmlspecialchars(t('help_phase_desc')) ?></div>
+      </div>
+      <div style="background:var(--surface-2);border-radius:var(--radius-md);padding:0.875rem 1rem;border-left:4px solid #f59e0b;">
+        <div style="display:flex;align-items:center;gap:0.5rem;font-weight:600;font-size:14px;color:var(--text);margin-bottom:0.25rem;">
+          <span style="font-size:15px;">◆</span> <?= htmlspecialchars(t('help_milestone_title')) ?>
+        </div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.4;"><?= htmlspecialchars(t('help_milestone_desc')) ?></div>
+      </div>
+      <div style="background:var(--surface-2);border-radius:var(--radius-md);padding:0.875rem 1rem;border-left:4px solid #3b82f6;">
+        <div style="display:flex;align-items:center;gap:0.5rem;font-weight:600;font-size:14px;color:var(--text);margin-bottom:0.25rem;">
+          <span style="font-size:15px;">📅</span> <?= htmlspecialchars(t('help_event_title')) ?>
+        </div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.4;"><?= htmlspecialchars(t('help_event_desc')) ?></div>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-primary" onclick="closeHelpModal()"><?= htmlspecialchars(t('close')) ?></button>
     </div>
   </div>
 </div>

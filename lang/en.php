@@ -321,8 +321,26 @@ return [
     'lang_uk'               => 'UA',
     'lang_label'            => 'Language',
 
+    // ── Concept Help / Modal ───────────────────────────────────
+    'help_concepts_btn'       => 'Structure Guide',
+    'help_concepts_title'     => 'Project Structure & Concepts',
+    'help_concepts_subtitle'  => 'How Groups, Phases, Milestones, and Events work together in Plotly',
+    'help_group_title'        => 'Phase Group',
+    'help_group_desc'         => 'A high-level container or workstream (e.g. Design Track, Release 1.0) that organizes related phases together.',
+    'help_phase_title'        => 'Phase',
+    'help_phase_desc'         => 'A multi-day stage with a start and end date (e.g. Wireframing, API Setup). Can belong to a group or stand alone.',
+    'help_milestone_title'    => 'Milestone',
+    'help_milestone_desc'     => 'A key target date or deadline checkpoint with zero duration (e.g. Final Sign-off, Beta Launch).',
+    'help_event_title'        => 'Event',
+    'help_event_desc'         => 'A scheduled meeting or calendar occurrence on specific dates with optional start/end times.',
+    'modal_add_group_sub'     => 'Create a category or workstream container for related phases.',
+    'modal_add_phase_sub'     => 'Define a time-bound stage (Start Date → End Date).',
+    'modal_add_milestone_sub' => 'Mark a key deadline or target date checkpoint.',
+    'modal_add_event_sub'     => 'Schedule a meeting or calendar activity.',
+
     // ── Validation ─────────────────────────────────────────────
     'error_name_required'   => 'Name is required',
     'error_date_required'   => 'Date is required',
     'error_end_before_start' => 'End date cannot be before start date',
 ];
+

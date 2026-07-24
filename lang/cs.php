@@ -323,8 +323,26 @@ return [
     'lang_uk'               => 'UA',
     'lang_label'            => 'Jazyk',
 
+    // ── Concept Help / Modal ───────────────────────────────────
+    'help_concepts_btn'       => 'Nápověda k struktuře',
+    'help_concepts_title'     => 'Struktura projektu a pojmy',
+    'help_concepts_subtitle'  => 'Jak spolu v Plotly souvisí Skupiny, Fáze, Milníky a Události',
+    'help_group_title'        => 'Skupina fází',
+    'help_group_desc'         => 'Nadbylý kontejner nebo pracovní větev (např. Design, Backend), která sdružuje související fáze.',
+    'help_phase_title'        => 'Fáze',
+    'help_phase_desc'         => 'Vícedenní časový úsek s počátečním a koncovým datem (např. Vývoj API). Může být ve skupině nebo samostatně.',
+    'help_milestone_title'    => 'Milník',
+    'help_milestone_desc'     => 'Klíčový termín nebo cíl bez trvání na konkrétní datum (např. Schválení klientem, Spuštění).',
+    'help_event_title'        => 'Událost',
+    'help_event_desc'         => 'Plánovaná schůzka nebo událost v kalendáři s volitelným časem začátku a konce.',
+    'modal_add_group_sub'     => 'Vytvořte skupinu/větev pro organizaci souvisejících fází.',
+    'modal_add_phase_sub'     => 'Definujte časový úsek projektu (Od → Do).',
+    'modal_add_milestone_sub' => 'Označte klíčový termín nebo cílové datum.',
+    'modal_add_event_sub'     => 'Naplánujte schůzku nebo kalendářní událost.',
+
     // ── Validation ─────────────────────────────────────────────
     'error_name_required'   => 'Název je povinný',
     'error_date_required'   => 'Datum je povinné',
     'error_end_before_start' => 'Datum konce nemůže být před datem začátku',
 ];
+

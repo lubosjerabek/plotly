@@ -212,7 +212,7 @@ function renderProjectItems(milestones, events) {
   const msItems = milestones.length > 0
     ? milestones.map(m => `
         <li>
-          <span class="item-list__name">${escHtml(m.name)}</span>
+          <span class="item-list__name"><span style="color:#f59e0b;margin-right:5px;font-size:12px;" aria-hidden="true">◆</span>${escHtml(m.name)}</span>
           <span class="item-list__meta">${fmtDate(m.target_date)}</span>
           ${canEdit ? `
           <button class="btn btn-icon btn-ghost" title="Edit milestone" style="width:22px;height:22px;padding:2px;"
@@ -229,7 +229,7 @@ function renderProjectItems(milestones, events) {
   const evItems = events.length > 0
     ? events.map(e => `
         <li>
-          <span class="item-list__name">${escHtml(e.name)}</span>
+          <span class="item-list__name"><span style="color:#3b82f6;margin-right:5px;font-size:12px;" aria-hidden="true">📅</span>${escHtml(e.name)}</span>
           <span class="item-list__meta">${fmtEventMeta(e)}</span>
           ${canEdit ? `
           <button class="btn btn-icon btn-ghost" title="${T.tooltip_edit_event}" style="width:22px;height:22px;padding:2px;"
@@ -246,14 +246,14 @@ function renderProjectItems(milestones, events) {
   container.innerHTML = `
     <div class="phase-section">
       <div class="phase-section__header">
-        <span class="phase-section__label">${T.milestones}</span>
+        <span class="phase-section__label">◆ ${T.milestones}</span>
         ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addProjectMilestone()">${T.add}</button>` : ''}
       </div>
       <ul class="item-list">${msItems}</ul>
     </div>
     <div class="phase-section">
       <div class="phase-section__header">
-        <span class="phase-section__label">${T.events}</span>
+        <span class="phase-section__label">📅 ${T.events}</span>
         ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addProjectEvent()">${T.add}</button>` : ''}
       </div>
       <ul class="item-list">${evItems}</ul>
@@ -283,7 +283,7 @@ function buildPhaseCard(phase, phaseMap, msMap, wasCollapsed, wasExpanded, hadSt
   const msItems = phase.milestones.length > 0
     ? phase.milestones.map(m => `
         <li>
-          <span class="item-list__name">${escHtml(m.name)}</span>
+          <span class="item-list__name"><span style="color:#f59e0b;margin-right:5px;font-size:12px;" aria-hidden="true">◆</span>${escHtml(m.name)}</span>
           <span class="item-list__meta">${fmtDate(m.target_date)}</span>
           ${canEdit ? `
           <button class="btn btn-icon btn-ghost" title="Edit milestone" style="width:22px;height:22px;padding:2px;"
@@ -300,7 +300,7 @@ function buildPhaseCard(phase, phaseMap, msMap, wasCollapsed, wasExpanded, hadSt
   const evItems = phase.events.length > 0
     ? phase.events.map(e => `
         <li>
-          <span class="item-list__name">${escHtml(e.name)}</span>
+          <span class="item-list__name"><span style="color:#3b82f6;margin-right:5px;font-size:12px;" aria-hidden="true">📅</span>${escHtml(e.name)}</span>
           <span class="item-list__meta">${fmtEventMeta(e)}</span>
           ${canEdit ? `
           <button class="btn btn-icon btn-ghost" title="${T.tooltip_edit_event}" style="width:22px;height:22px;padding:2px;"
@@ -320,7 +320,7 @@ function buildPhaseCard(phase, phaseMap, msMap, wasCollapsed, wasExpanded, hadSt
         <svg class="phase-card__chevron"><use href="#icon-chevron-down"/></svg>
         <div class="phase-card__color-dot" style="background:${color};--dot-color:${color}"></div>
         <div class="phase-card__title-area">
-          <h3 class="phase-card__name">${escHtml(phase.name)}</h3>
+          <h3 class="phase-card__name"><span style="margin-right:4px;font-size:14px;" aria-hidden="true">📊</span>${escHtml(phase.name)}</h3>
           <div class="phase-card__meta">
             ${statusBadge(status)}
             <span class="phase-card__dates">${fmtDate(phase.start_date)} → ${fmtDate(phase.end_date)}</span>
@@ -347,14 +347,14 @@ function buildPhaseCard(phase, phaseMap, msMap, wasCollapsed, wasExpanded, hadSt
       ${phase.description ? `<p class="phase-description">${escHtml(phase.description)}</p>` : ''}
       <div class="phase-section">
         <div class="phase-section__header">
-          <span class="phase-section__label">${T.milestones}</span>
+          <span class="phase-section__label">◆ ${T.milestones}</span>
           ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addMilestone(${phase.id})">${T.add}</button>` : ''}
         </div>
         <ul class="item-list" id="ms-list-${phase.id}">${msItems}</ul>
       </div>
       <div class="phase-section">
         <div class="phase-section__header">
-          <span class="phase-section__label">${T.events}</span>
+          <span class="phase-section__label">📅 ${T.events}</span>
           ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addEvent(${phase.id})">${T.add}</button>` : ''}
         </div>
         <ul class="item-list" id="ev-list-${phase.id}">${evItems}</ul>
@@ -451,7 +451,7 @@ function renderPhases(phases, groups = []) {
           <svg class="phase-group-card__chevron"><use href="#icon-chevron-down"/></svg>
           <div class="phase-card__color-dot" style="background:${color};--dot-color:${color};margin-top:3px;flex-shrink:0;"></div>
           <div class="phase-group-card__title-area">
-            <h3 class="phase-group-card__name">${escHtml(group.name)}</h3>
+            <h3 class="phase-group-card__name"><span style="margin-right:4px;font-size:14px;" aria-hidden="true">🗂️</span>${escHtml(group.name)}</h3>
             <div class="phase-group-card__meta">
               ${statusBadge(groupStatus)}
               ${groupStart ? `<span class="phase-group-card__dates">${fmtDate(groupStart)} → ${fmtDate(groupEnd)}</span>` : ''}
@@ -1035,10 +1035,20 @@ function setFieldError(id, msg) {
  * @param {Array}    fields       Field descriptor objects
  * @param {Function} callback     Called when the user clicks Submit
  * @param {string}   [submitLabel] Label for the submit button (default: 'Save')
+ * @param {string}   [subtitle]   Optional explanatory subtitle under modal heading
  */
-function showModal(title, fields, callback, submitLabel = 'Save') {
+function showModal(title, fields, callback, submitLabel = 'Save', subtitle = '') {
   document.getElementById('modalTitle').textContent = title;
   document.getElementById('modalSubmitBtn').textContent = submitLabel;
+  const subEl = document.getElementById('modalSubtitle');
+  if (subEl) {
+    if (subtitle) {
+      subEl.textContent = subtitle;
+      subEl.style.display = 'block';
+    } else {
+      subEl.style.display = 'none';
+    }
+  }
   const container = document.getElementById('modalFields');
   container.innerHTML = '';
   fields.forEach(f => {
@@ -1057,6 +1067,16 @@ function showModal(title, fields, callback, submitLabel = 'Save') {
   });
   _modalCallback = callback;
   document.getElementById('genericModal').classList.add('is-open');
+
+/** Open the Structure Guide modal */
+function openHelpModal() {
+  document.getElementById('helpModal').classList.add('is-open');
+}
+
+/** Close the Structure Guide modal */
+function closeHelpModal() {
+  document.getElementById('helpModal').classList.remove('is-open');
+}
   const _startEl = document.getElementById('modal_input_start');
   const _endEl   = document.getElementById('modal_input_end');
   if (_startEl && _endEl) {
@@ -1241,7 +1261,7 @@ function addGroup() {
       if (resp.ok) { toast.success(T.toast_group_added || 'Group added'); closeModal(); await refresh(); }
       else toast.error(T.toast_group_add_failed || 'Failed to add group');
     } finally { btn.disabled = false; }
-  }, T.modal_add_group || 'Add Group');
+  }, T.modal_add_group || 'Add Group', T.modal_add_group_sub || '');
 }
 
 /** Open the modal to edit an existing phase group's name, description, and colour */
@@ -1316,7 +1336,7 @@ function addPhase() {
       if (resp.ok) { toast.success(T.toast_phase_added); closeModal(); await refresh(); }
       else toast.error(T.toast_phase_add_failed);
     } finally { btn.disabled = false; }
-  }, T.modal_add_phase);
+  }, T.modal_add_phase, T.modal_add_phase_sub || '');
 }
 
 /**
@@ -1446,6 +1466,7 @@ function confirmDeletePhase(id, name) {
 }
 
 // ── Project-level Actions ─────────────────────────────────────────────────────
+// ── Project-level Actions ─────────────────────────────────────────────────────
 /** Open the modal to add a project-level milestone (not attached to any phase) */
 function addProjectMilestone() {
   showModal(T.modal_add_project_milestone, [
@@ -1466,7 +1487,7 @@ function addProjectMilestone() {
       if (resp.ok) { toast.success(T.toast_milestone_added); closeModal(); await refresh(); }
       else toast.error(T.toast_milestone_add_failed);
     } finally { btn.disabled = false; }
-  }, T.modal_add_milestone);
+  }, T.modal_add_milestone, T.modal_add_milestone_sub || '');
 }
 
 /** Open the modal to add a project-level event (not attached to any phase) */
@@ -1475,7 +1496,7 @@ function addProjectEvent() {
     const resp = await api.createProjectEvent(projectId, data);
     if (resp.ok) { toast.success(T.toast_event_added); closeModal(); await refresh(); }
     else toast.error(T.toast_event_add_failed);
-  }, T.modal_add_event);
+  }, T.modal_add_event, T.modal_add_event_sub || '');
 }
 
 // ── Milestone Actions ─────────────────────────────────────────────────────────
@@ -1499,7 +1520,7 @@ function addMilestone(phaseId) {
       if (resp.ok) { toast.success(T.toast_milestone_added); closeModal(); await refresh(); }
       else toast.error(T.toast_milestone_add_failed);
     } finally { btn.disabled = false; }
-  }, T.modal_add_milestone);
+  }, T.modal_add_milestone, T.modal_add_milestone_sub || '');
 }
 
 /** Open the modal to rename a milestone and/or change its target date */
@@ -1536,7 +1557,7 @@ function confirmDeleteMilestone(id, name) {
 // ── Event Actions ─────────────────────────────────────────────────────────────
 
 /** Shared event modal builder with all-day / time toggle. Also auto-shifts end date when start date changes. */
-function _openEventModal(title, defaults, onSave, submitLabel) {
+function _openEventModal(title, defaults, onSave, submitLabel, subtitle = '') {
   const isAllDay = !defaults.start_time;
   showModal(title, [
     { id: 'name',       label: T.event_name,       type: 'text',     defaultValue: defaults.name       || '' },
@@ -1566,7 +1587,7 @@ function _openEventModal(title, defaults, onSave, submitLabel) {
         end_time:   allDay ? null : (document.getElementById('modal_input_end_time').value   || null),
       });
     } finally { btn.disabled = false; }
-  }, submitLabel);
+  }, submitLabel, subtitle);
 
   // Wire up the all-day toggle after the modal DOM is built
   // showModal builds the DOM synchronously — attach the date-shift listener immediately.
@@ -1601,7 +1622,7 @@ function addEvent(phaseId) {
     const resp = await api.createEvent(phaseId, data);
     if (resp.ok) { toast.success(T.toast_event_added); closeModal(); await refresh(); }
     else toast.error(T.toast_event_add_failed);
-  }, T.modal_add_event);
+  }, T.modal_add_event, T.modal_add_event_sub || '');
 }
 
 /** Open the event modal pre-filled with the existing event data for editing */
