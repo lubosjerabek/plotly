@@ -212,7 +212,7 @@ function renderProjectItems(milestones, events) {
   const msItems = milestones.length > 0
     ? milestones.map(m => `
         <li>
-          <span class="item-list__name"><span style="color:#f59e0b;margin-right:5px;font-size:12px;" aria-hidden="true">◆</span>${escHtml(m.name)}</span>
+          <span class="item-list__name">${escHtml(m.name)}</span>
           <span class="item-list__meta">${fmtDate(m.target_date)}</span>
           ${canEdit ? `
           <button class="btn btn-icon btn-ghost" title="Edit milestone" style="width:22px;height:22px;padding:2px;"
@@ -229,7 +229,7 @@ function renderProjectItems(milestones, events) {
   const evItems = events.length > 0
     ? events.map(e => `
         <li>
-          <span class="item-list__name"><span style="color:#3b82f6;margin-right:5px;font-size:12px;" aria-hidden="true">📅</span>${escHtml(e.name)}</span>
+          <span class="item-list__name">${escHtml(e.name)}</span>
           <span class="item-list__meta">${fmtEventMeta(e)}</span>
           ${canEdit ? `
           <button class="btn btn-icon btn-ghost" title="${T.tooltip_edit_event}" style="width:22px;height:22px;padding:2px;"
@@ -246,14 +246,14 @@ function renderProjectItems(milestones, events) {
   container.innerHTML = `
     <div class="phase-section">
       <div class="phase-section__header">
-        <span class="phase-section__label">◆ ${T.milestones}</span>
+        <span class="phase-section__label">${T.milestones}</span>
         ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addProjectMilestone()">${T.add}</button>` : ''}
       </div>
       <ul class="item-list">${msItems}</ul>
     </div>
     <div class="phase-section">
       <div class="phase-section__header">
-        <span class="phase-section__label">📅 ${T.events}</span>
+        <span class="phase-section__label">${T.events}</span>
         ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addProjectEvent()">${T.add}</button>` : ''}
       </div>
       <ul class="item-list">${evItems}</ul>
@@ -283,7 +283,7 @@ function buildPhaseCard(phase, phaseMap, msMap, wasCollapsed, wasExpanded, hadSt
   const msItems = phase.milestones.length > 0
     ? phase.milestones.map(m => `
         <li>
-          <span class="item-list__name"><span style="color:#f59e0b;margin-right:5px;font-size:12px;" aria-hidden="true">◆</span>${escHtml(m.name)}</span>
+          <span class="item-list__name">${escHtml(m.name)}</span>
           <span class="item-list__meta">${fmtDate(m.target_date)}</span>
           ${canEdit ? `
           <button class="btn btn-icon btn-ghost" title="Edit milestone" style="width:22px;height:22px;padding:2px;"
@@ -300,7 +300,7 @@ function buildPhaseCard(phase, phaseMap, msMap, wasCollapsed, wasExpanded, hadSt
   const evItems = phase.events.length > 0
     ? phase.events.map(e => `
         <li>
-          <span class="item-list__name"><span style="color:#3b82f6;margin-right:5px;font-size:12px;" aria-hidden="true">📅</span>${escHtml(e.name)}</span>
+          <span class="item-list__name">${escHtml(e.name)}</span>
           <span class="item-list__meta">${fmtEventMeta(e)}</span>
           ${canEdit ? `
           <button class="btn btn-icon btn-ghost" title="${T.tooltip_edit_event}" style="width:22px;height:22px;padding:2px;"
@@ -320,7 +320,7 @@ function buildPhaseCard(phase, phaseMap, msMap, wasCollapsed, wasExpanded, hadSt
         <svg class="phase-card__chevron"><use href="#icon-chevron-down"/></svg>
         <div class="phase-card__color-dot" style="background:${color};--dot-color:${color}"></div>
         <div class="phase-card__title-area">
-          <h3 class="phase-card__name"><span style="margin-right:4px;font-size:14px;" aria-hidden="true">📊</span>${escHtml(phase.name)}</h3>
+          <h3 class="phase-card__name">${escHtml(phase.name)}</h3>
           <div class="phase-card__meta">
             ${statusBadge(status)}
             <span class="phase-card__dates">${fmtDate(phase.start_date)} → ${fmtDate(phase.end_date)}</span>
@@ -347,14 +347,14 @@ function buildPhaseCard(phase, phaseMap, msMap, wasCollapsed, wasExpanded, hadSt
       ${phase.description ? `<p class="phase-description">${escHtml(phase.description)}</p>` : ''}
       <div class="phase-section">
         <div class="phase-section__header">
-          <span class="phase-section__label">◆ ${T.milestones}</span>
+          <span class="phase-section__label">${T.milestones}</span>
           ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addMilestone(${phase.id})">${T.add}</button>` : ''}
         </div>
         <ul class="item-list" id="ms-list-${phase.id}">${msItems}</ul>
       </div>
       <div class="phase-section">
         <div class="phase-section__header">
-          <span class="phase-section__label">📅 ${T.events}</span>
+          <span class="phase-section__label">${T.events}</span>
           ${canEdit ? `<button class="btn btn-ghost btn-xs" onclick="addEvent(${phase.id})">${T.add}</button>` : ''}
         </div>
         <ul class="item-list" id="ev-list-${phase.id}">${evItems}</ul>
@@ -451,7 +451,7 @@ function renderPhases(phases, groups = []) {
           <svg class="phase-group-card__chevron"><use href="#icon-chevron-down"/></svg>
           <div class="phase-card__color-dot" style="background:${color};--dot-color:${color};margin-top:3px;flex-shrink:0;"></div>
           <div class="phase-group-card__title-area">
-            <h3 class="phase-group-card__name"><span style="margin-right:4px;font-size:14px;" aria-hidden="true">🗂️</span>${escHtml(group.name)}</h3>
+            <h3 class="phase-group-card__name">${escHtml(group.name)}</h3>
             <div class="phase-group-card__meta">
               ${statusBadge(groupStatus)}
               ${groupStart ? `<span class="phase-group-card__dates">${fmtDate(groupStart)} → ${fmtDate(groupEnd)}</span>` : ''}

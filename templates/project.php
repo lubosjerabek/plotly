@@ -585,8 +585,8 @@ require __DIR__ . '/partials/head.php'; ?>
           <button class="active" data-view="grouped" onclick="setPhasesView('grouped')"><?= htmlspecialchars(t('view_grouped')) ?></button>
           <button data-view="flow" onclick="setPhasesView('flow')"><?= htmlspecialchars(t('view_flow')) ?></button>
         </div>
-        <button class="btn btn-ghost btn-xs" onclick="openHelpModal()" style="display:inline-flex;align-items:center;gap:0.3rem;" title="<?= htmlspecialchars(t('help_concepts_title')) ?>">
-          <svg style="width:13px;height:13px;fill:currentColor;"><use href="#icon-help"/></svg>
+        <button class="btn btn-ghost btn-xs" onclick="openHelpModal()" title="<?= htmlspecialchars(t('help_concepts_title')) ?>">
+          <svg><use href="#icon-help"/></svg>
           <span><?= htmlspecialchars(t('help_concepts_btn')) ?></span>
         </button>
       </div>
@@ -636,8 +636,8 @@ require __DIR__ . '/partials/head.php'; ?>
           <button class="active" data-view="Month" onclick="setGanttView('Month')"><?= htmlspecialchars(t('gantt_month')) ?></button>
         </div>
       </div>
-      <button class="btn btn-ghost btn-xs" onclick="openHelpModal()" style="display:inline-flex;align-items:center;gap:0.3rem;" title="<?= htmlspecialchars(t('help_concepts_title')) ?>">
-        <svg style="width:13px;height:13px;fill:currentColor;"><use href="#icon-help"/></svg>
+      <button class="btn btn-ghost btn-xs" onclick="openHelpModal()" title="<?= htmlspecialchars(t('help_concepts_title')) ?>">
+        <svg><use href="#icon-help"/></svg>
         <span><?= htmlspecialchars(t('help_concepts_btn')) ?></span>
       </button>
     </div>
